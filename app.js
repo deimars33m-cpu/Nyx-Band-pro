@@ -659,15 +659,35 @@ function applyIntervention() {
 // ============================================================
 
 function buildVocalColorStyle(names) {
-  if (!names || names.length === 0) return "color:#ffeb3b; text-shadow:0 0 8px #ffeb3b;";
+  if (!names || names.length === 0) return "color:#ffeb3b; text-shadow:0 0 8px #ffeb3b80;";
   
-  const colors = names.map(n => getMemberColor(n));
+  const colors = names.map(n => {
+    if (n.toLowerCase() === "coro") return "#ffeb3b";
+    return getMemberColor(n);
+  });
   
-  // Para SOLO, DUO o TRIO, usamos el color del primer integrante de la lista como color plano.
-  // Esto asegura que el texto se renderice perfectamente en cualquier navegador sobre elementos inline.
-  const c = colors[0];
-  return `color:${c}; text-shadow:0 0 8px ${c}80;`;
+  if (colors.length === 1) {
+    const c = colors[0];
+    return `color:${c}; text-shadow:0 0 8px ${c}80;`;
+  } else {
+    // Para Dúo o Trío, creamos un degradado de izquierda a derecha.
+    // Usamos display: inline-block para que el clipping de fondo funcione correctamente.
+    const gradient = colors.join(", ");
+    return `background: linear-gradient(90deg, ${gradient}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block;`;
+  }
 }
+
+function buildInitialsBadgesHtml(names) {
+  if (!names || names.length === 0) return "";
+  
+  return names.map(name => {
+    const isCoro = name.toLowerCase() === "coro";
+    const color = isCoro ? "#ffeb3b" : getMemberColor(name);
+    const initial = name.charAt(0).toUpperCase();
+    return `<span class="member-initial-badge" style="background: ${color}20; color: ${color}; border: 1px solid ${color}50; --initial-color-glow: ${color}40;" title="${name}">${initial}</span>`;
+  }).join("");
+}
+
 
 // ============================================================
 // --- FIN SECCIÓN INTEGRANTES ---
@@ -1728,11 +1748,29 @@ function parseLyrics(lyricsText) {
   
   return lines.map(line => {
     line = line.trimRight();
-    if (line === "") return `<div class="lyric-row" style="height: 18px"></div>`;
+    
+    // Si la línea es vacía
+    if (line === "") {
+      return `
+        <div class="song-line-wrapper empty-line">
+          <div class="song-line-left-col"></div>
+          <div class="song-line-right-col">
+            <div class="lyric-row" style="height: 18px"></div>
+          </div>
+        </div>
+      `;
+    }
     
     // Si es una línea instrumental
     if (line.startsWith("Solo:") || line.startsWith("Intro:") || line.startsWith("Puente:") || line.startsWith("Instrumental:")) {
-      return `<div class="instrumental-row">${line}</div>`;
+      return `
+        <div class="song-line-wrapper instrumental-line">
+          <div class="song-line-left-col"></div>
+          <div class="song-line-right-col">
+            <div class="instrumental-row">${line}</div>
+          </div>
+        </div>
+      `;
     }
     
     let cleanLine = line;
@@ -1779,51 +1817,59 @@ function parseLyrics(lyricsText) {
     }
     finalLyricText += cleanLine.substring(lastIndexClean);
     
-    // 4. Construir prefijo si hay anotación activa
-    let prefixText = "";
+    // 4. Determinar si hay anotación activa para iniciales y colores
     let renderedLyric = finalLyricText;
     let hasAnnotation = false;
+    let initialsHtml = "";
     
     if (activeVocal) {
       hasAnnotation = true;
-      const namesLabel = activeVocal.names.join(", ");
-      prefixText = `[${namesLabel}] `;
-      
-      renderedLyric = `<span class="vocal-annotation" style="${activeVocal.colorStyle}"><span class="vocal-prefix" style="font-weight:700;">${prefixText}</span><span class="vocal-text">${finalLyricText}</span></span>`;
+      initialsHtml = buildInitialsBadgesHtml(activeVocal.names);
+      renderedLyric = `<span class="vocal-annotation" style="${activeVocal.colorStyle}">${finalLyricText}</span>`;
     }
-    
-    // 5. Ajustar posiciones de los acordes sumando la longitud del prefijo
-    const offset = prefixText.length;
     
     // Si al final de la línea se cerró el paréntesis, limpiar el estado activo para la siguiente línea
     if (shouldClearActiveVocal) {
       activeVocal = null;
     }
     
+    const hasChordsClass = chordsList.length > 0 ? "has-chords" : "";
+    const annotatedClass = hasAnnotation ? "notebook-annotation" : "";
+    
+    let contentHtml = "";
+    
     // Si la línea no tiene acordes
     if (chordsList.length === 0) {
-      return `<div class="lyric-row ${hasAnnotation ? 'notebook-annotation' : ''}">${renderedLyric}</div>`;
+      contentHtml = `<div class="lyric-row ${annotatedClass}">${renderedLyric}</div>`;
+    } else {
+      // Si la línea tiene acordes, construimos la fila de acordes y de letras
+      let chordHtml = "";
+      let lastPos = 0;
+      chordsList.forEach(c => {
+        const alignedPos = c.pos; // offset es 0 porque las iniciales están en la columna izquierda
+        const spaces = alignedPos - lastPos;
+        if (spaces > 0) {
+          chordHtml += "&nbsp;".repeat(spaces);
+        }
+        chordHtml += `<span class="chord-in-text text-cyan" onclick="playAndSelectChord('${c.name}')">${c.name}</span>`;
+        lastPos = alignedPos + c.name.length;
+      });
+      
+      contentHtml = `
+        <div class="chord-row">${chordHtml}</div>
+        <div class="lyric-row ${annotatedClass}">${renderedLyric}</div>
+      `;
     }
     
-    // Si la línea tiene acordes, construimos la fila de acordes y de letras
-    let chordHtml = "";
-    let lastPos = 0;
-    chordsList.forEach(c => {
-      const alignedPos = c.pos + offset;
-      const spaces = alignedPos - lastPos;
-      if (spaces > 0) {
-        chordHtml += "&nbsp;".repeat(spaces);
-      }
-      chordHtml += `<span class="chord-in-text text-cyan" onclick="playAndSelectChord('${c.name}')">${c.name}</span>`;
-      lastPos = alignedPos + c.name.length;
-    });
-
     return `
-      <div class="chord-row">${chordHtml}</div>
-      <div class="lyric-row ${hasAnnotation ? 'notebook-annotation' : ''}">${renderedLyric}</div>
+      <div class="song-line-wrapper ${hasChordsClass} ${annotatedClass}">
+        <div class="song-line-left-col">${initialsHtml}</div>
+        <div class="song-line-right-col">${contentHtml}</div>
+      </div>
     `;
   }).join("");
 }
+
 
 function playAndSelectChord(chordName) {
   // Limpiar caracteres extra (ej. Dm/C -> Dm)

@@ -3128,3 +3128,54 @@ textarea {
   text-shadow: 0 0 8px rgba(255,235,59,0.5);
 }
 
+/* ============================================================ */
+/* NEW INITIALS COLUMN AND GRADIENT TEXT STYLES                  */
+/* ============================================================ */
+
+/* Contenedor principal de la línea */
+.song-line-wrapper {
+  display: grid;
+  grid-template-columns: 55px 1fr;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 0px;
+}
+
+/* Columna izquierda para iniciales de voz */
+.song-line-left-col {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-end;
+  height: 24px; /* Alineado a la altura de lyric-row por defecto */
+  user-select: none;
+}
+
+/* Si la línea tiene acordes, bajamos las iniciales para alinearlas con la letra */
+.song-line-wrapper.has-chords .song-line-left-col {
+  padding-top: 17px; /* 22px de altura de acorde - 5px de margen negativo */
+}
+
+/* Columna derecha para acordes y letra */
+.song-line-right-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Insignias circulares para iniciales */
+.member-initial-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  box-shadow: 0 0 6px var(--initial-color-glow);
+}
+
+
