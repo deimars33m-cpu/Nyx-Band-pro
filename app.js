@@ -1793,7 +1793,7 @@ function parseLyrics(lyricsText) {
     let shouldClearActiveVocal = false;
     
     // 1. Detectar inicio de anotación (Javi, Deimars: ...
-    const matchOpen = cleanLine.match(/^\(([^:)]+):\s*/);
+    const matchOpen = cleanLine.match(/\(([^:)]+):\s*/);
     if (matchOpen) {
       const namesStr = matchOpen[1];
       const namesList = namesStr.split(",").map(n => n.trim());
@@ -1810,8 +1810,11 @@ function parseLyrics(lyricsText) {
       }
       
       activeVocal = { names: namesList, colorStyle: colorStyle, isGeneralNote: isGeneralNote };
-      cleanLine = cleanLine.substring(matchOpen[0].length);
+      
+      // Remover solo la anotación de la línea, preservando acordes o texto previos
+      cleanLine = cleanLine.substring(0, matchOpen.index) + cleanLine.substring(matchOpen.index + matchOpen[0].length);
     }
+
     
     // 2. Detectar fin de anotación )
     if (activeVocal && cleanLine.endsWith(")")) {
