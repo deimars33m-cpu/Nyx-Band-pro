@@ -1800,6 +1800,16 @@ function parseLyrics(lyricsText) {
       shouldClearActiveVocal = true;
     }
     
+    // Extraer comentario si cerramos la anotación activa
+    let commentText = "";
+    if (activeVocal && shouldClearActiveVocal) {
+      const lastHyphenIndex = cleanLine.lastIndexOf(" - ");
+      if (lastHyphenIndex !== -1) {
+        commentText = cleanLine.substring(lastHyphenIndex + 3).trim();
+        cleanLine = cleanLine.substring(0, lastHyphenIndex);
+      }
+    }
+    
     // 3. Extraer acordes de la porción de letra limpia
     let finalLyricText = "";
     let chordsList = [];
@@ -1828,6 +1838,15 @@ function parseLyrics(lyricsText) {
       renderedLyric = `<span class="vocal-annotation" style="${activeVocal.colorStyle}">${finalLyricText}</span>`;
     }
     
+    // Construir nota HTML si se extrajo un comentario, guardando referencia antes de limpiar activeVocal
+    let noteHtml = "";
+    if (commentText && activeVocal) {
+      const noteColor = activeVocal.names[0]
+        ? (activeVocal.names[0].toLowerCase() === "coro" ? "#ffeb3b" : getMemberColor(activeVocal.names[0]))
+        : "#ffeb3b";
+      noteHtml = `<div class="vocal-note-row" style="color: ${noteColor}dd;">${commentText}</div>`;
+    }
+    
     // Si al final de la línea se cerró el paréntesis, limpiar el estado activo para la siguiente línea
     if (shouldClearActiveVocal) {
       activeVocal = null;
@@ -1840,7 +1859,10 @@ function parseLyrics(lyricsText) {
     
     // Si la línea no tiene acordes
     if (chordsList.length === 0) {
-      contentHtml = `<div class="lyric-row ${annotatedClass}">${renderedLyric}</div>`;
+      contentHtml = `
+        <div class="lyric-row ${annotatedClass}">${renderedLyric}</div>
+        ${noteHtml}
+      `;
     } else {
       // Si la línea tiene acordes, construimos la fila de acordes y de letras
       let chordHtml = "";
@@ -1858,6 +1880,7 @@ function parseLyrics(lyricsText) {
       contentHtml = `
         <div class="chord-row">${chordHtml}</div>
         <div class="lyric-row ${annotatedClass}">${renderedLyric}</div>
+        ${noteHtml}
       `;
     }
     
