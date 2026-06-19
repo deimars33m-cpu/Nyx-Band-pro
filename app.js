@@ -596,15 +596,17 @@ function applyIntervention() {
       : `(Coro: ${finalText})`;
   } else {
     const names = _selectedMembersForIntervention;
-    if (names.length === 0) {
-      alert("Selecciona al menos un integrante.");
+    if (names.length === 0 && !extraNote) {
+      alert("Selecciona al menos un integrante o escribe una nota adicional.");
       return;
     }
-    const prefix = names.join(", ");
+    
+    const prefix = names.length === 0 ? "Nota" : names.join(", ");
     wrappedText = extraNote
       ? `(${prefix}: ${finalText} - ${extraNote})`
       : `(${prefix}: ${finalText})`;
   }
+
 
   try {
     // Temporalmente reactivar el editor para poder modificarlo
@@ -688,6 +690,11 @@ function buildVocalColorStyle(names) {
 function buildInitialsBadgesHtml(names) {
   if (!names || names.length === 0) return "";
   
+  // Si es una nota general de ensayo, no mostrar iniciales
+  if (names.length === 1 && names[0].toLowerCase() === "nota") {
+    return "";
+  }
+  
   return names.map(name => {
     const isCoro = name.toLowerCase() === "coro";
     const color = isCoro ? "#ffeb3b" : getMemberColor(name);
@@ -695,6 +702,7 @@ function buildInitialsBadgesHtml(names) {
     return `<span class="member-initial-badge" style="background: ${color}20; color: ${color}; border: 1px solid ${color}50; --initial-color-glow: ${color}40;" title="${name}">${initial}</span>`;
   }).join("");
 }
+
 
 
 // ============================================================
@@ -1752,7 +1760,7 @@ function parseLyrics(lyricsText) {
   if (!lyricsText) return "";
   
   const lines = lyricsText.split("\n");
-  let activeVocal = null; // Guardará { names: Array, colorStyle: String }
+  let activeVocal = null; // Guardará { names: Array, colorStyle: String, isGeneralNote: Boolean }
   
   return lines.map(line => {
     line = line.trimRight();
@@ -1790,15 +1798,18 @@ function parseLyrics(lyricsText) {
       const namesStr = matchOpen[1];
       const namesList = namesStr.split(",").map(n => n.trim());
       const isCoro = namesList.some(n => n.toLowerCase() === "coro");
+      const isGeneralNote = namesList.some(n => n.toLowerCase() === "nota");
       
       let colorStyle;
       if (isCoro) {
         colorStyle = "color:#ffeb3b; text-shadow:0 0 8px #ffeb3b80;";
+      } else if (isGeneralNote) {
+        colorStyle = "";
       } else {
         colorStyle = buildVocalColorStyle(namesList);
       }
       
-      activeVocal = { names: namesList, colorStyle: colorStyle };
+      activeVocal = { names: namesList, colorStyle: colorStyle, isGeneralNote: isGeneralNote };
       cleanLine = cleanLine.substring(matchOpen[0].length);
     }
     
@@ -1843,16 +1854,27 @@ function parseLyrics(lyricsText) {
     if (activeVocal) {
       hasAnnotation = true;
       initialsHtml = buildInitialsBadgesHtml(activeVocal.names);
-      renderedLyric = `<span class="vocal-annotation" style="${activeVocal.colorStyle}">${finalLyricText}</span>`;
+      
+      if (activeVocal.isGeneralNote) {
+        // Para notas generales, mantenemos el color blanco por defecto
+        renderedLyric = finalLyricText;
+      } else {
+        renderedLyric = `<span class="vocal-annotation" style="${activeVocal.colorStyle}">${finalLyricText}</span>`;
+      }
     }
     
     // Construir nota HTML si se extrajo un comentario, guardando referencia antes de limpiar activeVocal
     let noteHtml = "";
     if (commentText && activeVocal) {
-      const noteColor = activeVocal.names[0]
-        ? (activeVocal.names[0].toLowerCase() === "coro" ? "#ffeb3b" : getMemberColor(activeVocal.names[0]))
-        : "#ffeb3b";
-      noteHtml = `<div class="vocal-note-row" style="color: ${noteColor}dd;">${commentText}</div>`;
+      let noteColor;
+      if (activeVocal.isGeneralNote) {
+        noteColor = "var(--text-muted)";
+      } else {
+        noteColor = activeVocal.names[0]
+          ? (activeVocal.names[0].toLowerCase() === "coro" ? "#ffeb3b" : getMemberColor(activeVocal.names[0]))
+          : "#ffeb3b";
+      }
+      noteHtml = `<div class="vocal-note-row" style="color: ${noteColor};">${commentText}</div>`;
     }
     
     // Si al final de la línea se cerró el paréntesis, limpiar el estado activo para la siguiente línea
