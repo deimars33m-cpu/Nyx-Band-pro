@@ -406,6 +406,7 @@ let _interventionLongPressActive = false;
 // Guardamos el texto seleccionado INMEDIATAMENTE al soltar el mouse/dedo,
 // antes de que el browser colapse la selección al hacer clic en el popup
 let _pendingSelectionText = "";
+let _savedInterventionRange = null; // Respaldo estable del DOM Range para evitar pérdida de selección al enfocar el popup
 
 function bindInterventionSelectionDetector() {
   // Escuchar en document (no en el editor) para capturar el mouseup
@@ -442,6 +443,7 @@ function bindInterventionSelectionDetector() {
     // Guardar texto seleccionado AHORA, antes de que el clic en popup lo limpie
     _pendingSelectionText = selectedText;
     _interventionSelection = { text: selectedText };
+    _savedInterventionRange = range.cloneRange(); // Clonamos y respaldamos el rango DOM
 
     // Abrir el picker — usamos requestAnimationFrame para que el render esté listo
     requestAnimationFrame(() => {
@@ -460,7 +462,9 @@ function unbindInterventionSelectionDetector() {
     _interventionMouseUpHandler = null;
   }
   _pendingSelectionText = "";
+  _savedInterventionRange = null;
 }
+
 
 function openInterventionPicker(e) {
   const popup = document.getElementById("intervention-picker-popup");
@@ -552,22 +556,22 @@ function closeInterventionPicker() {
   const popup = document.getElementById("intervention-picker-popup");
   if (popup) popup.style.display = "none";
   _interventionSelection = null;
+  _savedInterventionRange = null;
 }
 
+
 function applyIntervention() {
-  // Obtener la selección actual del navegador
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) {
+  // En lugar de consultar window.getSelection() (que puede haberse perdido o cambiado al enfocar el input),
+  // utilizamos el rango que guardamos establemente al soltar el mouse
+  const range = _savedInterventionRange;
+  if (!range) {
     alert("No hay texto seleccionado. Selecciona una porción de la letra primero.");
     closeInterventionPicker();
     return;
   }
   
-  const range = sel.getRangeAt(0);
-  const selText = range.toString().trim();
-  
-  // Si por alguna razón la selección del rango se perdió, intentamos usar el texto respaldado
-  const finalText = selText || _pendingSelectionText;
+  const rangeText = range.toString().trim();
+  const finalText = rangeText || _pendingSelectionText;
   if (!finalText) {
     alert("No hay texto seleccionado. Selecciona una porción de la letra primero.");
     closeInterventionPicker();
@@ -612,8 +616,12 @@ function applyIntervention() {
     const newTextNode = document.createTextNode(wrappedText);
     range.insertNode(newTextNode);
 
-    // Limpiar selección activa
-    sel.removeAllRanges();
+    // Limpiar selección activa del navegador si existe
+    const sel = window.getSelection();
+    if (sel) {
+      sel.removeAllRanges();
+    }
+
 
     // Serializar el contenido final del editor
     const finalRaw = serializeRichLyrics();
