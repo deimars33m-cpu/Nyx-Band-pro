@@ -494,10 +494,31 @@
     </div>
   </div>
 
-  <!-- MENÚ ACCIONES FLOTANTES (FAB) EN PANTALLA COMPLETA -->
+  <!-- BOTÓN FLOTANTE SUPERIOR DERECHA: EDICIÓN EN PANTALLA COMPLETA -->
+  <button id="rehearsal-fullscreen-edit-btn" class="fullscreen-floating-edit-btn" onclick="editActiveSong()" title="Editar Letra y Acordes">✏️</button>
+
+  <!-- BOTÓN FLOTANTE INFERIOR IZQUIERDA: GRABACIÓN DE SONIDOS -->
+  <div id="rehearsal-record-fab-container" class="rehearsal-fab-container bottom-left">
+    <div class="fab-menu glass">
+      <div class="fab-menu-title">Grabación de Audio</div>
+      <div class="fab-control-row">
+        <span>Grabación</span>
+        <button id="fab-btn-record" class="btn btn-secondary btn-pill" onclick="toggleHeaderRecording()" style="padding: 4px 10px; font-size: 10px;">🎙️ Grabar</button>
+      </div>
+      <div class="fab-control-row" style="justify-content: center; margin-top: 8px;">
+        <span id="fab-record-timer" style="font-family: var(--font-mono); font-size: 14px; font-weight: 800; color: #ffffff;">00:00</span>
+      </div>
+      <div class="fab-control-row" style="margin-top: 8px;">
+        <canvas id="fab-record-canvas" width="180" height="40" style="width: 100%; height: 40px; background: rgba(0,0,0,0.25); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);"></canvas>
+      </div>
+    </div>
+    <button class="fab-main-btn" onclick="toggleRecordFabMenu()" title="Grabación de Sonidos">🎙️</button>
+  </div>
+
+  <!-- BOTÓN FLOTANTE INFERIOR DERECHA: CONTROLES DE METRÓNOMO -->
   <div id="rehearsal-fab-container" class="rehearsal-fab-container">
     <div class="fab-menu glass">
-      <div class="fab-menu-title">Control de Ensayo</div>
+      <div class="fab-menu-title">Metrónomo</div>
       
       <!-- Fila de Metrónomo -->
       <div class="fab-control-row">
@@ -515,14 +536,8 @@
           <button class="btn btn-outline-cyan" onclick="handleTapTempo()" style="padding:2px 6px; font-size:9px; border-radius:4px;">TAP</button>
         </div>
       </div>
-
-      <!-- Fila de Grabación -->
-      <div class="fab-control-row" style="margin-top: 4px; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px;">
-        <span>Grabación</span>
-        <button id="fab-btn-record" class="btn btn-secondary btn-pill" onclick="toggleHeaderRecording()" style="padding: 4px 10px; font-size: 10px;">🎙️ Grabar</button>
-      </div>
     </div>
-    <button class="fab-main-btn" onclick="toggleFabMenu()" title="Controles de Ensayo">⚙️</button>
+    <button class="fab-main-btn" onclick="toggleFabMenu()" title="Controles de Metrónomo">🎵</button>
   </div>
 
   <!-- Scripts -->

@@ -3699,5 +3699,150 @@ body.fullscreen-mode .rehearsal-fab-container {
   color: var(--neon-cyan);
 }
 
+/* ==========================================================================
+   PANTALLA COMPLETA EXCLUSIVA PARA MÓVILES (VERTICAL/HORIZONTAL) Y TABLETS
+   ========================================================================== */
+
+/* Botón flotante de edición en la esquina superior derecha (solo para pantalla completa móvil) */
+.fullscreen-floating-edit-btn {
+  display: none;
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(30, 32, 40, 0.9);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  color: var(--neon-cyan);
+  font-size: 20px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 229, 255, 0.3);
+  z-index: 1100;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fullscreen-floating-edit-btn:hover {
+  transform: scale(1.08);
+  background: var(--neon-cyan);
+  color: #131417;
+  box-shadow: 0 0 15px var(--neon-cyan);
+}
+
+/* Ajustes para el FAB de grabación en la esquina inferior izquierda */
+.rehearsal-fab-container.bottom-left {
+  left: 24px;
+  right: auto;
+}
+
+.rehearsal-fab-container.bottom-left .fab-main-btn {
+  background: var(--gradient-green) !important;
+  box-shadow: 0 4px 20px rgba(0, 255, 102, 0.4) !important;
+}
+
+.rehearsal-fab-container.bottom-left .fab-main-btn:hover {
+  box-shadow: 0 0 24px rgba(0, 255, 102, 0.7) !important;
+}
+
+.rehearsal-fab-container.bottom-left.expanded .fab-main-btn {
+  transform: rotate(135deg);
+  background: rgba(30, 32, 40, 0.95) !important;
+  color: var(--neon-lime) !important;
+  border-color: rgba(0, 255, 102, 0.4) !important;
+  box-shadow: none !important;
+}
+
+.rehearsal-fab-container.bottom-left .fab-menu {
+  left: 0;
+  right: auto;
+  transform-origin: bottom left;
+}
+
+/* Media Query exclusivo para móviles y tablets */
+@media (max-width: 1024px), (max-height: 550px) {
+  
+  /* Mostrar botón flotante de edición y FAB de grabación en pantalla completa */
+  body.fullscreen-mode .fullscreen-floating-edit-btn {
+    display: flex !important;
+  }
+  
+  body.fullscreen-mode .rehearsal-fab-container.bottom-left {
+    display: block !important;
+  }
+
+  /* Ocultar encabezado, controles superiores y barra de transporte en móvil */
+  body.fullscreen-mode .rehearsal-header {
+    display: none !important;
+  }
+
+  body.fullscreen-mode .transport-bar {
+    display: none !important;
+  }
+
+  /* Estirar el contenedor principal al 100% de pantalla */
+  body.fullscreen-mode .main-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  body.fullscreen-mode .rehearsal-body {
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+    padding-bottom: 0 !important;
+    height: 100vh !important;
+    width: 100vw !important;
+  }
+
+  body.fullscreen-mode .lyrics-viewer-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-shadow: none !important;
+  }
+
+  /* Mostrar la cabecera del visor de letra compactada para la leyenda */
+  body.fullscreen-mode .lyrics-viewer-header {
+    height: 50px !important;
+    padding: 8px 16px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    background: rgba(19, 20, 24, 0.8) !important;
+  }
+
+  body.fullscreen-mode .lyrics-song-info {
+    display: none !important; /* Ocultar "LETRA Y ACORDES" */
+  }
+
+  body.fullscreen-mode .scroll-controls {
+    display: none !important; /* Ocultar botón editar antiguo */
+  }
+
+  body.fullscreen-mode .rehearsal-members-legend {
+    margin: 0 auto !important; /* Centrar barra de nombres */
+    justify-content: center !important;
+  }
+
+  /* El visor de letras toma todo el alto restante */
+  body.fullscreen-mode .lyrics-scroll-area {
+    flex: 1 !important;
+    height: calc(100vh - 50px) !important;
+  }
+}
+
 
 

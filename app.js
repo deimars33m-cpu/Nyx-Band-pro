@@ -2426,7 +2426,7 @@ function toggleAutoScroll() {
 function startRecording() {
   initAudioContext();
   
-  const timerDisplay = document.getElementById("transport-record-timer");
+  const timerDisplays = document.querySelectorAll("#transport-record-timer, #fab-record-timer");
   const btnRec = document.getElementById("btn-record-transport");
   
   navigator.mediaDevices.getUserMedia({ audio: true })
@@ -2487,7 +2487,7 @@ function startRecording() {
         secs++;
         const m = Math.floor(secs / 60).toString().padStart(2, '0');
         const s = (secs % 60).toString().padStart(2, '0');
-        if (timerDisplay) timerDisplay.textContent = `${m}:${s}`;
+        timerDisplays.forEach(td => td.textContent = `${m}:${s}`);
       }, 1000);
       
       // Dibujar onda de audio
@@ -2527,70 +2527,74 @@ function stopRecording() {
 
 // Visualizador de la onda en Canvas
 function visualizeAudioWave() {
-  const canvas = document.getElementById("transport-wave-canvas");
-  if (!canvas) return;
+  const canvases = document.querySelectorAll("#transport-wave-canvas, #fab-record-canvas");
+  if (canvases.length === 0) return;
   
-  const ctx = canvas.getContext("2d");
   const analyser = state.recorder.analyser;
-  if (!ctx || !analyser) return;
+  if (!analyser) return;
   
   const bufferLength = analyser.frequencyBinCount;
   const dataArray = new Uint8Array(bufferLength);
   
-  // Redimensionar canvas internamente
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
+  // Redimensionar canvases internamente
+  canvases.forEach(canvas => {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+  });
   
   function draw() {
     state.recorder.animationFrameId = requestAnimationFrame(draw);
-    
     analyser.getByteFrequencyData(dataArray);
     
-    ctx.fillStyle = "rgba(10, 11, 13, 0.4)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    const barWidth = (canvas.width / bufferLength) * 2.5;
-    let barHeight;
-    let x = 0;
-    
-    for (let i = 0; i < bufferLength; i++) {
-      barHeight = dataArray[i] / 2;
+    canvases.forEach(canvas => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
       
-      // Degradado neón (púrpura a cian)
-      const grad = ctx.createLinearGradient(0, canvas.height, 0, 0);
-      grad.addColorStop(0, "var(--neon-purple)");
-      grad.addColorStop(1, "var(--neon-cyan)");
+      ctx.fillStyle = "rgba(10, 11, 13, 0.4)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      ctx.fillStyle = grad;
-      ctx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
+      const barWidth = (canvas.width / bufferLength) * 2.5;
+      let barHeight;
+      let x = 0;
       
-      x += barWidth;
-    }
+      for (let i = 0; i < bufferLength; i++) {
+        barHeight = dataArray[i] / 2;
+        
+        // Degradado neón (púrpura a cian)
+        const grad = ctx.createLinearGradient(0, canvas.height, 0, 0);
+        grad.addColorStop(0, "var(--neon-purple)");
+        grad.addColorStop(1, "var(--neon-cyan)");
+        
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
+        
+        x += barWidth;
+      }
+    });
   }
   
   draw();
 }
 
 function clearAudioCanvas() {
-  const canvas = document.getElementById("transport-wave-canvas");
-  if (!canvas) return;
-  
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
-  
-  ctx.fillStyle = "rgba(10, 11, 13, 0.6)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  // Línea plana central
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, canvas.height / 2);
-  ctx.lineTo(canvas.width, canvas.height / 2);
-  ctx.stroke();
+  const canvases = document.querySelectorAll("#transport-wave-canvas, #fab-record-canvas");
+  canvases.forEach(canvas => {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    
+    ctx.fillStyle = "rgba(10, 11, 13, 0.6)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height / 2);
+    ctx.lineTo(canvas.width, canvas.height / 2);
+    ctx.stroke();
+  });
 }
 
 function renderRecordingsList(songId) {
@@ -4302,9 +4306,12 @@ function toggleFullscreenRehearsal() {
   if (isCurrentlyFullscreen) {
     body.classList.remove("fullscreen-mode");
     
-    // Cerrar el FAB si estaba abierto
+    // Cerrar los FABs si estaban abiertos
     const fabContainer = document.getElementById("rehearsal-fab-container");
     if (fabContainer) fabContainer.classList.remove("expanded");
+    
+    const recordFab = document.getElementById("rehearsal-record-fab-container");
+    if (recordFab) recordFab.classList.remove("expanded");
   } else {
     body.classList.add("fullscreen-mode");
     
@@ -4392,6 +4399,13 @@ function toggleSectionLoop(idx) {
 
 function toggleFabMenu() {
   const container = document.getElementById("rehearsal-fab-container");
+  if (container) {
+    container.classList.toggle("expanded");
+  }
+}
+
+function toggleRecordFabMenu() {
+  const container = document.getElementById("rehearsal-record-fab-container");
   if (container) {
     container.classList.toggle("expanded");
   }
