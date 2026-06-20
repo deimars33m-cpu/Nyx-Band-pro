@@ -2737,7 +2737,7 @@ textarea {
 }
 
 /* Responsive mobile full screen modal */
-@media (max-width: 768px) {
+@media (max-width: 1024px), (max-height: 550px) {
   .modal-content {
     width: 100vw !important;
     height: 100vh !important;
@@ -3284,8 +3284,8 @@ textarea {
   pointer-events: auto;
 }
 
-/* Media Query para pantallas móviles (< 768px) */
-@media (max-width: 768px) {
+/* Media Query para pantallas móviles y orientación horizontal (landscape) */
+@media (max-width: 1024px), (max-height: 550px) {
   .mobile-top-bar {
     display: flex;
   }
