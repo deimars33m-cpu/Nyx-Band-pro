@@ -700,8 +700,11 @@ function buildInitialsBadgesHtml(names) {
   return names.map(name => {
     const isCoro = name.toLowerCase() === "coro";
     const color = isCoro ? "#ffeb3b" : getMemberColor(name);
-    const initial = name.charAt(0).toUpperCase();
-    return `<span class="member-initial-badge" style="background: ${color}20; color: ${color}; border: 1px solid ${color}50; --initial-color-glow: ${color}40;" title="${name}">${initial}</span>`;
+    const initial = isCoro ? "TODOS" : name.charAt(0).toUpperCase();
+    const styleAttr = isCoro
+      ? `background: ${color}20; color: ${color}; border: 1px solid ${color}50; --initial-color-glow: ${color}40; width: auto; border-radius: 12px; padding: 0 6px;`
+      : `background: ${color}20; color: ${color}; border: 1px solid ${color}50; --initial-color-glow: ${color}40;`;
+    return `<span class="member-initial-badge" style="${styleAttr}" title="${name}">${initial}</span>`;
   }).join("");
 }
 
