@@ -134,6 +134,8 @@ let state = {
   currentChord: "C",
   currentInstrument: "guitar", // guitar o piano
   dictMode: "chords", // chords o scales
+  rehearsalViewMode: "classic", // "classic" o "timeline"
+  timelineActiveIndex: 0,
   currentScale: "ionian",
   currentScaleRoot: 0, // C (semitono 0)
   chordFilterRoot: "C",
@@ -763,6 +765,19 @@ function renderApp() {
   renderSetlist();
   renderRehearsalRoom();
   renderDictionary();
+  
+  if (state.currentTab === "rehearsal" && state.rehearsalViewMode === "timeline" && state.activeSongId) {
+    const song = state.songs.find(s => s.id === state.activeSongId);
+    if (song) {
+      const events = getSongChordEvents(song);
+      events.forEach((ev, idx) => {
+        if (ev.chord && ev.chord !== "N/C" && ev.chord !== "Solo/Intro") {
+          renderGuitarChordSVG(ev.chord, `timeline-guitar-svg-${idx}`);
+          drawChordStaffAndTabSVG(ev.chord, `timeline-staff-svg-${idx}`);
+        }
+      });
+    }
+  }
 }
 
 function renderNav() {
@@ -1176,6 +1191,264 @@ function saveSongFromForm() {
   renderApp();
 }
 
+function getSongChordEvents(song) {
+  if (!song || !song.lyrics) return [];
+  
+  const sections = parseLyricsToSections(song.lyrics);
+  const events = [];
+  let currentVocal = null;
+  
+  sections.forEach((section) => {
+    const sectionLabel = section.header
+      .replace(/VERSE/gi, 'Verso')
+      .replace(/CHORUS/gi, 'Coro')
+      .replace(/BRIDGE/gi, 'Puente')
+      .replace(/PRE-CHORUS/gi, 'Pre-Coro')
+      .replace(/INTRO/gi, 'Intro')
+      .replace(/OUTRO/gi, 'Outro');
+      
+    section.lines.forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed === "") return;
+      
+      // Instrumental lines like "Solo:", etc.
+      if (trimmed.startsWith("Solo:") || trimmed.startsWith("Intro:") || trimmed.startsWith("Puente:") || trimmed.startsWith("Instrumental:") || trimmed.startsWith("Solo")) {
+        events.push({
+          isInstrumental: true,
+          chord: "Solo/Intro",
+          sectionName: sectionLabel,
+          vocal: currentVocal,
+          note: trimmed,
+          lyrics: trimmed
+        });
+        return;
+      }
+      
+      // Detect annotation inside this line
+      const matchOpen = trimmed.match(/\(([^:)]+):\s*/);
+      if (matchOpen) {
+        const namesStr = matchOpen[1];
+        const namesList = namesStr.split(",").map(n => n.trim());
+        const isCoro = namesList.some(n => n.toLowerCase() === "coro");
+        const isGeneralNote = namesList.some(n => n.toLowerCase() === "nota");
+        
+        let names = namesList;
+        currentVocal = {
+          names: names,
+          isGeneralNote: isGeneralNote,
+          colorStyle: isCoro ? "color:#ffeb3b; text-shadow:0 0 8px #ffeb3b80;" : ""
+        };
+      }
+      
+      // Extract comment note if any (Nota: ...)
+      let commentText = "";
+      const commentMatch = trimmed.match(/\((Nota|Adicional):\s*([^)]+)\)/i);
+      if (commentMatch) {
+        commentText = commentMatch[2].trim();
+      }
+      
+      // Extract chords
+      const regexChords = /\[([^\]]+)\]/g;
+      let match;
+      const lineChords = [];
+      let cleanLine = trimmed;
+      
+      while ((match = regexChords.exec(cleanLine)) !== null) {
+        lineChords.push(match[1]);
+      }
+      
+      // Clean lyrics for display
+      let cleanLyrics = cleanLine
+        .replace(/\(([^:)]+):\s*[^)]+\)/g, "") // remove parenthesized annotations
+        .replace(/\((Nota|Adicional):\s*[^)]+\)/gi, "")
+        .replace(/\[[^\]]+\]/g, "")
+        .trim();
+        
+      if (lineChords.length > 0) {
+        lineChords.forEach((chordName) => {
+          events.push({
+            isInstrumental: false,
+            chord: chordName,
+            sectionName: sectionLabel,
+            vocal: currentVocal,
+            note: commentText,
+            lyrics: cleanLyrics || "..."
+          });
+        });
+      } else if (cleanLyrics) {
+        events.push({
+          isInstrumental: false,
+          chord: "N/C",
+          sectionName: sectionLabel,
+          vocal: currentVocal,
+          note: commentText,
+          lyrics: cleanLyrics
+        });
+      }
+    });
+  });
+  
+  return events;
+}
+
+function toggleRehearsalViewMode() {
+  state.rehearsalViewMode = state.rehearsalViewMode === "timeline" ? "classic" : "timeline";
+  state.timelineActiveIndex = 0;
+  
+  renderApp();
+  
+  if (state.rehearsalViewMode === "timeline") {
+    const song = state.songs.find(s => s.id === state.activeSongId);
+    const events = getSongChordEvents(song);
+    events.forEach((ev, idx) => {
+      if (ev.chord && ev.chord !== "N/C" && ev.chord !== "Solo/Intro") {
+        renderGuitarChordSVG(ev.chord, `timeline-guitar-svg-${idx}`);
+        drawChordStaffAndTabSVG(ev.chord, `timeline-staff-svg-${idx}`);
+      }
+    });
+  }
+}
+
+function renderTimelineCards(song) {
+  const events = getSongChordEvents(song);
+  if (events.length === 0) {
+    return `<p style="color:var(--text-muted); text-align:center; width:100%;">No hay acordes ni anotaciones disponibles en esta canción.</p>`;
+  }
+  
+  const beats = state.metronome.beatsPerMeasure || 4;
+  
+  return events.map((ev, idx) => {
+    const isActive = state.timelineActiveIndex === idx;
+    const activeClass = isActive ? "active-chord" : "";
+    
+    // Performer initials/badge HTML
+    let performerBadge = "";
+    if (ev.vocal && ev.vocal.names && ev.vocal.names.length > 0) {
+      performerBadge = buildInitialsBadgesHtml(ev.vocal.names);
+    }
+    
+    // Additional notes HTML
+    let noteHtml = "";
+    if (ev.note) {
+      let noteColor = "var(--neon-cyan)";
+      if (ev.vocal && ev.vocal.names && ev.vocal.names[0]) {
+        const nameLower = ev.vocal.names[0].toLowerCase();
+        noteColor = nameLower === "coro" ? "#ffeb3b" : getMemberColor(ev.vocal.names[0]);
+      }
+      noteHtml = `<div class="timeline-note" style="border-left: 2px solid ${noteColor}; color: ${noteColor}; background: ${noteColor}10;">${ev.note}</div>`;
+    }
+    
+    // Beat indicator dots
+    let dotsHtml = "";
+    for (let b = 0; b < beats; b++) {
+      const isLit = isActive && (state.metronome.isPlaying && state.metronome.currentBeat === b);
+      dotsHtml += `<div class="timeline-beat-dot ${isLit ? 'lit' : ''}" style="--dot-color: var(--neon-lime);"></div>`;
+    }
+    
+    // Content body depending on whether it is a chord, Solo/Intro, or N/C
+    let diagramArea = "";
+    let staffArea = "";
+    let chordTitle = ev.chord;
+    
+    if (ev.isInstrumental || ev.chord === "Solo/Intro") {
+      diagramArea = `<div class="timeline-instrumental-placeholder">🎸 SOLO / INTRO</div>`;
+      chordTitle = "INSTR.";
+    } else if (ev.chord === "N/C") {
+      diagramArea = `<div class="timeline-nc-placeholder">📖 LETRA</div>`;
+      chordTitle = "N/C";
+    } else {
+      diagramArea = `<div id="timeline-guitar-svg-${idx}" class="timeline-guitar-diagram"></div>`;
+      staffArea = `<div id="timeline-staff-svg-${idx}" class="timeline-staff-tab-container"></div>`;
+    }
+    
+    return `
+      <div id="timeline-card-${idx}" class="timeline-card glass ${activeClass}" onclick="selectTimelineCard(${idx})">
+        <div class="timeline-card-header">
+          <span class="timeline-section-badge">${ev.sectionName}</span>
+          ${performerBadge}
+        </div>
+        
+        <div class="timeline-chord-title">${chordTitle}</div>
+        
+        <div class="timeline-visuals-grid">
+          ${diagramArea}
+          ${staffArea}
+        </div>
+        
+        ${noteHtml}
+        
+        <div class="timeline-lyrics-snippet">"${ev.lyrics}"</div>
+        
+        <div class="timeline-beat-indicator">
+          ${dotsHtml}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function selectTimelineCard(idx) {
+  state.timelineActiveIndex = idx;
+  const song = state.songs.find(s => s.id === state.activeSongId);
+  const events = getSongChordEvents(song);
+  
+  // Re-renderizar todos los SVGs de guitarra y pentagramas
+  renderApp();
+  
+  events.forEach((ev, i) => {
+    if (ev.chord && ev.chord !== "N/C" && ev.chord !== "Solo/Intro") {
+      renderGuitarChordSVG(ev.chord, `timeline-guitar-svg-${i}`);
+      drawChordStaffAndTabSVG(ev.chord, `timeline-staff-svg-${i}`);
+    }
+  });
+  
+  // Hacer scroll suave para centrar
+  const container = document.getElementById("timeline-scroll-container");
+  const card = document.getElementById(`timeline-card-${idx}`);
+  if (container && card) {
+    const offsetLeft = card.offsetLeft - (container.clientWidth / 2) + (card.clientWidth / 2);
+    container.scrollTo({ left: offsetLeft, behavior: 'smooth' });
+  }
+}
+
+function updateTimelineBeatVisuals() {
+  if (state.rehearsalViewMode !== "timeline") return;
+  
+  const song = state.songs.find(s => s.id === state.activeSongId);
+  if (!song) return;
+  
+  const events = getSongChordEvents(song);
+  if (events.length === 0) return;
+  
+  // Si el beat vuelve a 0, avanzamos de acorde
+  if (state.metronome.currentBeat === 0) {
+    state.timelineActiveIndex = (state.timelineActiveIndex + 1) % events.length;
+    
+    // Scroll suave para centrar la tarjeta activa
+    const container = document.getElementById("timeline-scroll-container");
+    const card = document.getElementById(`timeline-card-${state.timelineActiveIndex}`);
+    if (container && card) {
+      const offsetLeft = card.offsetLeft - (container.clientWidth / 2) + (card.clientWidth / 2);
+      container.scrollTo({ left: offsetLeft, behavior: 'smooth' });
+    }
+  }
+  
+  // Actualizar clases y LEDs en las tarjetas
+  events.forEach((ev, idx) => {
+    const card = document.getElementById(`timeline-card-${idx}`);
+    if (card) {
+      const isActive = state.timelineActiveIndex === idx;
+      card.classList.toggle("active-chord", isActive);
+      
+      const dots = card.querySelectorAll(".timeline-beat-dot");
+      dots.forEach((dot, dotIdx) => {
+        const isLit = isActive && state.metronome.isPlaying && (state.metronome.currentBeat === dotIdx);
+        dot.classList.toggle("lit", isLit);
+      });
+    }
+  });
+}
+
 function renderRehearsalRoom() {
   const room = document.getElementById("rehearsal-room-content");
   if (!room) return;
@@ -1220,7 +1493,10 @@ function renderRehearsalRoom() {
       </div>
       
       <div class="header-right" style="display: flex; gap: 12px; align-items: center;">
-        <button id="btn-toggle-global-labels" class="btn btn-secondary btn-pill" onclick="toggleGlobalLabelsLayout()" style="border-radius: 20px; font-size: 11px;">
+        <button id="btn-toggle-rehearsal-mode" class="btn btn-secondary btn-pill" onclick="toggleRehearsalViewMode()" style="border-radius: 20px; font-size: 11px; border: 1px solid var(--neon-lime);">
+          ${state.rehearsalViewMode === "timeline" ? "📖 Letra Clásica" : "🎼 Línea Temporal"}
+        </button>
+        <button id="btn-toggle-global-labels" class="btn btn-secondary btn-pill" onclick="toggleGlobalLabelsLayout()" style="border-radius: 20px; font-size: 11px; ${state.rehearsalViewMode === "timeline" ? 'display: none;' : ''}">
           ${labelsText}
         </button>
         <button class="btn btn-secondary btn-pill btn-toggle-fullscreen" onclick="toggleFullscreenRehearsal()" style="border-radius: 20px; font-size: 11px;">
@@ -1237,6 +1513,30 @@ function renderRehearsalRoom() {
 
     <!-- CUERPO DE LA SALA DE ENSAYOS: DOS COLUMNAS -->
     <div class="rehearsal-body">
+      ${state.rehearsalViewMode === "timeline" ? `
+      <!-- Lado Izquierdo: Línea Temporal de Acordes -->
+      <div class="lyrics-viewer-container glass timeline-view-active" style="display: flex; flex-direction: column;">
+        <div class="lyrics-viewer-header" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 20px;">
+          <span class="section-label" style="font-family: var(--font-sans); font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.5px; text-transform: uppercase;">Línea Temporal de Acordes</span>
+          
+          <!-- Legend of members and colors -->
+          <div class="rehearsal-members-legend" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-left: 12px; margin-right: auto;">
+            ${state.members.map(m => `
+              <span class="legend-badge" style="display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: ${m.color}; background: ${m.color}15; border: 1px solid ${m.color}35; padding: 3px 8px; border-radius: 9999px;">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: ${m.color}; display: inline-block;"></span>
+                ${m.name}
+              </span>
+            `).join("")}
+          </div>
+        </div>
+        
+        <div class="timeline-outer-wrapper" style="flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 20px 0;">
+          <div id="timeline-scroll-container" class="timeline-scroll-container" style="display: flex; gap: 24px; overflow-x: auto; padding: 10px 40px; width: 100%; scroll-behavior: smooth;">
+            ${renderTimelineCards(song)}
+          </div>
+        </div>
+      </div>
+      ` : `
       <!-- Lado Izquierdo: Visor de Letra y Acordes -->
       <div class="lyrics-viewer-container glass ${state.horizontalLabels ? 'horizontal-labels' : ''}">
         <div class="lyrics-viewer-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px 20px;">
@@ -1265,6 +1565,7 @@ function renderRehearsalRoom() {
           ${renderLyricsBySections(song)}
         </div>
       </div>
+      `}
       
       <!-- Lado Derecho: Metrónomo y Grabaciones del Tema -->
       <div class="sidebar-panel">
@@ -2273,6 +2574,7 @@ function playMetronomeTick() {
       
       // Increment beat
       state.metronome.currentBeat = (current + 1) % beats;
+      updateTimelineBeatVisuals();
     }
     
     // 3. Highlight current sequencer step in UI
@@ -2366,6 +2668,7 @@ function playMetronomeTick() {
     }
     
     state.metronome.currentBeat = (current + 1) % beats;
+    updateTimelineBeatVisuals();
   }
 }
 
