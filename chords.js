@@ -1049,7 +1049,7 @@ function playScaleSequence(rootSemitone, scaleKey, instrument = 'guitar') {
 }
 
 // --- DIBUJADO DE PENTAGRAMA Y TABLATURA EN SVG ---
-function drawChordStaffAndTabSVG(chordName, containerId) {
+function drawChordStaffAndTabSVG(chordName, containerId, idx = 0) {
   const container = document.getElementById(containerId);
   if (!container) return "";
   
@@ -1080,76 +1080,82 @@ function drawChordStaffAndTabSVG(chordName, containerId) {
     const absoluteStep = step + (currentOctave - 4) * 7;
     lastStep = absoluteStep;
     
-    // E4 está en absoluteStep = 2 (C4 = 0, D4 = 1, E4 = 2). E4 se dibuja en Y = 80 (línea inferior del pentagrama).
+    // E4 (step 2) -> Y = 55 (línea inferior del pentagrama).
     // Cada paso en la escala es de 5px.
-    // E4 (step 2) -> Y = 80
-    const y = 80 - (absoluteStep - 2) * 5;
+    const y = 55 - (absoluteStep - 2) * 5;
     return { note: noteName, y: y, accidental: acc, absoluteStep: absoluteStep };
   }).filter(Boolean);
   
   // Crear SVG
-  const width = 160;
-  const height = 150;
+  const width = 180;
+  const height = 130;
+  const noteX = idx === 0 ? 105 : 90;
   
   let svg = `<svg viewBox="0 0 ${width} ${height}" class="timeline-staff-tab-svg" style="width:100%; height:100%;">`;
   
   // 2. DIBUJAR PENTAGRAMA (Treble Staff): 5 líneas
-  // Líneas del pentagrama: Y = 40, 50, 60, 70, 80 (F5, D5, B4, G4, E4)
+  // Líneas del pentagrama: Y = 15, 25, 35, 45, 55
   for (let i = 0; i < 5; i++) {
-    const y = 40 + i * 10;
-    svg += `<line x1="10" y1="${y}" x2="${width - 10}" y2="${y}" stroke="rgba(255,255,255,0.25)" stroke-width="1" />`;
+    const y = 15 + i * 10;
+    svg += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="rgba(255,255,255,0.2)" stroke-width="1" />`;
   }
   
-  // Clave de Sol (carácter de clave de sol usando un elemento <text>)
-  svg += `<text x="15" y="78" font-family="Arial, Helvetica, sans-serif" font-size="42" fill="var(--neon-cyan)" opacity="0.85" style="user-select:none;">𝄞</text>`;
+  // Clave de Sol (solo en la primera tarjeta, idx === 0)
+  if (idx === 0) {
+    svg += `<text x="8" y="52" font-family="Arial, Helvetica, sans-serif" font-size="38" fill="var(--neon-cyan)" opacity="0.85" style="user-select:none;">𝄞</text>`;
+  }
   
   // Dibujar notas en el pentagrama
   staffNotes.forEach(sn => {
-    // Si la nota está por debajo del pentagrama (ej. C4 a Y = 90), dibujamos una línea adicional corta (ledger line)
-    if (sn.y >= 90) {
-      svg += `<line x1="75" y1="${sn.y}" x2="95" y2="${sn.y}" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" />`;
+    // Líneas adicionales si la nota está por fuera (C4 está a Y = 65)
+    if (sn.y >= 65) {
+      svg += `<line x1="${noteX - 10}" y1="${sn.y}" x2="${noteX + 10}" y2="${sn.y}" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" />`;
     }
-    // Si está por encima del pentagrama (ej. A5 a Y = 30), línea adicional
-    if (sn.y <= 30) {
-      svg += `<line x1="75" y1="${sn.y}" x2="95" y2="${sn.y}" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" />`;
+    if (sn.y <= 5) {
+      svg += `<line x1="${noteX - 10}" y1="${sn.y}" x2="${noteX + 10}" y2="${sn.y}" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" />`;
     }
     
     // Si tiene alteración (#)
     if (sn.accidental === "#") {
-      svg += `<text x="70" y="${sn.y + 4}" font-size="12" font-weight="bold" fill="var(--neon-cyan)">#</text>`;
+      svg += `<text x="${noteX - 16}" y="${sn.y + 4}" font-size="12" font-weight="bold" fill="var(--neon-cyan)">#</text>`;
     } else if (sn.accidental === "b") {
-      svg += `<text x="70" y="${sn.y + 4}" font-size="12" font-weight="bold" fill="var(--neon-cyan)">♭</text>`;
+      svg += `<text x="${noteX - 16}" y="${sn.y + 4}" font-size="12" font-weight="bold" fill="var(--neon-cyan)">♭</text>`;
     }
     
     // Cabeza de la nota
-    svg += `<ellipse cx="85" cy="${sn.y}" rx="5.5" ry="4" fill="var(--neon-cyan)" style="filter: drop-shadow(0 0 3px var(--neon-cyan));" />`;
+    svg += `<ellipse cx="${noteX}" cy="${sn.y}" rx="5.5" ry="4" fill="var(--neon-cyan)" style="filter: drop-shadow(0 0 3px var(--neon-cyan));" />`;
   });
   
   // 3. DIBUJAR TABLATURA (6 líneas para guitarra)
-  // Líneas de TAB: Y = 100, 108, 116, 124, 132, 140
+  // Líneas de TAB: Y = 75, 83, 91, 99, 107, 115
   for (let i = 0; i < 6; i++) {
-    const y = 100 + i * 8;
-    svg += `<line x1="10" y1="${y}" x2="${width - 10}" y2="${y}" stroke="rgba(255,255,255,0.2)" stroke-width="1" />`;
+    const y = 75 + i * 8;
+    svg += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="rgba(255,255,255,0.15)" stroke-width="1" />`;
   }
   
-  // Etiqueta "TAB" vertical
-  svg += `
-    <text x="13" y="112" font-family="Impact, Arial Black, sans-serif" font-size="10" font-weight="900" fill="var(--neon-lime)" opacity="0.8" letter-spacing="1">T</text>
-    <text x="13" y="122" font-family="Impact, Arial Black, sans-serif" font-size="10" font-weight="900" fill="var(--neon-lime)" opacity="0.8" letter-spacing="1">A</text>
-    <text x="13" y="132" font-family="Impact, Arial Black, sans-serif" font-size="10" font-weight="900" fill="var(--neon-lime)" opacity="0.8" letter-spacing="1">B</text>
-  `;
+  // Etiqueta "TAB" vertical (solo en la primera tarjeta, idx === 0)
+  if (idx === 0) {
+    svg += `
+      <text x="8" y="86" font-family="Impact, Arial Black, sans-serif" font-size="9" font-weight="900" fill="var(--neon-lime)" opacity="0.8" letter-spacing="1">T</text>
+      <text x="8" y="96" font-family="Impact, Arial Black, sans-serif" font-size="9" font-weight="900" fill="var(--neon-lime)" opacity="0.8" letter-spacing="1">A</text>
+      <text x="8" y="106" font-family="Impact, Arial Black, sans-serif" font-size="9" font-weight="900" fill="var(--neon-lime)" opacity="0.8" letter-spacing="1">B</text>
+    `;
+  }
   
   // Dibujar trastes sobre las líneas de TAB
   if (frets.length === 6) {
     for (let stringIdx = 0; stringIdx < 6; stringIdx++) {
       const fret = frets[stringIdx];
       if (fret !== -1) {
-        const y = 140 - stringIdx * 8;
-        svg += `<rect x="80" y="${y - 5.5}" width="10" height="11" rx="2" fill="#020617" />`;
-        svg += `<text x="85" y="${y + 3.5}" text-anchor="middle" font-family="var(--font-sans)" font-size="8" font-weight="800" fill="var(--neon-lime)" style="filter: drop-shadow(0 0 2px var(--neon-lime));">${fret}</text>`;
+        const y = 115 - stringIdx * 8;
+        svg += `<rect x="${noteX - 5}" y="${y - 5.5}" width="10" height="11" rx="2" fill="#020617" />`;
+        svg += `<text x="${noteX}" y="${y + 3.5}" text-anchor="middle" font-family="var(--font-sans)" font-size="8" font-weight="800" fill="var(--neon-lime)" style="filter: drop-shadow(0 0 2px var(--neon-lime));">${fret}</text>`;
       }
     }
   }
+  
+  // 4. DIBUJAR COMPÁS (Barline vertical al final de la tarjeta)
+  svg += `<line x1="${width}" y1="15" x2="${width}" y2="115" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />`;
   
   svg += `</svg>`;
   container.innerHTML = svg;

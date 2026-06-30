@@ -773,7 +773,7 @@ function renderApp() {
       events.forEach((ev, idx) => {
         if (ev.chord && ev.chord !== "N/C" && ev.chord !== "Solo/Intro") {
           renderGuitarChordSVG(ev.chord, `timeline-guitar-svg-${idx}`);
-          drawChordStaffAndTabSVG(ev.chord, `timeline-staff-svg-${idx}`);
+          drawChordStaffAndTabSVG(ev.chord, `timeline-staff-svg-${idx}`, idx);
         }
       });
     }
@@ -1303,7 +1303,7 @@ function toggleRehearsalViewMode() {
     events.forEach((ev, idx) => {
       if (ev.chord && ev.chord !== "N/C" && ev.chord !== "Solo/Intro") {
         renderGuitarChordSVG(ev.chord, `timeline-guitar-svg-${idx}`);
-        drawChordStaffAndTabSVG(ev.chord, `timeline-staff-svg-${idx}`);
+        drawChordStaffAndTabSVG(ev.chord, `timeline-staff-svg-${idx}`, idx);
       }
     });
   }
@@ -1398,7 +1398,7 @@ function selectTimelineCard(idx) {
   events.forEach((ev, i) => {
     if (ev.chord && ev.chord !== "N/C" && ev.chord !== "Solo/Intro") {
       renderGuitarChordSVG(ev.chord, `timeline-guitar-svg-${i}`);
-      drawChordStaffAndTabSVG(ev.chord, `timeline-staff-svg-${i}`);
+      drawChordStaffAndTabSVG(ev.chord, `timeline-staff-svg-${i}`, i);
     }
   });
   
