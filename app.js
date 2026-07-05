@@ -763,6 +763,7 @@ function checkSharedSong() {
 function renderApp() {
   renderNav();
   renderSetlist();
+  renderRehearsalRoom();
   renderDictionary();
 }
 
@@ -1074,6 +1075,23 @@ function renderSetlist() {
 // --- CARGAR CANCION ---
 function openSongInRehearsal(songId) {
   state.activeSongId = songId;
+  state.transposeOffset = 0;
+  state.autoscrollActivo = true;
+  state.enReproduccion = false;
+  state.tiempoActual = 0;
+  state.mostrarTransposer = false;
+  state.lineaActivaIndex = 0;
+  
+  const song = state.songs.find(s => s.id === songId);
+  if (song) {
+    const lines = parseLyricsToEnsayoModel(song.lyrics);
+    const structure = getSongEstructuraEnsayo(song, lines);
+    if (structure.length > 0) {
+      state.seccionActivaId = structure[0].id;
+    }
+  }
+  
+  switchTab("rehearsal");
   renderApp();
 }
 
@@ -1145,6 +1163,487 @@ function saveSongFromForm() {
   saveLocalStorage();
   document.getElementById("modal-add-song").classList.remove("open");
   renderApp();
+}
+
+// --- MOTOR Y LÓGICA DE LA HOJA DE ENSAYO EN VIVO ---
+
+let rehearsalIntervalId = null;
+
+function parseLyricsToEnsayoModel(lyricsText) {
+  if (!lyricsText) return [];
+  const lines = lyricsText.split("\n");
+  const result = [];
+  let seccionId = "sec-intro";
+  
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (trimmed === "") return;
+    
+    // Detectar cabecera de sección, e.g. [CORO] o [VERSE 1]
+    if (trimmed.startsWith("[") && trimmed.endsWith("]") && !trimmed.includes(" ")) {
+      const name = trimmed.slice(1, -1).toUpperCase();
+      seccionId = "sec-" + name.toLowerCase().replace(/\s+/g, "-");
+      return;
+    }
+    
+    // Extraer acordes entre corchetes
+    const chordRegex = /\[([^\]]+)\]/g;
+    const lineChords = [];
+    let match;
+    
+    let wordIndex = 0;
+    while ((match = chordRegex.exec(line)) !== null) {
+      lineChords.push({
+        id: `ac-${index}-${match.index}`,
+        acorde: match[1],
+        posicionPalabra: wordIndex,
+        posicionCaracter: match.index
+      });
+      wordIndex += 2;
+    }
+    
+    const cleanText = line.replace(/\[[^\]]+\]/g, "").replace(/\s+/g, " ").trim();
+    
+    result.push({
+      id: `line-${index}`,
+      texto: cleanText || "(Instrumental)",
+      acordes: lineChords,
+      seccionId: seccionId
+    });
+  });
+  return result;
+}
+
+function getSongEstructuraEnsayo(song, lines) {
+  const sections = [];
+  const uniqueSecIds = [...new Set(lines.map(l => l.seccionId))];
+  
+  uniqueSecIds.forEach((secId) => {
+    const name = secId.replace("sec-", "").toUpperCase();
+    const secLines = lines.filter(l => l.seccionId === secId);
+    if (secLines.length === 0) return;
+    
+    const startIdx = lines.indexOf(secLines[0]);
+    const endIdx = lines.indexOf(secLines[secLines.length - 1]);
+    
+    let type = "verso";
+    if (name.includes("INTRO")) type = "intro";
+    else if (name.includes("CORO") || name.includes("ESTRIBILLO") || name.includes("CHORUS")) type = "estribillo";
+    else if (name.includes("PUENTE") || name.includes("BRIDGE")) type = "puente";
+    else if (name.includes("SOLO")) type = "solo";
+    else if (name.includes("FINAL") || name.includes("OUTRO")) type = "outro";
+    
+    sections.push({
+      id: secId,
+      nombre: name.replace("-", " "),
+      tipo: type,
+      lineaInicio: startIdx,
+      lineaFin: endIdx,
+      notas: type === "estribillo" ? "Coro doble aquí · entra guitarra líder" : ""
+    });
+  });
+  
+  if (sections.length === 0) {
+    sections.push({
+      id: "sec-intro",
+      nombre: "INTRO",
+      tipo: "intro",
+      lineaInicio: 0,
+      lineaFin: Math.max(0, lines.length - 1),
+      notas: ""
+    });
+  }
+  return sections;
+}
+
+const notasCromáticas = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const flatMap = { "Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#", "Bb": "A#" };
+
+function transposeChord(chord, offset) {
+  if (offset === 0) return chord;
+  const match = chord.match(/^([A-G]#?|[A-G]b?)(.*)$/);
+  if (!match) return chord;
+  const root = match[1];
+  const suffix = match[2];
+  const normalizedRoot = flatMap[root] || root;
+  const index = notasCromáticas.indexOf(normalizedRoot);
+  if (index === -1) return chord;
+  let newIndex = (index + offset) % 12;
+  if (newIndex < 0) newIndex += 12;
+  return notasCromáticas[newIndex] + suffix;
+}
+
+function triggerEnsayoToast(msg) {
+  const existing = document.querySelector(".ensayo-toast");
+  if (existing) existing.remove();
+  
+  const toast = document.createElement("div");
+  toast.className = "ensayo-toast glass";
+  toast.innerHTML = `<span>🔔</span> ${msg}`;
+  document.querySelector(".hoja-ensayo").appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+function scrollToEnsayoLine(index) {
+  const el = document.getElementById(`ensayo-line-${index}`);
+  const container = document.querySelector(".lyric-scroll-container");
+  if (el && container) {
+    const offsetTop = el.offsetTop - container.clientHeight / 2 + el.clientHeight / 2;
+    container.scrollTo({
+      top: Math.max(0, offsetTop),
+      behavior: "smooth"
+    });
+  }
+}
+
+function renderRehearsalRoom() {
+  const room = document.getElementById("rehearsal-room-content");
+  if (!room) return;
+  
+  if (!state.activeSongId) {
+    room.innerHTML = `
+      <div class="empty-rehearsal-state glass" style="margin: 40px auto; text-align: center; max-width: 400px; padding: 30px 20px;">
+        <div class="empty-icon" style="font-size: 40px; margin-bottom: 12px;">🎸</div>
+        <h3>Hoja de Ensayo</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
+          Selecciona un tema de tu REPERTORIO en la pestaña principal para iniciar el ensayo interactivo en vivo.
+        </p>
+        <button class="btn btn-primary" onclick="switchTab('repertorio')" style="border-radius: 20px; padding: 8px 20px;">Ver REPERTORIO</button>
+      </div>
+    `;
+    return;
+  }
+  
+  const song = state.songs.find(s => s.id === state.activeSongId);
+  if (!song) return;
+  
+  const lines = parseLyricsToEnsayoModel(song.lyrics);
+  const structure = getSongEstructuraEnsayo(song, lines);
+  
+  // Garantizar que la sección activa sea válida
+  if (!state.seccionActivaId && structure.length > 0) {
+    state.seccionActivaId = structure[0].id;
+  }
+  
+  const tonalidadTranspuesta = transposeChord(song.key, state.transposeOffset || 0);
+  const activeSec = structure.find(s => s.id === state.seccionActivaId) || structure[0];
+  const activeNotas = activeSec ? (activeSec.notas || "") : "";
+  
+  // Construir Roster de Integrantes
+  const members = [
+    { id: "int-camila", nombre: "Camila", instrumento: "Voz", colorAvatar: "#FF3EA5", iniciales: "CA" },
+    { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro", colorAvatar: "#FF3EA5", iniciales: "RO" },
+    { id: "int-julian", nombre: "Julián", instrumento: "Bajo", colorAvatar: "#29F0D6", iniciales: "JU" },
+    { id: "int-male", nombre: "Male", instrumento: "Batería", colorAvatar: "#FFD23F", iniciales: "MA" }
+  ];
+  
+  const type = activeSec ? activeSec.tipo : "verso";
+  const rosterHtml = members.map(m => {
+    let activo = true;
+    if (type === "intro" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
+    else if (type === "solo" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
+    else if (type === "verso" && m.id === "int-rodrigo") activo = false;
+    
+    return `
+      <div class="roster-avatar-column ${activo ? 'active' : 'inactive'}" style="--member-color: ${m.colorAvatar}">
+        <div class="avatar-circle">${m.iniciales}</div>
+        <div class="avatar-name">${m.nombre}</div>
+        <div class="avatar-role">${activo ? m.instrumento : 'Apoyo'}</div>
+      </div>
+    `;
+  }).join("");
+
+  // Construir las líneas de letra y acordes
+  const duration = song.duracionSegundos || 220;
+  const progressRatio = state.tiempoActual / duration;
+  const currentLineIndex = Math.min(
+    Math.floor(progressRatio * lines.length),
+    lines.length - 1
+  );
+  
+  if (state.enReproduccion) {
+    state.lineaActivaIndex = currentLineIndex;
+    const currentLine = lines[currentLineIndex];
+    if (currentLine && currentLine.seccionId !== state.seccionActivaId) {
+      state.seccionActivaId = currentLine.seccionId;
+    }
+  }
+
+  const linesHtml = lines.map((line, idx) => {
+    const isActive = state.lineaActivaIndex === idx;
+    const lineSec = structure.find(s => s.id === line.seccionId);
+    let colorType = "cyan";
+    if (lineSec) {
+      if (lineSec.tipo === "estribillo" || lineSec.tipo === "outro") colorType = "magenta";
+      else if (lineSec.tipo === "puente" || lineSec.tipo === "pre-coro") colorType = "amber";
+    }
+    
+    const chordsHtml = line.acordes.map(ac => {
+      const transposed = transposeChord(ac.acorde, state.transposeOffset || 0);
+      return `<span class="chord-badge" style="margin-left: ${ac.posicionPalabra * 28}px">${transposed}</span>`;
+    }).join("");
+    
+    return `
+      <div id="ensayo-line-${idx}" class="lyric-line-row ${isActive ? 'active-line' : ''} color-${colorType}" data-index="${idx}">
+        <div class="line-guide-dot"></div>
+        ${line.acordes.length > 0 ? `<div class="mono line-chords-row">${chordsHtml}</div>` : ''}
+        <div class="line-lyric-text">${line.texto}</div>
+        ${isActive && activeNotas ? `<div class="line-additional-notes">${activeNotas}</div>` : ''}
+      </div>
+    `;
+  }).join("");
+
+  // Renderizar la Hoja de Ensayo Completa
+  room.innerHTML = `
+    <div class="hoja-ensayo">
+      <!-- 3.1 ENCABEZADO -->
+      <header class="ensayo-header">
+        <div class="header-left">
+          <h1 class="rj ensayo-song-title">${song.title}</h1>
+          <div class="ensayo-subtitle">Ensayo · en vivo</div>
+        </div>
+        
+        <div class="header-right">
+          <div class="transposer-wrapper">
+            <button class="chip mono chip-key" id="ensayo-key-chip">${tonalidadTranspuesta}</button>
+            <div class="transposer-dropdown glass" id="ensayo-transposer-dropdown" style="display: none;">
+              <div class="dropdown-title">Transponer</div>
+              <div class="transposer-grid">
+                ${[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5].map(offset => `
+                  <button class="transpose-btn mono ${state.transposeOffset === offset ? 'active' : ''}" data-offset="${offset}">
+                    ${offset === 0 ? 'Orig' : offset > 0 ? `+${offset}` : offset}
+                  </button>
+                `).join("")}
+              </div>
+            </div>
+          </div>
+          <span class="chip mono chip-bpm">${song.bpm} bpm</span>
+        </div>
+      </header>
+
+      <!-- 3.2 TABS DE SECCIONES -->
+      <nav class="section-navigator">
+        ${structure.map(sec => `
+          <button class="rj chip section-tab ${state.seccionActivaId === sec.id ? 'active' : ''}" data-id="${sec.id}">
+            ${sec.nombre}
+          </button>
+        `).join("")}
+      </nav>
+
+      <!-- 3.3 ÁREA DE ACORDES Y LETRA -->
+      <div class="lyric-scroll-container">
+        <div class="lyric-content-wrapper">
+          <div class="neon-guide-cable"></div>
+          ${linesHtml}
+        </div>
+      </div>
+
+      <!-- 3.4 SECCIÓN DE INTEGRANTES -->
+      <section class="ensayo-roster-section">
+        <div class="roster-title">Participación en esta sección</div>
+        <div class="roster-avatars-row">
+          ${rosterHtml}
+        </div>
+      </section>
+
+      <!-- 3.5 BARRA DE TRANSPORTE -->
+      <footer class="ensayo-transport-bar">
+        <div class="transport-left">
+          <span class="transport-label">Tono</span>
+          <span class="mono transport-val">${song.key}</span>
+        </div>
+
+        <div class="transport-center">
+          <button class="transport-btn btn-skip" id="btn-ensayo-prev">⏮</button>
+          <button class="transport-btn btn-play-pause" id="btn-ensayo-play">${state.enReproduccion ? '⏸' : '▶'}</button>
+          <button class="transport-btn btn-skip" id="btn-ensayo-next">⏭</button>
+        </div>
+
+        <button class="transport-right autoscroll-toggle ${state.autoscrollActivo ? 'active' : ''}" id="btn-ensayo-autoscroll">
+          <span class="scroll-icon">↕</span>
+          <span class="scroll-label">${state.autoscrollActivo ? 'auto' : 'manual'}</span>
+        </button>
+      </footer>
+    </div>
+  `;
+
+  bindRehearsalEvents();
+}
+
+function bindRehearsalEvents() {
+  // Transposer Dropdown toggle
+  const keyChip = document.getElementById("ensayo-key-chip");
+  const dropdown = document.getElementById("ensayo-transposer-dropdown");
+  if (keyChip && dropdown) {
+    keyChip.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+    });
+  }
+
+  document.addEventListener("click", () => {
+    const dropdown = document.getElementById("ensayo-transposer-dropdown");
+    if (dropdown) dropdown.style.display = "none";
+  });
+
+  // Transpose button click
+  document.querySelectorAll(".transpose-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const offset = parseInt(e.target.getAttribute("data-offset")) || 0;
+      state.transposeOffset = offset;
+      renderRehearsalRoom();
+      triggerEnsayoToast(`Tono ajustado: ${offset > 0 ? '+' : ''}${offset} semitonos`);
+    });
+  });
+
+  // Section Tab Navigation
+  document.querySelectorAll(".section-tab").forEach(tab => {
+    tab.addEventListener("click", (e) => {
+      const id = e.target.getAttribute("data-id");
+      const song = state.songs.find(s => s.id === state.activeSongId);
+      if (song) {
+        const lines = parseLyricsToEnsayoModel(song.lyrics);
+        const structure = getSongEstructuraEnsayo(song, lines);
+        const targetSec = structure.find(s => s.id === id);
+        if (targetSec) {
+          state.seccionActivaId = id;
+          state.lineaActivaIndex = targetSec.lineaInicio;
+          
+          // Calcular tiempo proporcional
+          const ratio = targetSec.lineaInicio / lines.length;
+          state.tiempoActual = ratio * (song.duracionSegundos || 220);
+          
+          renderRehearsalRoom();
+          scrollToEnsayoLine(targetSec.lineaInicio);
+        }
+      }
+    });
+  });
+
+  // Play / Pause Toggle
+  const btnPlay = document.getElementById("btn-ensayo-play");
+  if (btnPlay) {
+    btnPlay.addEventListener("click", () => {
+      const song = state.songs.find(s => s.id === state.activeSongId);
+      if (!song) return;
+      
+      state.enReproduccion = !state.enReproduccion;
+      
+      if (state.enReproduccion) {
+        if (!song.rutaAudio) {
+          triggerEnsayoToast("Sin archivo de audio — usando metrónomo de ensayo");
+        }
+        
+        // Iniciar intervalo de tiempo
+        const duration = song.duracionSegundos || 220;
+        const intervalMs = 200;
+        
+        if (rehearsalIntervalId) clearInterval(rehearsalIntervalId);
+        
+        rehearsalIntervalId = setInterval(() => {
+          if (!state.enReproduccion) {
+            clearInterval(rehearsalIntervalId);
+            return;
+          }
+          state.tiempoActual += (intervalMs / 1000);
+          if (state.tiempoActual >= duration) {
+            state.tiempoActual = 0;
+            state.enReproduccion = false;
+            state.lineaActivaIndex = 0;
+            clearInterval(rehearsalIntervalId);
+            renderRehearsalRoom();
+            return;
+          }
+          
+          renderRehearsalRoom();
+          if (state.autoscrollActivo) {
+            scrollToEnsayoLine(state.lineaActivaIndex);
+          }
+        }, intervalMs);
+      } else {
+        if (rehearsalIntervalId) clearInterval(rehearsalIntervalId);
+      }
+      
+      renderRehearsalRoom();
+    });
+  }
+
+  // Skip buttons
+  const btnPrev = document.getElementById("btn-ensayo-prev");
+  const btnNext = document.getElementById("btn-ensayo-next");
+  
+  if (btnPrev || btnNext) {
+    const song = state.songs.find(s => s.id === state.activeSongId);
+    if (song) {
+      const lines = parseLyricsToEnsayoModel(song.lyrics);
+      const structure = getSongEstructuraEnsayo(song, lines);
+      const currentSecIdx = structure.findIndex(s => s.id === state.seccionActivaId);
+      
+      if (btnPrev) {
+        btnPrev.addEventListener("click", () => {
+          let targetIdx = currentSecIdx - 1;
+          if (targetIdx >= 0) {
+            const targetSec = structure[targetIdx];
+            state.seccionActivaId = targetSec.id;
+            state.lineaActivaIndex = targetSec.lineaInicio;
+            state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
+            renderRehearsalRoom();
+            scrollToEnsayoLine(targetSec.lineaInicio);
+          } else {
+            state.tiempoActual = 0;
+            state.lineaActivaIndex = 0;
+            state.seccionActivaId = structure[0].id;
+            renderRehearsalRoom();
+            scrollToEnsayoLine(0);
+          }
+        });
+      }
+      
+      if (btnNext) {
+        btnNext.addEventListener("click", () => {
+          let targetIdx = currentSecIdx + 1;
+          if (targetIdx < structure.length) {
+            const targetSec = structure[targetIdx];
+            state.seccionActivaId = targetSec.id;
+            state.lineaActivaIndex = targetSec.lineaInicio;
+            state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
+            renderRehearsalRoom();
+            scrollToEnsayoLine(targetSec.lineaInicio);
+          }
+        });
+      }
+    }
+  }
+
+  // Autoscroll Toggle
+  const btnScroll = document.getElementById("btn-ensayo-autoscroll");
+  if (btnScroll) {
+    btnScroll.addEventListener("click", () => {
+      state.autoscrollActivo = !state.autoscrollActivo;
+      renderRehearsalRoom();
+      triggerEnsayoToast(state.autoscrollActivo ? "Autoscroll activado (auto)" : "Autoscroll desactivado (manual)");
+    });
+  }
+
+  // Manual scroll listener to disable autoscroll
+  const container = document.querySelector(".lyric-scroll-container");
+  if (container) {
+    container.addEventListener("scroll", () => {
+      if (state.enReproduccion && state.autoscrollActivo) {
+        state.autoscrollActivo = false;
+        // Re-renderizar para actualizar el indicador visual a manual sin detener reproducción
+        const scrollLabel = document.querySelector("#btn-ensayo-autoscroll .scroll-label");
+        const scrollIcon = document.querySelector("#btn-ensayo-autoscroll .scroll-icon");
+        const btnToggle = document.getElementById("btn-ensayo-autoscroll");
+        if (scrollLabel && scrollIcon && btnToggle) {
+          scrollLabel.textContent = "manual";
+          scrollIcon.style.color = "var(--text-muted)";
+          scrollLabel.style.color = "var(--text-muted)";
+          btnToggle.classList.remove("active");
+        }
+      }
+    });
+  }
 }
 
 function changeTimeSignature(sig) {
