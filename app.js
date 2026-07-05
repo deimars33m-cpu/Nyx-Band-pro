@@ -984,6 +984,16 @@ function switchTab(tabName) {
     if (state.autoScroll.isActive) toggleAutoScroll();
   }
   
+  // Ajustar paddings y scroll del layout principal si estamos en Ensayo
+  const mainContentEl = document.querySelector(".main-content");
+  if (mainContentEl) {
+    if (tabName === "rehearsal") {
+      mainContentEl.classList.add("ensayo-active");
+    } else {
+      mainContentEl.classList.remove("ensayo-active");
+    }
+  }
+  
   // Cerrar paneles móviles al cambiar de pestaña
   closeMobileDrawers();
   
@@ -1516,12 +1526,12 @@ function renderDesktopRehearsal(room, song, lines, structure) {
 
   const linesHtml = lines.map((line, idx) => {
     const isActive = state.lineaActivaIndex === idx;
-    const chordInputsHtml = Array.from({ length: 4 }).map((_, cidx) => {
-      const ac = line.acordes[cidx];
-      const chordVal = ac ? transposeChord(ac.acorde, state.transposeOffset || 0) : "";
+    const lineChords = line.acordes && line.acordes.length > 0 ? line.acordes : [{ acorde: "" }, { acorde: "" }];
+    const chordInputsHtml = lineChords.map((ac, cidx) => {
+      const chordVal = ac.acorde ? transposeChord(ac.acorde, state.transposeOffset || 0) : "";
       return `
-        <input class="chord-input desktop-chord-${idx}" data-line="${idx}" data-chord-idx="${cidx}" value="${chordVal}" placeholder="-" />
-        ${cidx < 3 ? '<span class="chord-separator">·</span>' : ''}
+        <input class="chord-input desktop-chord-${idx}" data-line="${idx}" data-chord-idx="${cidx}" value="${chordVal}" placeholder="" />
+        ${cidx < lineChords.length - 1 ? '<span class="chord-separator" style="flex:1;"></span>' : ''}
       `;
     }).join("");
 
