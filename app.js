@@ -1239,7 +1239,7 @@ function getSongEstructuraEnsayo(song, lines) {
       tipo: type,
       lineaInicio: startIdx,
       lineaFin: endIdx,
-      notas: type === "estribillo" ? "Coro doble aquí · entra guitarra líder" : ""
+      notas: type === "estribillo" ? "Coro doble aquí · entra guitarra líder en el 3er verso" : ""
     });
   });
   
@@ -1302,13 +1302,13 @@ function renderRehearsalRoom() {
   
   if (!state.activeSongId) {
     room.innerHTML = `
-      <div class="empty-rehearsal-state glass" style="margin: 40px auto; text-align: center; max-width: 400px; padding: 30px 20px;">
-        <div class="empty-icon" style="font-size: 40px; margin-bottom: 12px;">🎸</div>
-        <h3>Hoja de Ensayo</h3>
-        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
-          Selecciona un tema de tu REPERTORIO en la pestaña principal para iniciar el ensayo interactivo en vivo.
+      <div style="background:#0A0A14; border-radius:26px; padding:28px 20px; text-align:center; max-width:340px; border:1px solid #23213A; margin: 40px auto; font-family:'Inter',sans-serif; color:#F3F1FF;">
+        <div style="font-size: 40px; margin-bottom: 12px;">🎙️</div>
+        <h3 class="rj" style="font-size:22px; font-weight:600; color:#FF3EA5; letter-spacing:0.3px;">Ensayo en Vivo</h3>
+        <p style="color:#9C97C4; font-size:12px; margin-bottom: 20px; line-height:1.5;">
+          Selecciona un tema de tu REPERTORIO en la pestaña principal para iniciar la Hoja de Ensayo.
         </p>
-        <button class="btn btn-primary" onclick="switchTab('repertorio')" style="border-radius: 20px; padding: 8px 20px;">Ver REPERTORIO</button>
+        <button class="btn btn-primary" onclick="switchTab('repertorio')" style="border-radius:20px; font-size:12px; padding:8px 20px;">Ver REPERTORIO</button>
       </div>
     `;
     return;
@@ -1320,14 +1320,13 @@ function renderRehearsalRoom() {
   const lines = parseLyricsToEnsayoModel(song.lyrics);
   const structure = getSongEstructuraEnsayo(song, lines);
   
-  // Garantizar que la sección activa sea válida
   if (!state.seccionActivaId && structure.length > 0) {
     state.seccionActivaId = structure[0].id;
   }
   
   const tonalidadTranspuesta = transposeChord(song.key, state.transposeOffset || 0);
   const activeSec = structure.find(s => s.id === state.seccionActivaId) || structure[0];
-  const activeNotas = activeSec ? (activeSec.notas || "") : "";
+  const activeNotas = activeSec ? (activeSec.notes || activeSec.notas || "") : "";
   
   // Construir Roster de Integrantes
   const members = [
@@ -1344,13 +1343,23 @@ function renderRehearsalRoom() {
     else if (type === "solo" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
     else if (type === "verso" && m.id === "int-rodrigo") activo = false;
     
-    return `
-      <div class="roster-avatar-column ${activo ? 'active' : 'inactive'}" style="--member-color: ${m.colorAvatar}">
-        <div class="avatar-circle">${m.iniciales}</div>
-        <div class="avatar-name">${m.nombre}</div>
-        <div class="avatar-role">${activo ? m.instrumento : 'Apoyo'}</div>
-      </div>
-    `;
+    if (activo) {
+      return `
+        <div style="flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:4px; width:58px;">
+          <div style="width:38px; height:38px; border-radius:50%; background:#2A0F20; border:2px solid #FF3EA5; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:500; color:#FF9FCB; box-shadow: 0 0 10px rgba(255, 62, 165, 0.35);">${m.iniciales}</div>
+          <div style="font-size:10px; color:#F3F1FF; text-align:center;">${m.nombre}</div>
+          <div style="font-size:9px; color:#6E699A; text-align:center;">${m.instrumento}</div>
+        </div>
+      `;
+    } else {
+      return `
+        <div style="flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:4px; width:58px; opacity:0.5;">
+          <div style="width:38px; height:38px; border-radius:50%; background:#151329; border:1px solid #2A2840; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:500; color:#9C97C4;">${m.iniciales}</div>
+          <div style="font-size:10px; color:#9C97C4; text-align:center;">${m.nombre}</div>
+          <div style="font-size:9px; color:#6E699A; text-align:center;">${m.instrumento}</div>
+        </div>
+      `;
+    }
   }).join("");
 
   // Construir las líneas de letra y acordes
@@ -1372,98 +1381,122 @@ function renderRehearsalRoom() {
   const linesHtml = lines.map((line, idx) => {
     const isActive = state.lineaActivaIndex === idx;
     const lineSec = structure.find(s => s.id === line.seccionId);
-    let colorType = "cyan";
+    let colorType = "#29F0D6"; // default cyan
     if (lineSec) {
-      if (lineSec.tipo === "estribillo" || lineSec.tipo === "outro") colorType = "magenta";
-      else if (lineSec.tipo === "puente" || lineSec.tipo === "pre-coro") colorType = "amber";
+      if (lineSec.tipo === "estribillo" || lineSec.tipo === "outro") colorType = "#FF3EA5"; // magenta
+      else if (lineSec.tipo === "puente" || lineSec.tipo === "pre-coro") colorType = "#FFD23F"; // amber
     }
     
     const chordsHtml = line.acordes.map(ac => {
       const transposed = transposeChord(ac.acorde, state.transposeOffset || 0);
-      return `<span class="chord-badge" style="margin-left: ${ac.posicionPalabra * 28}px">${transposed}</span>`;
+      return `<span style="font-weight:500;">${transposed}</span>`;
     }).join("");
     
-    return `
-      <div id="ensayo-line-${idx}" class="lyric-line-row ${isActive ? 'active-line' : ''} color-${colorType}" data-index="${idx}">
-        <div class="line-guide-dot"></div>
-        ${line.acordes.length > 0 ? `<div class="mono line-chords-row">${chordsHtml}</div>` : ''}
-        <div class="line-lyric-text">${line.texto}</div>
-        ${isActive && activeNotas ? `<div class="line-additional-notes">${activeNotas}</div>` : ''}
-      </div>
-    `;
+    if (isActive) {
+      return `
+        <div id="ensayo-line-${idx}" style="position:relative; background:rgba(255,62,165,0.07); border-left:2px solid #FF3EA5; border-radius:0 8px 8px 0; padding:8px 10px; margin-left:-10px; margin-bottom:14px; transition:all 0.28s;">
+          <div style="position:absolute; left:-18px; top:11px; width:8px; height:8px; border-radius:50%; background:#FF3EA5; box-shadow:0 0 10px #FF3EA5;"></div>
+          ${line.acordes.length > 0 ? `
+            <div class="mono" style="font-size:12px; color:#FF3EA5; display:flex; gap:30px; margin-bottom:3px;">
+              ${line.acordes.map(ac => `<span style="font-weight:500;">${transposeChord(ac.acorde, state.transposeOffset || 0)}</span>`).join("")}
+            </div>
+          ` : ''}
+          <div style="font-size:14px; color:#F3F1FF; line-height:1.5; font-weight:500;">${line.texto}</div>
+          ${activeNotas ? `<div style="font-size:11px; color:#D48FB0; margin-top:4px;">${activeNotas}</div>` : ''}
+        </div>
+      `;
+    } else {
+      return `
+        <div id="ensayo-line-${idx}" style="position:relative; margin-bottom:14px; transition:all 0.28s;">
+          <div style="position:absolute; left:-18px; top:2px; width:8px; height:8px; border-radius:50%; background:${colorType}; box-shadow:0 0 6px ${colorType};"></div>
+          ${line.acordes.length > 0 ? `
+            <div class="mono" style="font-size:12px; color:${colorType}; display:flex; gap:26px; margin-bottom:3px;">
+              ${line.acordes.map(ac => `<span style="font-weight:500;">${transposeChord(ac.acorde, state.transposeOffset || 0)}</span>`).join("")}
+            </div>
+          ` : ''}
+          <div style="font-size:14px; color:#F3F1FF; line-height:1.5;">${line.texto}</div>
+        </div>
+      `;
+    }
   }).join("");
 
   // Renderizar la Hoja de Ensayo Completa
   room.innerHTML = `
-    <div class="hoja-ensayo">
-      <!-- 3.1 ENCABEZADO -->
-      <header class="ensayo-header">
-        <div class="header-left">
-          <h1 class="rj ensayo-song-title">${song.title}</h1>
-          <div class="ensayo-subtitle">Ensayo · en vivo</div>
-        </div>
+    <div style="background:transparent; display:flex; justify-content:center; padding:10px 0;">
+      <div class="hoja-ensayo" style="width:340px; background:#0A0A14; border-radius:26px; padding:16px 15px 14px; font-family:'Inter',sans-serif; color:#F3F1FF; border:1px solid #23213A; display:flex; flex-direction:column; box-sizing:border-box;">
         
-        <div class="header-right">
-          <div class="transposer-wrapper">
-            <button class="chip mono chip-key" id="ensayo-key-chip">${tonalidadTranspuesta}</button>
-            <div class="transposer-dropdown glass" id="ensayo-transposer-dropdown" style="display: none;">
-              <div class="dropdown-title">Transponer</div>
-              <div class="transposer-grid">
-                ${[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5].map(offset => `
-                  <button class="transpose-btn mono ${state.transposeOffset === offset ? 'active' : ''}" data-offset="${offset}">
+        <!-- 3.1 ENCABEZADO -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+          <div>
+            <div class="rj" id="ensayo-title-click" style="font-size:22px; font-weight:600; letter-spacing:0.3px; color:#FF3EA5; text-shadow:0 0 10px rgba(255, 62, 165, 0.4); cursor:pointer;">${song.title}</div>
+            <div style="font-size:11px; color:#9C97C4; margin-top:1px;">Ensayo · en vivo</div>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; position:relative;">
+            <button class="chip mono" id="ensayo-key-chip" style="background:rgba(41,240,214,0.12); color:#29F0D6; border:1px solid rgba(41,240,214,0.35); cursor:pointer; outline:none;">
+              ${tonalidadTranspuesta}
+            </button>
+            <div class="transposer-dropdown glass" id="ensayo-transposer-dropdown" style="display:none; position:absolute; top:30px; right:0; width:160px; background:rgba(10,10,20,0.95); border:1px solid #23213A; border-radius:12px; padding:8px; z-index:100; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+              <div class="dropdown-title" style="font-size:10px; color:#6E699A; margin-bottom:6px; text-transform:uppercase;">Transponer</div>
+              <div class="transposer-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px;">
+                ${[-3, -2, -1, 0, 1, 2, 3].map(offset => `
+                  <button class="transpose-btn mono ${state.transposeOffset === offset ? 'active' : ''}" data-offset="${offset}" style="background:rgba(255,255,255,0.03); border:1px solid #2A2840; color:#F3F1FF; font-size:10px; padding:3px 0; border-radius:4px; cursor:pointer;">
                     ${offset === 0 ? 'Orig' : offset > 0 ? `+${offset}` : offset}
                   </button>
                 `).join("")}
               </div>
             </div>
+            <span class="chip mono" style="background:rgba(255,210,63,0.12); color:#FFD23F; border:1px solid rgba(255,210,63,0.35);">${song.bpm} bpm</span>
           </div>
-          <span class="chip mono chip-bpm">${song.bpm} bpm</span>
         </div>
-      </header>
 
-      <!-- 3.2 TABS DE SECCIONES -->
-      <nav class="section-navigator">
-        ${structure.map(sec => `
-          <button class="rj chip section-tab ${state.seccionActivaId === sec.id ? 'active' : ''}" data-id="${sec.id}">
-            ${sec.nombre}
-          </button>
-        `).join("")}
-      </nav>
-
-      <!-- 3.3 ÁREA DE ACORDES Y LETRA -->
-      <div class="lyric-scroll-container">
-        <div class="lyric-content-wrapper">
-          <div class="neon-guide-cable"></div>
-          ${linesHtml}
+        <!-- 3.2 TABS DE SECCIONES -->
+        <div style="display:flex; gap:6px; overflow-x:auto; margin-bottom:16px; padding-bottom:4px;">
+          ${structure.map(sec => {
+            const isActive = state.seccionActivaId === sec.id;
+            if (isActive) {
+              return `<button class="rj chip section-tab" data-id="${sec.id}" style="background:#FF3EA5; color:#3C0A2A; border:1px solid #FF3EA5; font-size:12px; font-weight:600; cursor:pointer; outline:none;">${sec.nombre}</button>`;
+            } else {
+              return `<button class="rj chip section-tab" data-id="${sec.id}" style="background:transparent; color:#6E699A; border:1px solid #2A2840; font-size:12px; cursor:pointer; outline:none;">${sec.nombre}</button>`;
+            }
+          }).join("")}
         </div>
+
+        <!-- 3.3 ÁREA DE ACORDES Y LETRA -->
+        <div class="lyric-scroll-container" style="position:relative; padding-left:18px; margin-bottom:16px; max-height:280px; overflow-y:auto; scroll-behavior:smooth;">
+          <div style="position:absolute; left:5px; top:2px; bottom:2px; width:2px; background:linear-gradient(#29F0D6,#29F0D6); opacity:0.35; box-shadow:0 0 6px #29F0D6;"></div>
+          <div class="lyric-content-wrapper">
+            ${linesHtml}
+          </div>
+        </div>
+
+        <!-- 3.4 SECCIÓN DE INTEGRANTES -->
+        <div style="border-top:1px solid #23213A; padding-top:12px; margin-bottom:14px;">
+          <div style="font-size:11px; color:#6E699A; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Participación en esta sección</div>
+          <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
+            ${rosterHtml}
+          </div>
+        </div>
+
+        <!-- 3.5 BARRA DE TRANSPORTE -->
+        <div style="display:flex; align-items:center; justify-content:space-between; background:#111022; border:1px solid #23213A; border-radius:16px; padding:8px 14px;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:11px; color:#6E699A;">Tono</span>
+            <span class="mono" style="font-size:12px; color:#F3F1FF;">${song.key}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px;">
+            <i class="ti ti-player-skip-back" style="font-size:18px; color:#9C97C4; cursor:pointer;" id="btn-ensayo-prev"></i>
+            <div style="width:34px; height:34px; border-radius:50%; background:#FF3EA5; display:flex; align-items:center; justify-content:center; cursor:pointer;" id="btn-ensayo-play">
+              <i class="ti ${state.enReproduccion ? 'ti-player-pause' : 'ti-player-play'}" style="font-size:16px; color:#3C0A2A;" id="btn-ensayo-play-icon"></i>
+            </div>
+            <i class="ti ti-player-skip-forward" style="font-size:18px; color:#9C97C4; cursor:pointer;" id="btn-ensayo-next"></i>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; cursor:pointer;" id="btn-ensayo-autoscroll">
+            <i class="ti ti-arrows-vertical" style="font-size:15px; color:${state.autoscrollActivo ? '#29F0D6' : '#9C97C4'};" id="autoscroll-icon"></i>
+            <span style="font-size:10px; color:${state.autoscrollActivo ? '#29F0D6' : '#9C97C4'};" id="autoscroll-label">${state.autoscrollActivo ? 'auto' : 'manual'}</span>
+          </div>
+        </div>
+
       </div>
-
-      <!-- 3.4 SECCIÓN DE INTEGRANTES -->
-      <section class="ensayo-roster-section">
-        <div class="roster-title">Participación en esta sección</div>
-        <div class="roster-avatars-row">
-          ${rosterHtml}
-        </div>
-      </section>
-
-      <!-- 3.5 BARRA DE TRANSPORTE -->
-      <footer class="ensayo-transport-bar">
-        <div class="transport-left">
-          <span class="transport-label">Tono</span>
-          <span class="mono transport-val">${song.key}</span>
-        </div>
-
-        <div class="transport-center">
-          <button class="transport-btn btn-skip" id="btn-ensayo-prev">⏮</button>
-          <button class="transport-btn btn-play-pause" id="btn-ensayo-play">${state.enReproduccion ? '⏸' : '▶'}</button>
-          <button class="transport-btn btn-skip" id="btn-ensayo-next">⏭</button>
-        </div>
-
-        <button class="transport-right autoscroll-toggle ${state.autoscrollActivo ? 'active' : ''}" id="btn-ensayo-autoscroll">
-          <span class="scroll-icon">↕</span>
-          <span class="scroll-label">${state.autoscrollActivo ? 'auto' : 'manual'}</span>
-        </button>
-      </footer>
     </div>
   `;
 
@@ -1471,6 +1504,13 @@ function renderRehearsalRoom() {
 }
 
 function bindRehearsalEvents() {
+  const titleClick = document.getElementById("ensayo-title-click");
+  if (titleClick) {
+    titleClick.addEventListener("click", () => {
+      triggerEnsayoToast("Abriendo editor de acordes...");
+    });
+  }
+
   // Transposer Dropdown toggle
   const keyChip = document.getElementById("ensayo-key-chip");
   const dropdown = document.getElementById("ensayo-transposer-dropdown");
@@ -1534,7 +1574,6 @@ function bindRehearsalEvents() {
           triggerEnsayoToast("Sin archivo de audio — usando metrónomo de ensayo");
         }
         
-        // Iniciar intervalo de tiempo
         const duration = song.duracionSegundos || 220;
         const intervalMs = 200;
         
@@ -1631,15 +1670,12 @@ function bindRehearsalEvents() {
     container.addEventListener("scroll", () => {
       if (state.enReproduccion && state.autoscrollActivo) {
         state.autoscrollActivo = false;
-        // Re-renderizar para actualizar el indicador visual a manual sin detener reproducción
-        const scrollLabel = document.querySelector("#btn-ensayo-autoscroll .scroll-label");
-        const scrollIcon = document.querySelector("#btn-ensayo-autoscroll .scroll-icon");
-        const btnToggle = document.getElementById("btn-ensayo-autoscroll");
-        if (scrollLabel && scrollIcon && btnToggle) {
+        const scrollLabel = document.getElementById("autoscroll-label");
+        const scrollIcon = document.getElementById("autoscroll-icon");
+        if (scrollLabel && scrollIcon) {
           scrollLabel.textContent = "manual";
-          scrollIcon.style.color = "var(--text-muted)";
-          scrollLabel.style.color = "var(--text-muted)";
-          btnToggle.classList.remove("active");
+          scrollLabel.style.color = "#9C97C4";
+          scrollIcon.style.color = "#9C97C4";
         }
       }
     });
