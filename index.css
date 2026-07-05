@@ -1,10 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Caveat:wght@400;600;700&display=swap');
 
 :root {
+  /* Colors from BandSync Rehearsal Mockup */
+  --bg-stage: #0A0A14;
+  --bg-panel: #111022;
+  --bg-card: #151329;
+  --border: #23213A;
+  --border-soft: #2A2840;
+  --magenta: #FF3EA5;
+  --magenta-dim: rgba(255, 62, 165, 0.15);
+  --magenta-light: rgba(255, 62, 165, 0.08);
+  --cyan: #29F0D6;
+  --cyan-dim: rgba(41, 240, 214, 0.15);
+  --amber: #FFD23F;
+  --text: #F3F1FF;
+  --text-muted: #9C97C4;
+  --text-dim: #6E699A;
+
   /* Colors from CSGOstar design system (Matte Dark & High Neon) */
   --bg-primary: #131417;        /* Soft matte black-gray */
   --bg-secondary: #181920;      /* Slightly lighter dark background */
-  --bg-card: #1e2028;           /* Level 1 Cards */
   --bg-card-hover: #262933;     /* Level 2 Active/Hover cards */
   --border-color: #2b2e3a;      /* Muted borders */
   --border-hover: #00ff66;      /* Active borders (Neon Green) */
