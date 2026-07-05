@@ -1324,11 +1324,18 @@ function renderRehearsalRoom() {
     state.seccionActivaId = structure[0].id;
   }
   
+  if (window.innerWidth < 768) {
+    renderMobileRehearsal(room, song, lines, structure);
+  } else {
+    renderDesktopRehearsal(room, song, lines, structure);
+  }
+}
+
+function renderMobileRehearsal(room, song, lines, structure) {
   const tonalidadTranspuesta = transposeChord(song.key, state.transposeOffset || 0);
   const activeSec = structure.find(s => s.id === state.seccionActivaId) || structure[0];
   const activeNotas = activeSec ? (activeSec.notes || activeSec.notas || "") : "";
   
-  // Construir Roster de Integrantes
   const members = [
     { id: "int-camila", nombre: "Camila", instrumento: "Voz", colorAvatar: "#FF3EA5", iniciales: "CA" },
     { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro", colorAvatar: "#FF3EA5", iniciales: "RO" },
@@ -1362,7 +1369,6 @@ function renderRehearsalRoom() {
     }
   }).join("");
 
-  // Construir las líneas de letra y acordes
   const duration = song.duracionSegundos || 220;
   const progressRatio = state.tiempoActual / duration;
   const currentLineIndex = Math.min(
@@ -1381,16 +1387,11 @@ function renderRehearsalRoom() {
   const linesHtml = lines.map((line, idx) => {
     const isActive = state.lineaActivaIndex === idx;
     const lineSec = structure.find(s => s.id === line.seccionId);
-    let colorType = "#29F0D6"; // default cyan
+    let colorType = "#29F0D6";
     if (lineSec) {
-      if (lineSec.tipo === "estribillo" || lineSec.tipo === "outro") colorType = "#FF3EA5"; // magenta
-      else if (lineSec.tipo === "puente" || lineSec.tipo === "pre-coro") colorType = "#FFD23F"; // amber
+      if (lineSec.tipo === "estribillo" || lineSec.tipo === "outro") colorType = "#FF3EA5";
+      else if (lineSec.tipo === "puente" || lineSec.tipo === "pre-coro") colorType = "#FFD23F";
     }
-    
-    const chordsHtml = line.acordes.map(ac => {
-      const transposed = transposeChord(ac.acorde, state.transposeOffset || 0);
-      return `<span style="font-weight:500;">${transposed}</span>`;
-    }).join("");
     
     if (isActive) {
       return `
@@ -1420,12 +1421,10 @@ function renderRehearsalRoom() {
     }
   }).join("");
 
-  // Renderizar la Hoja de Ensayo Completa
   room.innerHTML = `
     <div style="background:transparent; display:flex; justify-content:center; padding:10px 0;">
       <div class="hoja-ensayo" style="width:340px; background:#0A0A14; border-radius:26px; padding:16px 15px 14px; font-family:'Inter',sans-serif; color:#F3F1FF; border:1px solid #23213A; display:flex; flex-direction:column; box-sizing:border-box;">
         
-        <!-- 3.1 ENCABEZADO -->
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
           <div>
             <div class="rj" id="ensayo-title-click" style="font-size:22px; font-weight:600; letter-spacing:0.3px; color:#FF3EA5; text-shadow:0 0 10px rgba(255, 62, 165, 0.4); cursor:pointer;">${song.title}</div>
@@ -1449,7 +1448,6 @@ function renderRehearsalRoom() {
           </div>
         </div>
 
-        <!-- 3.2 TABS DE SECCIONES -->
         <div style="display:flex; gap:6px; overflow-x:auto; margin-bottom:16px; padding-bottom:4px;">
           ${structure.map(sec => {
             const isActive = state.seccionActivaId === sec.id;
@@ -1461,7 +1459,6 @@ function renderRehearsalRoom() {
           }).join("")}
         </div>
 
-        <!-- 3.3 ÁREA DE ACORDES Y LETRA -->
         <div class="lyric-scroll-container" style="position:relative; padding-left:18px; margin-bottom:16px; max-height:280px; overflow-y:auto; scroll-behavior:smooth;">
           <div style="position:absolute; left:5px; top:2px; bottom:2px; width:2px; background:linear-gradient(#29F0D6,#29F0D6); opacity:0.35; box-shadow:0 0 6px #29F0D6;"></div>
           <div class="lyric-content-wrapper">
@@ -1469,7 +1466,6 @@ function renderRehearsalRoom() {
           </div>
         </div>
 
-        <!-- 3.4 SECCIÓN DE INTEGRANTES -->
         <div style="border-top:1px solid #23213A; padding-top:12px; margin-bottom:14px;">
           <div style="font-size:11px; color:#6E699A; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Participación en esta sección</div>
           <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
@@ -1477,7 +1473,6 @@ function renderRehearsalRoom() {
           </div>
         </div>
 
-        <!-- 3.5 BARRA DE TRANSPORTE -->
         <div style="display:flex; align-items:center; justify-content:space-between; background:#111022; border:1px solid #23213A; border-radius:16px; padding:8px 14px;">
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:11px; color:#6E699A;">Tono</span>
@@ -1495,23 +1490,207 @@ function renderRehearsalRoom() {
             <span style="font-size:10px; color:${state.autoscrollActivo ? '#29F0D6' : '#9C97C4'};" id="autoscroll-label">${state.autoscrollActivo ? 'auto' : 'manual'}</span>
           </div>
         </div>
-
       </div>
     </div>
   `;
 
-  bindRehearsalEvents();
+  bindMobileRehearsalEvents(structure, lines, song);
 }
 
-function bindRehearsalEvents() {
+function renderDesktopRehearsal(room, song, lines, structure) {
+  const tonalidadTranspuesta = transposeChord(song.key, state.transposeOffset || 0);
+  const activeSec = structure.find(s => s.id === state.seccionActivaId) || structure[0];
+  const activeNotas = activeSec ? (activeSec.notes || activeSec.notas || "") : "";
+
+  const structureHtml = structure.map(sec => {
+    const isActive = state.seccionActivaId === sec.id;
+    return `
+      <div class="section-item ${isActive ? 'active' : ''}" data-id="${sec.id}">
+        <i class="ti ti-music section-icon"></i>
+        <div class="section-label">${sec.nombre}</div>
+        <div class="section-time">0:30</div>
+        <i class="ti ti-menu-2 section-menu"></i>
+      </div>
+    `;
+  }).join("");
+
+  const linesHtml = lines.map((line, idx) => {
+    const isActive = state.lineaActivaIndex === idx;
+    const chordInputsHtml = Array.from({ length: 4 }).map((_, cidx) => {
+      const ac = line.acordes[cidx];
+      const chordVal = ac ? transposeChord(ac.acorde, state.transposeOffset || 0) : "";
+      return `
+        <input class="chord-input desktop-chord-${idx}" data-line="${idx}" data-chord-idx="${cidx}" value="${chordVal}" placeholder="-" />
+        ${cidx < 3 ? '<span class="chord-separator">·</span>' : ''}
+      `;
+    }).join("");
+
+    return `
+      <div class="lyric-line-editor ${isActive ? 'active' : ''}" id="ensayo-line-${idx}" data-index="${idx}">
+        <span class="line-number">${idx + 1}</span>
+        <div class="lyric-chords">
+          ${chordInputsHtml}
+        </div>
+        <input class="lyric-text-input" id="desktop-text-${idx}" data-line="${idx}" value="${line.texto}" />
+        ${isActive && activeNotas ? `<div class="lyric-notes">💡 ${activeNotas}</div>` : ''}
+        <div class="lyric-controls">
+          <button class="btn-small btn-desktop-duplicate" data-index="${idx}"><i class="ti ti-copy"></i> Duplicar</button>
+          <button class="btn-small btn-desktop-delete" data-index="${idx}" style="color:#E24B4A;"><i class="ti ti-trash"></i> Eliminar</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const members = [
+    { id: "int-camila", nombre: "Camila", instrumento: "Voz", colorAvatar: "#FF3EA5", iniciales: "CA" },
+    { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro", colorAvatar: "#FF3EA5", iniciales: "RO" },
+    { id: "int-julian", nombre: "Julián", instrumento: "Bajo", colorAvatar: "#29F0D6", iniciales: "JU" },
+    { id: "int-male", nombre: "Male", instrumento: "Batería", colorAvatar: "#FFD23F", iniciales: "MA" },
+    { id: "int-franco", nombre: "Franco", instrumento: "Teclado", colorAvatar: "#29F0D6", iniciales: "FR" }
+  ];
+
+  const type = activeSec ? activeSec.tipo : "verso";
+  const participantsHtml = members.map(m => {
+    let activo = true;
+    if (type === "intro" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
+    else if (type === "solo" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
+    else if (type === "verso" && m.id === "int-rodrigo") activo = false;
+    
+    return `
+      <div class="participant-card ${activo ? 'active' : ''}" data-id="${m.id}">
+        <div class="participant-avatar">${m.iniciales}</div>
+        <div class="participant-info">
+          <div class="participant-name">${m.nombre}</div>
+          <div class="participant-role">${m.instrumento}</div>
+        </div>
+        <i class="ti ti-check participant-check" style="font-size:14px; color:var(--cyan);"></i>
+      </div>
+    `;
+  }).join("");
+
+  const duration = song.duracionSegundos || 220;
+  const progressPercent = (state.tiempoActual / duration) * 100;
+
+  room.innerHTML = `
+    <div class="layout">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="topbar-title">${song.title}</div>
+          <div class="topbar-meta">
+            <span class="meta-chip meta-chip-cyan mono" id="ensayo-key-chip">${tonalidadTranspuesta}</span>
+            <div class="transposer-dropdown glass" id="ensayo-transposer-dropdown" style="display:none; position:absolute; top:45px; right:auto; width:160px; background:rgba(10,10,20,0.95); border:1px solid #23213A; border-radius:12px; padding:8px; z-index:100; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+              <div class="dropdown-title" style="font-size:10px; color:#6E699A; margin-bottom:6px; text-transform:uppercase;">Transponer</div>
+              <div class="transposer-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px;">
+                ${[-3, -2, -1, 0, 1, 2, 3].map(offset => `
+                  <button class="transpose-btn mono ${state.transposeOffset === offset ? 'active' : ''}" data-offset="${offset}" style="background:rgba(255,255,255,0.03); border:1px solid #2A2840; color:#F3F1FF; font-size:10px; padding:3px 0; border-radius:4px; cursor:pointer;">
+                    ${offset === 0 ? 'Orig' : offset > 0 ? `+${offset}` : offset}
+                  </button>
+                `).join("")}
+              </div>
+            </div>
+            <span class="meta-chip meta-chip-amber mono">${song.bpm} bpm</span>
+            <span class="meta-chip" style="color:var(--text-dim); border-color:var(--border-soft);">Versión: ensayo</span>
+            <span class="meta-chip" style="color:var(--text-dim); border-color:var(--border-soft);">${formatTime(duration)}</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <button class="btn" onclick="alert('Descargar como PDF')"><i class="ti ti-download" style="font-size:14px; margin-right:4px;"></i> PDF</button>
+          <button class="btn" onclick="alert('Descargar como imagen')"><i class="ti ti-photo" style="font-size:14px; margin-right:4px;"></i> Imagen</button>
+          <button class="btn-primary" id="btn-desktop-save"><i class="ti ti-check" style="font-size:14px; margin-right:6px;"></i> Guardar</button>
+        </div>
+      </div>
+
+      <div class="main-content-ensayo">
+        <div class="left-sidebar-ensayo">
+          <div class="sidebar-title">Estructura</div>
+          <div class="section-tree">${structureHtml}</div>
+          <div class="add-section-btn" id="btn-desktop-add-sec"><i class="ti ti-plus" style="font-size:12px; margin-right:4px;"></i> Nueva sección</div>
+        </div>
+
+        <div class="center-pane-ensayo">
+          <div class="editor-tabs">
+            <button class="editor-tab active"><i class="ti ti-edit" style="font-size:12px; margin-right:4px;"></i> Acordes</button>
+            <button class="editor-tab" onclick="alert('Notas de referencia cargadas')"><i class="ti ti-music" style="font-size:12px; margin-right:4px;"></i> Notas de referencia</button>
+            <button class="editor-tab" onclick="alert('Historial de Grabación de Audio')"><i class="ti ti-volume-2" style="font-size:12px; margin-right:4px;"></i> Audio</button>
+          </div>
+          <div class="lyrics-editor">${linesHtml}</div>
+        </div>
+
+        <div class="right-sidebar-ensayo">
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">Propiedades de la sección</div>
+            <div class="property-row">
+              <label class="property-label">Nombre</label>
+              <input class="property-input" id="desktop-sec-name-input" value="${activeSec ? activeSec.nombre : 'Sin sección'}" />
+            </div>
+            <div class="property-row">
+              <label class="property-label">Tipo</label>
+              <select class="property-input" id="desktop-sec-type-select">
+                <option value="verso" ${type === 'verso' ? 'selected' : ''}>Verso</option>
+                <option value="estribillo" ${type === 'estribillo' ? 'selected' : ''}>Estribillo</option>
+                <option value="puente" ${type === 'puente' ? 'selected' : ''}>Puente</option>
+                <option value="intro" ${type === 'intro' ? 'selected' : ''}>Intro</option>
+                <option value="outro" ${type === 'outro' ? 'selected' : ''}>Outro</option>
+                <option value="solo" ${type === 'solo' ? 'selected' : ''}>Solo</option>
+              </select>
+            </div>
+            <div class="property-row">
+              <label class="property-label">Notas</label>
+              <input class="property-input" id="desktop-sec-notes-input" value="${activeNotas}" placeholder="Notas de sección..." />
+            </div>
+          </div>
+
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">Participantes</div>
+            <div class="participants-grid">${participantsHtml}</div>
+            <div class="add-participant-btn" onclick="alert('Agregar nuevo integrante')"><i class="ti ti-plus"></i> Agregar músico</div>
+          </div>
+
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">Notas de línea</div>
+            <textarea class="property-input" id="desktop-line-notes-textarea" rows="4" placeholder="Notas de ensayo para esta línea..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="transport-bar-ensayo">
+        <div class="transport-group">
+          <button class="btn-icon" id="btn-desktop-prev"><i class="ti ti-player-skip-back"></i></button>
+          <button class="play-btn" id="btn-desktop-play"><i class="ti ${state.enReproduccion ? 'ti-player-pause' : 'ti-player-play'}"></i></button>
+          <button class="btn-icon" id="btn-desktop-next"><i class="ti ti-player-skip-forward"></i></button>
+        </div>
+        <div class="transport-group" style="flex:1; gap:12px;">
+          <span class="time-display">${formatTime(state.tiempoActual)}</span>
+          <div class="progress-bar" id="desktop-progress-bar"><div class="progress-fill" style="width: ${progressPercent}%;"></div></div>
+          <span class="time-display">${formatTime(duration)}</span>
+        </div>
+        <div class="transport-controls">
+          <div class="control-group"><span class="control-label">Tono:</span><span class="control-value">${song.key}</span></div>
+          <div class="control-group"><span class="control-label">Transponer:</span><div class="transpose-btns"><button class="tp-btn" id="btn-desktop-tp-down">−</button><input class="control-input" id="desktop-tp-val" value="${state.transposeOffset || 0}" style="width:40px; text-align:center;" readonly /><button class="tp-btn" id="btn-desktop-tp-up">+</button></div></div>
+          <div class="control-group"><button class="btn-icon ${state.autoscrollActivo ? 'active' : ''}" id="btn-desktop-autoscroll" style="color: ${state.autoscrollActivo ? 'var(--cyan)' : 'var(--text-muted)'};" title="Autoscroll"><i class="ti ti-arrows-vertical"></i></button></div>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="modalAddSection">
+        <div class="modal-box">
+          <div class="modal-title">Nueva sección</div>
+          <div class="modal-field"><label class="modal-label">Nombre</label><input class="modal-input" id="modal-sec-name" placeholder="Ej: Verso 3, Puente, Solo..." /></div>
+          <div class="modal-field"><label class="modal-label">Tipo</label><select class="modal-input" id="modal-sec-type"><option value="verso">Verso</option><option value="estribillo" selected>Estribillo</option><option value="puente">Puente</option><option value="intro">Intro</option><option value="outro">Outro</option><option value="solo">Solo</option></select></div>
+          <div class="modal-buttons"><button class="modal-btn" id="btn-modal-cancel">Cancelar</button><button class="modal-btn modal-btn-primary" id="btn-modal-create">Crear</button></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  bindDesktopRehearsalEvents(structure, lines, song);
+}
+
+function bindMobileRehearsalEvents(structure, lines, song) {
   const titleClick = document.getElementById("ensayo-title-click");
   if (titleClick) {
-    titleClick.addEventListener("click", () => {
-      triggerEnsayoToast("Abriendo editor de acordes...");
-    });
+    titleClick.addEventListener("click", () => triggerEnsayoToast("Abriendo editor de acordes..."));
   }
 
-  // Transposer Dropdown toggle
   const keyChip = document.getElementById("ensayo-key-chip");
   const dropdown = document.getElementById("ensayo-transposer-dropdown");
   if (keyChip && dropdown) {
@@ -1521,12 +1700,6 @@ function bindRehearsalEvents() {
     });
   }
 
-  document.addEventListener("click", () => {
-    const dropdown = document.getElementById("ensayo-transposer-dropdown");
-    if (dropdown) dropdown.style.display = "none";
-  });
-
-  // Transpose button click
   document.querySelectorAll(".transpose-btn").forEach(btn => {
     btn.addEventListener("click", (e) => {
       const offset = parseInt(e.target.getAttribute("data-offset")) || 0;
@@ -1536,151 +1709,253 @@ function bindRehearsalEvents() {
     });
   });
 
-  // Section Tab Navigation
   document.querySelectorAll(".section-tab").forEach(tab => {
     tab.addEventListener("click", (e) => {
       const id = e.target.getAttribute("data-id");
-      const song = state.songs.find(s => s.id === state.activeSongId);
-      if (song) {
-        const lines = parseLyricsToEnsayoModel(song.lyrics);
-        const structure = getSongEstructuraEnsayo(song, lines);
-        const targetSec = structure.find(s => s.id === id);
-        if (targetSec) {
-          state.seccionActivaId = id;
-          state.lineaActivaIndex = targetSec.lineaInicio;
-          
-          // Calcular tiempo proporcional
-          const ratio = targetSec.lineaInicio / lines.length;
-          state.tiempoActual = ratio * (song.duracionSegundos || 220);
-          
-          renderRehearsalRoom();
-          scrollToEnsayoLine(targetSec.lineaInicio);
-        }
+      const targetSec = structure.find(s => s.id === id);
+      if (targetSec) {
+        state.seccionActivaId = id;
+        state.lineaActivaIndex = targetSec.lineaInicio;
+        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
+        renderRehearsalRoom();
+        scrollToEnsayoLine(targetSec.lineaInicio);
       }
     });
   });
 
-  // Play / Pause Toggle
   const btnPlay = document.getElementById("btn-ensayo-play");
   if (btnPlay) {
     btnPlay.addEventListener("click", () => {
-      const song = state.songs.find(s => s.id === state.activeSongId);
-      if (!song) return;
-      
-      state.enReproduccion = !state.enReproduccion;
-      
-      if (state.enReproduccion) {
-        if (!song.rutaAudio) {
-          triggerEnsayoToast("Sin archivo de audio — usando metrónomo de ensayo");
-        }
-        
-        const duration = song.duracionSegundos || 220;
-        const intervalMs = 200;
-        
-        if (rehearsalIntervalId) clearInterval(rehearsalIntervalId);
-        
-        rehearsalIntervalId = setInterval(() => {
-          if (!state.enReproduccion) {
-            clearInterval(rehearsalIntervalId);
-            return;
-          }
-          state.tiempoActual += (intervalMs / 1000);
-          if (state.tiempoActual >= duration) {
-            state.tiempoActual = 0;
-            state.enReproduccion = false;
-            state.lineaActivaIndex = 0;
-            clearInterval(rehearsalIntervalId);
-            renderRehearsalRoom();
-            return;
-          }
-          
-          renderRehearsalRoom();
-          if (state.autoscrollActivo) {
-            scrollToEnsayoLine(state.lineaActivaIndex);
-          }
-        }, intervalMs);
-      } else {
-        if (rehearsalIntervalId) clearInterval(rehearsalIntervalId);
-      }
-      
-      renderRehearsalRoom();
+      togglePlayState(song, lines);
     });
   }
 
-  // Skip buttons
   const btnPrev = document.getElementById("btn-ensayo-prev");
   const btnNext = document.getElementById("btn-ensayo-next");
-  
-  if (btnPrev || btnNext) {
-    const song = state.songs.find(s => s.id === state.activeSongId);
-    if (song) {
-      const lines = parseLyricsToEnsayoModel(song.lyrics);
-      const structure = getSongEstructuraEnsayo(song, lines);
-      const currentSecIdx = structure.findIndex(s => s.id === state.seccionActivaId);
-      
-      if (btnPrev) {
-        btnPrev.addEventListener("click", () => {
-          let targetIdx = currentSecIdx - 1;
-          if (targetIdx >= 0) {
-            const targetSec = structure[targetIdx];
-            state.seccionActivaId = targetSec.id;
-            state.lineaActivaIndex = targetSec.lineaInicio;
-            state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
-            renderRehearsalRoom();
-            scrollToEnsayoLine(targetSec.lineaInicio);
-          } else {
-            state.tiempoActual = 0;
-            state.lineaActivaIndex = 0;
-            state.seccionActivaId = structure[0].id;
-            renderRehearsalRoom();
-            scrollToEnsayoLine(0);
-          }
-        });
+  const currentSecIdx = structure.findIndex(s => s.id === state.seccionActivaId);
+
+  if (btnPrev) {
+    btnPrev.addEventListener("click", () => {
+      let targetIdx = currentSecIdx - 1;
+      if (targetIdx >= 0) {
+        const targetSec = structure[targetIdx];
+        state.seccionActivaId = targetSec.id;
+        state.lineaActivaIndex = targetSec.lineaInicio;
+        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
+        renderRehearsalRoom();
+        scrollToEnsayoLine(targetSec.lineaInicio);
       }
-      
-      if (btnNext) {
-        btnNext.addEventListener("click", () => {
-          let targetIdx = currentSecIdx + 1;
-          if (targetIdx < structure.length) {
-            const targetSec = structure[targetIdx];
-            state.seccionActivaId = targetSec.id;
-            state.lineaActivaIndex = targetSec.lineaInicio;
-            state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
-            renderRehearsalRoom();
-            scrollToEnsayoLine(targetSec.lineaInicio);
-          }
-        });
-      }
-    }
+    });
   }
 
-  // Autoscroll Toggle
+  if (btnNext) {
+    btnNext.addEventListener("click", () => {
+      let targetIdx = currentSecIdx + 1;
+      if (targetIdx < structure.length) {
+        const targetSec = structure[targetIdx];
+        state.seccionActivaId = targetSec.id;
+        state.lineaActivaIndex = targetSec.lineaInicio;
+        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
+        renderRehearsalRoom();
+        scrollToEnsayoLine(targetSec.lineaInicio);
+      }
+    });
+  }
+
   const btnScroll = document.getElementById("btn-ensayo-autoscroll");
   if (btnScroll) {
     btnScroll.addEventListener("click", () => {
       state.autoscrollActivo = !state.autoscrollActivo;
       renderRehearsalRoom();
-      triggerEnsayoToast(state.autoscrollActivo ? "Autoscroll activado (auto)" : "Autoscroll desactivado (manual)");
+    });
+  }
+}
+
+function bindDesktopRehearsalEvents(structure, lines, song) {
+  const keyChip = document.getElementById("ensayo-key-chip");
+  const dropdown = document.getElementById("ensayo-transposer-dropdown");
+  if (keyChip && dropdown) {
+    keyChip.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
     });
   }
 
-  // Manual scroll listener to disable autoscroll
-  const container = document.querySelector(".lyric-scroll-container");
-  if (container) {
-    container.addEventListener("scroll", () => {
-      if (state.enReproduccion && state.autoscrollActivo) {
-        state.autoscrollActivo = false;
-        const scrollLabel = document.getElementById("autoscroll-label");
-        const scrollIcon = document.getElementById("autoscroll-icon");
-        if (scrollLabel && scrollIcon) {
-          scrollLabel.textContent = "manual";
-          scrollLabel.style.color = "#9C97C4";
-          scrollIcon.style.color = "#9C97C4";
+  document.querySelectorAll(".transpose-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const offset = parseInt(e.target.getAttribute("data-offset")) || 0;
+      state.transposeOffset = offset;
+      renderRehearsalRoom();
+    });
+  });
+
+  document.querySelectorAll(".section-item").forEach(item => {
+    item.addEventListener("click", (e) => {
+      const id = item.getAttribute("data-id");
+      const targetSec = structure.find(s => s.id === id);
+      if (targetSec) {
+        state.seccionActivaId = id;
+        state.lineaActivaIndex = targetSec.lineaInicio;
+        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
+        renderRehearsalRoom();
+        scrollToEnsayoLine(targetSec.lineaInicio);
+      }
+    });
+  });
+
+  document.querySelectorAll(".lyric-line-editor").forEach(editor => {
+    editor.addEventListener("click", (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON" || e.target.tagName === "I") return;
+      const index = parseInt(editor.getAttribute("data-index"));
+      state.lineaActivaIndex = index;
+      const line = lines[index];
+      if (line) {
+        state.seccionActivaId = line.seccionId;
+      }
+      renderRehearsalRoom();
+    });
+  });
+
+  document.querySelectorAll(".btn-desktop-duplicate").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const idx = parseInt(btn.getAttribute("data-index"));
+      duplicateDesktopLine(song, idx);
+    });
+  });
+
+  document.querySelectorAll(".btn-desktop-delete").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const idx = parseInt(btn.getAttribute("data-index"));
+      deleteDesktopLine(song, idx);
+    });
+  });
+
+  const btnSave = document.getElementById("btn-desktop-save");
+  if (btnSave) {
+    btnSave.addEventListener("click", () => {
+      saveDesktopLyrics(song, lines, structure);
+    });
+  }
+
+  const btnPlay = document.getElementById("btn-desktop-play");
+  if (btnPlay) {
+    btnPlay.addEventListener("click", () => {
+      togglePlayState(song, lines);
+    });
+  }
+
+  const btnPrev = document.getElementById("btn-desktop-prev");
+  const btnNext = document.getElementById("btn-desktop-next");
+  const currentSecIdx = structure.findIndex(s => s.id === state.seccionActivaId);
+
+  if (btnPrev) {
+    btnPrev.addEventListener("click", () => {
+      let targetIdx = currentSecIdx - 1;
+      if (targetIdx >= 0) {
+        const targetSec = structure[targetIdx];
+        state.seccionActivaId = targetSec.id;
+        state.lineaActivaIndex = targetSec.lineaInicio;
+        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
+        renderRehearsalRoom();
+        scrollToEnsayoLine(targetSec.lineaInicio);
+      }
+    });
+  }
+
+  if (btnNext) {
+    btnNext.addEventListener("click", () => {
+      let targetIdx = currentSecIdx + 1;
+      if (targetIdx < structure.length) {
+        const targetSec = structure[targetIdx];
+        state.seccionActivaId = targetSec.id;
+        state.lineaActivaIndex = targetSec.lineaInicio;
+        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
+        renderRehearsalRoom();
+        scrollToEnsayoLine(targetSec.lineaInicio);
+      }
+    });
+  }
+
+  const btnTpDown = document.getElementById("btn-desktop-tp-down");
+  const btnTpUp = document.getElementById("btn-desktop-tp-up");
+  if (btnTpDown && btnTpUp) {
+    btnTpDown.addEventListener("click", () => {
+      state.transposeOffset = Math.max(-5, (state.transposeOffset || 0) - 1);
+      renderRehearsalRoom();
+    });
+    btnTpUp.addEventListener("click", () => {
+      state.transposeOffset = Math.min(5, (state.transposeOffset || 0) + 1);
+      renderRehearsalRoom();
+    });
+  }
+
+  const btnScroll = document.getElementById("btn-desktop-autoscroll");
+  if (btnScroll) {
+    btnScroll.addEventListener("click", () => {
+      state.autoscrollActivo = !state.autoscrollActivo;
+      renderRehearsalRoom();
+    });
+  }
+
+  const progBar = document.getElementById("desktop-progress-bar");
+  if (progBar) {
+    progBar.addEventListener("click", (e) => {
+      const rect = progBar.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const percent = clickX / rect.width;
+      state.tiempoActual = percent * (song.duracionSegundos || 220);
+      renderRehearsalRoom();
+    });
+  }
+
+  const secNameInp = document.getElementById("desktop-sec-name-input");
+  if (secNameInp) {
+    secNameInp.addEventListener("change", (e) => {
+      const activeSec = structure.find(s => s.id === state.seccionActivaId);
+      if (activeSec) {
+        const oldName = activeSec.nombre.toUpperCase();
+        const newName = e.target.value.trim().toUpperCase();
+        if (newName !== "" && newName !== oldName) {
+          song.lyrics = song.lyrics.replace(`[${oldName}]`, `[${newName}]`);
+          saveLocalStorage();
+          renderRehearsalRoom();
         }
       }
     });
   }
+
+  const btnAddSec = document.getElementById("btn-desktop-add-sec");
+  const modal = document.getElementById("modalAddSection");
+  const btnModalCancel = document.getElementById("btn-modal-cancel");
+  const btnModalCreate = document.getElementById("btn-modal-create");
+
+  if (btnAddSec && modal) {
+    btnAddSec.addEventListener("click", () => {
+      modal.classList.add("active");
+    });
+  }
+  if (btnModalCancel && modal) {
+    btnModalCancel.addEventListener("click", () => {
+      modal.classList.remove("active");
+    });
+  }
+  if (btnModalCreate && modal) {
+    btnModalCreate.addEventListener("click", () => {
+      const name = document.getElementById("modal-sec-name").value.trim();
+      if (name !== "") {
+        addDesktopSection(song, name);
+      }
+      modal.classList.remove("active");
+    });
+  }
 }
+
+// Escuchar cambios de tamaño de pantalla para renderizar vista móvil o PC
+window.addEventListener("resize", () => {
+  if (state.currentTab === "rehearsal") {
+    renderRehearsalRoom();
+  }
+});
 
 function changeTimeSignature(sig) {
   state.metronome.beatsPerMeasure = parseInt(sig.split("/")[0]) || 4;
