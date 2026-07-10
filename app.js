@@ -1087,6 +1087,7 @@ function initEventHandlers() {
                   state.members = [];
                   state.favoritesChords = [];
                 }
+                
                 renderSetlist();
                 updateBandUI();
                 updateProfileBadge();
