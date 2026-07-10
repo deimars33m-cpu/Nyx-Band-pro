@@ -6,26 +6,48 @@
   let groupToJoinDetails = null;
   let isAuthFlowActive = false; // Bandera para evitar race conditions
 
+  // --- LOG DE DIAGNÓSTICO EN PANTALLA ---
+  window.logDebug = function(msg) {
+    console.log("[DEBUG]", msg);
+    const linesEl = document.getElementById("auth-debug-lines");
+    if (linesEl) {
+      if (linesEl.textContent === "Esperando inicialización...") {
+        linesEl.innerHTML = "";
+      }
+      linesEl.innerHTML += `<div>&gt; ${msg}</div>`;
+    }
+  };
+
   // --- OBTENER CLIENTE ---
   function getSupabase() {
-    return window.supabaseClient;
+    const client = window.supabaseClient;
+    logDebug(`Obteniendo cliente de Supabase... ${client ? "✅ Encontrado" : "❌ Nulo"}`);
+    return client;
   }
 
   // --- INICIALIZAR Y GESTIONAR ESTADO ---
   const supabase = getSupabase();
   if (supabase) {
+    logDebug("Suscribiendo a onAuthStateChange...");
     supabase.auth.onAuthStateChange(async (event, session) => {
-      if (isAuthFlowActive) return; // Ignorar si estamos a mitad de un registro/login
+      logDebug(`Evento de Auth: ${event}. Sesión: ${session ? "Activa" : "Inexistente"}`);
+      if (isAuthFlowActive) {
+        logDebug("Flujo de auth activo, ignorando cambio temporalmente.");
+        return;
+      }
       
       if (session && session.user) {
         currentUserInstance = session.user;
+        logDebug(`Usuario logueado: ${session.user.email}. Comprobando onboarding...`);
         checkUserOnboardingStatus(session.user);
       } else {
+        logDebug("No hay sesión de usuario, mostrando pantalla de Login.");
         showScreen("auth");
       }
     });
   } else {
     showError("errorAuth", "Error: Supabase no está configurado o inicializado correctamente en supabase.js.");
+    logDebug("❌ ERROR: Cliente de Supabase no inicializado en supabase.js");
   }
 
   // --- NAVEGACIÓN ---
@@ -48,53 +70,71 @@
 
   // --- VERIFICAR ESTADO AL ENTRAR (LOGIN NORMAL) ---
   async function checkUserOnboardingStatus(user) {
+    logDebug("checkUserOnboardingStatus iniciado...");
     const supabase = getSupabase();
-    if (!supabase) return;
+    if (!supabase) {
+      logDebug("❌ checkUserOnboardingStatus falló: Supabase es nulo.");
+      return;
+    }
     try {
-      // Intentar obtener el perfil del usuario de la tabla public.users
+      logDebug(`Consultando tabla 'users' para ID: ${user.id}`);
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
 
-      if (userError) throw userError;
+      if (userError) {
+        logDebug(`❌ Error al obtener perfil 'users': ${userError.message}`);
+        throw userError;
+      }
+
+      logDebug(`Resultado de 'users': ${userData ? JSON.stringify(userData) : "Nulo (sin registro)"}`);
 
       if (userData && userData.current_band_id && userData.current_band_id !== "KAWSAY") {
-        // Ya tiene banda y perfil válidos, ir directo a index.html
+        logDebug(`✅ Perfil y banda válidos detectados (${userData.current_band_id}). Redirigiendo a index.html...`);
         window.location.href = "index.html";
         return;
       }
       
-      // Si el usuario existe en auth pero no tiene registro en public.users o no tiene banda activa
+      logDebug("El usuario no tiene banda activa o perfil. Buscando si es miembro de alguna banda...");
       let currentBandId = null;
       const name = user.user_metadata.nombre || user.email.split("@")[0];
       const personalBandName = `Grupo de ${name.charAt(0).toUpperCase() + name.slice(1)}`;
 
-      // Consultar si ya tiene alguna banda registrada de la cual es miembro
       const { data: memberOf, error: memberError } = await supabase
         .from('members')
         .select('band_id')
         .eq('user_id', user.id)
         .limit(1);
 
-      if (memberError) throw memberError;
+      if (memberError) {
+        logDebug(`❌ Error al consultar 'members': ${memberError.message}`);
+        throw memberError;
+      }
+
+      logDebug(`Resultado de 'members': ${memberOf && memberOf.length > 0 ? JSON.stringify(memberOf) : "No es miembro de ninguna banda"}`);
 
       if (memberOf && memberOf.length > 0) {
         currentBandId = memberOf[0].band_id;
-        // Sincronizar el current_band_id en public.users si no estaba
-        await supabase.from('users').upsert({
+        logDebug(`✅ Integrante de banda existente detectado: ${currentBandId}. Sincronizando perfil...`);
+        const { error: upsertError } = await supabase.from('users').upsert({
           id: user.id,
           email: user.email,
           nombre: name,
           current_band_id: currentBandId
         });
+        if (upsertError) {
+          logDebug(`❌ Error al sincronizar perfil en 'users': ${upsertError.message}`);
+          throw upsertError;
+        }
       } else {
-        // No tiene banda, la creamos en este instante
+        logDebug("No pertenece a ninguna banda. Creando banda personal automática...");
         currentBandId = await createPersonalBandForUser(user, personalBandName);
+        logDebug(`✅ Banda personal automática creada: ${currentBandId}`);
       }
 
-      // Preparar UI
+      logDebug("Preparando UI para mostrar pantalla de Onboarding (group-choice)...");
       document.getElementById("userGroupNameDisplay").textContent = personalBandName;
       document.getElementById("joinPersonalGroupName").textContent = personalBandName;
       document.getElementById("createdGroupNameDisplay").textContent = personalBandName;
@@ -102,6 +142,7 @@
 
       showScreen("group-choice");
     } catch (e) {
+      logDebug(`❌ Excepción capturada en checkUserOnboardingStatus: ${e.message}`);
       console.error("Error comprobando perfil de Supabase:", e);
       alert("Error al comprobar estado del perfil:\n" + e.message);
       showScreen("auth");

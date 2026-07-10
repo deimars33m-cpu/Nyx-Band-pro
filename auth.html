@@ -157,11 +157,17 @@
         <label for="rememberMe" style="margin:0;cursor:pointer;">Recuérdame</label>
       </div>
 
-      <button type="submit" class="btn btn-primary" id="btn-login-submit">Continuar</button>
+      <button type="submit" class="btn btn-primary" id="btn-login-submit">Iniciar Sesión</button>
     </form>
 
+    <!-- Consola de diagnóstico visual integrada -->
+    <div id="auth-debug-console" style="margin-top:24px; padding:12px; background:rgba(0,0,0,0.85); border:1px solid rgba(255,62,165,0.4); border-radius:8px; font-family:monospace; font-size:11px; color:#00e5ff; text-align:left; max-height:120px; overflow-y:auto; line-height:1.4;">
+      <strong style="color:#ff3ea5;">[DIAGNÓSTICO EN VIVO]</strong>
+      <div id="auth-debug-lines" style="margin-top:6px;">Esperando inicialización...</div>
+    </div>
+
     <div class="footer-link" style="margin-top:20px;">
-      ¿No tienes cuenta? <a onclick="showScreen('register')">Regístrate aquí</a>
+      ¿No tienes una cuenta? <a onclick="showScreen('register')">Registrate aquí</a>
     </div>
   </div>
 
