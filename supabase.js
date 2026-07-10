@@ -11,10 +11,14 @@ const isSupabaseConfigured = supabaseUrl && supabaseAnonKey && supabaseUrl !== "
 
 if (isSupabaseConfigured) {
   try {
+    if (!window.supabase) {
+      throw new Error("El SDK global de Supabase no se cargó correctamente desde el CDN (window.supabase es undefined).");
+    }
     supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
     console.log("Supabase inicializado con éxito.");
   } catch (error) {
     console.error("Error al inicializar Supabase:", error);
+    alert("Error de Conexión / Inicialización:\n" + error.message);
   }
 } else {
   console.warn("Supabase no configurado. Configura supabaseUrl y supabaseAnonKey en supabase.js.");
