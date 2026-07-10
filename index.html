@@ -3,10 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Repertorio Co-op — Ensayos Colaborativos</title>
-  <link rel="stylesheet" href="index.css">
+  <title>NYX Band-Pro</title>
+  <link rel="stylesheet" href="index.css?v=1.3">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
+  <style>
+    #auth-guard-overlay {
+      position: fixed; inset: 0; z-index: 99999;
+      background: #0A0A14;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px;
+      font-family: 'Inter', sans-serif;
+    }
+    #auth-guard-overlay .logo-text {
+      font-size: 24px; font-weight: 700; color: #FF3EA5;
+      text-shadow: 0 0 20px rgba(255,62,165,0.5);
+    }
+    #auth-guard-overlay .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,62,165,0.2);
+      border-top-color: #FF3EA5;
+      border-radius: 50%;
+      animation: spin-auth 0.8s linear infinite;
+    }
+    @keyframes spin-auth { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
+  <!-- AUTH GUARD: Oculta la app hasta que Firebase verifique el usuario -->
+  <div id="auth-guard-overlay">
+    <div class="logo-text">♮ NYX Band-Pro</div>
+    <div class="spinner"></div>
+  </div>
   <!-- BACKGROUND GLOW EFFECTS -->
   <div class="bg-glow bg-glow-cyan"></div>
   <div class="bg-glow bg-glow-orange"></div>
@@ -15,7 +42,7 @@
   <!-- CABECERA SUPERIOR PARA MÓVILES -->
   <header class="mobile-top-bar glass">
     <button id="btn-toggle-sidebar" class="mobile-menu-btn" onclick="toggleMobileSidebar()">☰</button>
-    <div class="mobile-logo">∮ BandSync Pro</div>
+    <div class="mobile-logo">∮ NYX Band-Pro</div>
     <button id="btn-toggle-metronome" class="mobile-menu-btn" onclick="toggleMobileMetronome()" style="display: none;">🥁</button>
   </header>
 
@@ -29,7 +56,7 @@
       <div class="brand">
         <div class="logo-circle">∮</div>
         <div class="brand-text">
-          <span class="brand-name">BandSync Pro</span>
+          <span class="brand-name">NYX Band-Pro</span>
           <span class="brand-subtitle">Sesión Activa</span>
         </div>
       </div>
@@ -46,13 +73,34 @@
         </button>
       </nav>
       
-      <div class="sidebar-footer">
+      <div class="sidebar-footer" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.15);">
         <!-- Tema abierto actual -->
-        <div class="active-song-indicator" id="nav-active-song" style="display: none;">
+        <div class="active-song-indicator" id="nav-active-song" style="display: none; margin-bottom: 8px;">
           <span class="dot"></span>
           <div class="song-info">
             <span class="label">Tema Abierto</span>
             <strong class="song-name">Yesterday</strong>
+          </div>
+        </div>
+
+        <!-- Botones de Configuración Integrados (Glass Style) -->
+        <div class="sidebar-actions" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+          <!-- User Profile Badge -->
+          <div class="user-profile-badge glass" id="user-profile-btn" style="cursor: pointer; width: 100%; display: flex; align-items: center; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);" onclick="handleProfileClick()">
+            <div class="user-avatar" id="current-user-avatar" style="font-size: 18px; margin-right: 10px;">👤</div>
+            <div class="user-info" style="display: flex; flex-direction: column; text-align: left;">
+              <span class="user-name" id="current-user-name" style="font-size: 13px; font-weight: 700; color: #fff;">Invitado</span>
+              <span class="user-role" id="current-user-role" style="font-size: 10px; color: var(--text-secondary);">Haz clic para entrar</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; width: 100%;">
+            <button id="btn-band-settings" class="btn btn-secondary" onclick="openBandSettingsModal()" style="flex: 1; padding: 8px; font-size: 12px; border: 1px solid rgba(255,0,127,0.3); color: var(--neon-magenta); display: flex; align-items: center; justify-content: center; gap: 4px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+              ⚙️ Grupo
+            </button>
+            <button id="btn-members-registry" class="btn btn-secondary" onclick="openMembersModal()" style="flex: 1; padding: 8px; font-size: 12px; border: 1px solid rgba(0,229,255,0.3); color: var(--neon-cyan); display: flex; align-items: center; justify-content: center; gap: 4px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+              👥 Músicos
+            </button>
           </div>
         </div>
       </div>
@@ -65,27 +113,20 @@
         <div class="setlist-layout">
           <div class="setlist-main-content">
             <div class="page-header">
-              <div class="page-title-area">
-                <h1>Repertorio Studio Pro</h1>
-                <p>Gestiona el setlist de la banda. Organiza temas por estado, dificultad y preparate para la próxima sesión.</p>
+              <div class="page-title-area" style="display:flex; flex-direction:column; align-items:flex-start; gap: 8px;">
+                <img id="header-band-logo" src="" style="display:none; height: 52px; object-fit: contain;" alt="Logo del Grupo">
+                <h1 id="header-band-title" style="margin: 0; font-size: 28px; font-weight: 800; color: #fff;">Cargando...</h1>
+                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Organiza temas y ensayos</p>
               </div>
               <div class="page-actions">
-                <!-- User Profile Badge Stitch Style -->
-                <div class="user-profile-badge glass">
-                  <div class="user-avatar">🎙️</div>
-                  <div class="user-info">
-                    <span class="user-name">vino_costa</span>
-                    <span class="user-role">Director</span>
-                  </div>
-                </div>
-                <button id="btn-members-registry" class="btn btn-secondary" onclick="openMembersModal()" style="border: 1px solid rgba(0,229,255,0.35); color: var(--neon-cyan);">
-                  👥 Integrantes
-                </button>
                 <button id="btn-add-song" class="btn btn-primary btn-add-song-pill">
                   + Agregar Nueva Canción
                 </button>
               </div>
             </div>
+            
+            <!-- Banner de bienvenida para la demo de KAWSAY -->
+            <div id="band-welcome-banner" style="display:none; margin-bottom: 20px;"></div>
 
             <!-- Barra de Filtros y Búsqueda Stitch Style -->
             <section class="search-filter-bar glass">
@@ -342,6 +383,9 @@
               <button type="button" id="btn-convert-lyrics" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px;">
                 ⚡ Auto-Convertir
               </button>
+              <button type="button" class="btn btn-secondary" onclick="insertChordAtCaret('C')" style="padding: 6px 12px; font-size: 11px; color: var(--neon-magenta); border: 1px solid rgba(255,0,127,0.3); background: rgba(255,0,127,0.05); border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+                🎵 Insertar Acorde
+              </button>
               <div class="editor-mode-toggle" style="margin-left: auto; display: flex; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 9999px; padding: 3px;">
                 <button type="button" id="btn-editor-mode-chords" class="editor-mode-btn active" onclick="setEditorMode('chords')">
                   🎵 Acordes
@@ -357,6 +401,9 @@
             </p>
             <textarea id="song-lyrics" style="display: none;" required></textarea>
             <div id="editor-rich-lyrics" contenteditable="true" class="editor-rich-lyrics" placeholder="[Bm] Escribe la letra de tu tema aquí con acordes..."></div>
+
+            <!-- PANEL DE VISTA PREVIA DE ESTRUCTURA -->
+            <div id="structure-preview-panel" style="display:none; margin-top:12px; padding:12px 14px; background:rgba(0,0,0,0.25); border:1px solid var(--border-soft); border-radius:10px;"></div>
           </div>
 
           <div style="display:flex; justify-content: flex-end; gap: 12px; margin-top:24px">
@@ -406,6 +453,9 @@
         <input type="text" id="picker-custom-val" placeholder="Custom (ej: C#m9)">
         <button type="button" id="btn-picker-confirm" class="btn btn-primary">Aplicar</button>
       </div>
+      <button type="button" id="btn-picker-delete" class="btn btn-secondary" style="width:100%; margin-top:10px; background:rgba(255,0,127,0.08); border:1px solid rgba(255,0,127,0.3); color:#ff007f; padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer; text-shadow: 0 0 6px rgba(255,0,127,0.5);">
+        ❌ Eliminar Acorde
+      </button>
     </div>
   </div>
 
@@ -431,12 +481,36 @@
         <!-- Formulario para agregar integrante -->
         <div class="member-add-form" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end;">
           <div style="flex:1; min-width: 120px;">
-            <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">Nombre</label>
+            <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">Nombre / Usuario</label>
             <input type="text" id="new-member-name" placeholder="Ej: Henry" style="width:100%; padding: 8px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px;">
           </div>
           <div style="flex:1; min-width: 120px;">
-            <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">Rol / Instrumento</label>
-            <input type="text" id="new-member-role" placeholder="Ej: Voz, Guitarra" style="width:100%; padding: 8px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px;">
+            <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">Instrumentos</label>
+            <input type="text" id="new-member-instruments" placeholder="Ej: Guitarra, Teclado" style="width:100%; padding: 8px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px;">
+          </div>
+          <div style="flex:1; min-width: 120px;">
+            <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">Voces / Tipo</label>
+            <select id="new-member-vocals" style="width:100%; padding: 8px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px;">
+              <option value="Ninguna">Ninguna</option>
+              <option value="Voz Principal">Voz Principal</option>
+              <option value="Coros">Coros</option>
+              <option value="Voz Gutural">Voz Gutural</option>
+              <option value="Soprano">Soprano</option>
+              <option value="Mezzosoprano">Mezzosoprano</option>
+              <option value="Contralto">Contralto</option>
+              <option value="Tenor 1">Tenor 1</option>
+              <option value="Tenor 2">Tenor 2</option>
+              <option value="Barítono">Barítono</option>
+              <option value="Bajo">Bajo</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width: 120px;">
+            <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">Rol (Permiso)</label>
+            <select id="new-member-role" style="width:100%; padding: 8px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px;">
+              <option value="Integrante">Integrante</option>
+              <option value="Administrador">Administrador</option>
+              <option value="Invitado">Invitado</option>
+            </select>
           </div>
           <div>
             <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">Color Neón</label>
@@ -460,6 +534,16 @@
         <!-- Leyenda colores de coro -->
         <div style="margin-top:16px; padding: 12px; background: rgba(255,235,59,0.05); border: 1px solid rgba(255,235,59,0.15); border-radius:8px;">
           <p style="font-size:11px; color:var(--text-secondary); margin:0;">🎤 <strong style="color:#ffeb3b;">Coro / Todos:</strong> Color amarillo neón <span style="color:#ffeb3b;">█</span> — Se aplica automáticamente cuando eliges "Coro" en el editor de intervenciones.</p>
+        </div>
+        
+        <!-- Solicitudes de acceso pendientes (Admin only) -->
+        <div id="admin-requests-section" style="display:none; margin-top:20px; border-top:1px solid var(--border-soft); padding-top:16px;">
+          <h4 style="font-size:13px; font-weight:700; color:var(--neon-cyan); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+            <span>⏳</span> Solicitudes de Acceso Pendientes
+          </h4>
+          <div id="requests-list" style="display:flex; flex-direction:column; gap:8px;">
+            <!-- Renderizado dinámico de solicitudes -->
+          </div>
         </div>
       </div>
     </div>
@@ -498,7 +582,7 @@
   <button id="rehearsal-fullscreen-edit-btn" class="fullscreen-floating-edit-btn" onclick="editActiveSong()" title="Editar Letra y Acordes">✏️</button>
 
   <!-- BOTÓN FLOTANTE INFERIOR IZQUIERDA: GRABACIÓN DE SONIDOS -->
-  <div id="rehearsal-record-fab-container" class="rehearsal-fab-container bottom-left">
+  <div id="rehearsal-record-fab-container" class="rehearsal-fab-container bottom-left" style="display: none;">
     <div class="fab-menu glass">
       <div class="fab-menu-title">Grabación de Audio</div>
       <div class="fab-control-row">
@@ -516,7 +600,7 @@
   </div>
 
   <!-- BOTÓN FLOTANTE INFERIOR DERECHA: CONTROLES DE METRÓNOMO -->
-  <div id="rehearsal-fab-container" class="rehearsal-fab-container">
+  <div id="rehearsal-fab-container" class="rehearsal-fab-container" style="display: none;">
     <div class="fab-menu glass">
       <div class="fab-menu-title">Metrónomo</div>
       
@@ -540,8 +624,114 @@
     <button class="fab-main-btn" onclick="toggleFabMenu()" title="Controles de Metrónomo">🎵</button>
   </div>
 
-  <!-- Scripts -->
-  <script src="chords.js"></script>
-  <script src="app.js"></script>
+  <!-- MODAL DE CONFIGURACIÓN DE LA BANDA -->
+  <div id="modal-band-settings" class="modal-backdrop" onclick="if(event.target===this) document.getElementById('modal-band-settings').classList.remove('open')">
+    <div class="modal-content glass" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Configuración del Grupo</h3>
+        <button class="close-modal-btn" onclick="document.getElementById('modal-band-settings').classList.remove('open')">×</button>
+      </div>
+      <div style="padding: 20px;">
+        <!-- AVISO DE PERMISOS -->
+        <div id="band-settings-permissions-warning" style="display:none; margin-bottom: 16px; padding: 10px 14px; background: rgba(255, 179, 0, 0.15); border: 1px solid rgba(255, 179, 0, 0.3); border-radius: 8px; color: #ffb300; font-size: 12px; font-weight: 500;">
+          ⚠️ Solo los Administradores de este grupo pueden modificar el nombre o el logo.
+        </div>
+
+        <!-- INFO BÁSICA -->
+        <div style="margin-bottom: 24px;">
+          <h4 style="color: var(--neon-cyan); margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Información Principal</h4>
+          <div style="display:flex; gap: 16px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+              <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">Nombre del Grupo</label>
+              <input type="text" id="band-settings-name" style="width:100%; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:14px;">
+            </div>
+            <div>
+              <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">Logo (Opcional)</label>
+              <input type="file" id="band-settings-logo-upload" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
+              <button type="button" id="btn-band-settings-upload-logo" class="btn btn-secondary" onclick="document.getElementById('band-settings-logo-upload').click()" style="padding: 10px 16px;">🖼️ Subir Logo</button>
+            </div>
+          </div>
+          <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted);" id="band-settings-logo-status"></div>
+          
+          <!-- Visor de Logo PNG con transparencia de tablero de ajedrez -->
+          <div id="band-settings-logo-preview-container" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.15); background-image: linear-gradient(45deg, #181818 25%, transparent 25%), linear-gradient(-45deg, #181818 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #181818 75%), linear-gradient(-45deg, transparent 75%, #181818 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; background-color: #0b0b0b; justify-content: center; align-items: center; min-height: 80px;">
+            <img id="band-settings-logo-preview" style="max-height: 80px; object-fit: contain;" alt="Vista previa del logo">
+          </div>
+        </div>
+
+        <!-- CÓDIGO DE INVITACIÓN -->
+        <div style="margin-bottom: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
+          <h4 style="color: var(--neon-cyan); margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Miembros y Acceso</h4>
+          <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">Código de Invitación (Band ID)</label>
+          <div style="display:flex; gap: 8px;">
+            <input type="text" id="band-settings-id" readonly style="flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--text-secondary); font-family: var(--font-mono); font-size:14px;" value="...">
+            <button type="button" class="btn btn-secondary" onclick="copyBandIdCode()" style="padding: 10px 12px; min-width: 80px;">📋 Copiar</button>
+            <button type="button" id="btn-regenerate-code" class="btn btn-secondary" onclick="regenerateBandInviteCode()" style="padding: 10px 12px; min-width: 100px; border-color: var(--neon-magenta); color: var(--neon-magenta); display: none;">🔄 Regenerar</button>
+          </div>
+          <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Comparte este código con tus amigos para que se unan a este grupo con sus cuentas.</p>
+        </div>
+
+        <!-- MIS GRUPOS (MULTI-TENANT) -->
+        <div style="margin-bottom: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
+          <h4 style="color: var(--neon-magenta); margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Mis Grupos</h4>
+          
+          <div id="band-settings-groups-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+            <!-- Cargado dinámicamente con JS -->
+          </div>
+
+          <div style="display:flex; gap: 8px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px; display: flex; gap: 8px;">
+              <input type="text" id="band-join-code" placeholder="Ingresar Código de Banda" style="flex: 1; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px;">
+              <button type="button" class="btn btn-secondary" onclick="joinBandByCode()" style="padding: 10px 16px; border: 1px solid rgba(0,229,255,0.3); color: var(--neon-cyan);">Unirse</button>
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="createNewBandFlow()" style="padding: 10px 16px; border: 1px solid rgba(255,0,127,0.3); color: var(--neon-magenta);">+ Crear Nuevo Grupo</button>
+          </div>
+        </div>
+
+        <div style="text-align: right; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
+          <button type="button" id="btn-band-settings-save" class="btn btn-primary" onclick="saveBandSettings()">Guardar Configuración</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE ONBOARDING OBLIGATORIO -->
+  <div id="modal-onboarding" class="modal-backdrop" style="display: none; z-index: 2000; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);">
+    <div class="modal-content glass" style="max-width: 500px; text-align: center; padding: 40px 20px;">
+      <h2 style="font-size: 24px; color: #fff; margin-bottom: 12px;">¡Bienvenido a NYX Band-Pro! 🎸</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; line-height: 1.6;">
+        Para empezar a gestionar tu repertorio, necesitas pertenecer a un grupo. 
+        Puedes crear uno nuevo y ser el Administrador, o unirte a uno existente.
+      </p>
+      
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div class="glass" style="padding: 20px; border-radius: 12px; background: rgba(255,0,127,0.05); border: 1px solid rgba(255,0,127,0.2);">
+          <h3 style="color: var(--neon-magenta); font-size: 16px; margin-bottom: 12px;">Crear un Grupo Nuevo</h3>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Serás el Administrador y podrás invitar a los demás integrantes.</p>
+          <input type="text" id="onboarding-new-band-name" placeholder="Nombre de tu Banda..." style="width:100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; margin-bottom: 12px; font-size: 14px;">
+          <button class="btn btn-primary" style="width:100%; padding: 12px;" onclick="onboardingCreateBand()">Crear Mi Grupo</button>
+        </div>
+
+        <div class="glass" style="padding: 20px; border-radius: 12px; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.2);">
+          <h3 style="color: var(--neon-cyan); font-size: 16px; margin-bottom: 12px;">Unirse a un Grupo</h3>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Ingresa el código que te compartió el Administrador de tu banda.</p>
+          <input type="text" id="onboarding-join-code" placeholder="Código (ej. KAW-1234)" style="width:100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; margin-bottom: 12px; font-size: 14px; text-transform: uppercase;">
+          <button class="btn btn-secondary" style="width:100%; padding: 12px; border-color: var(--neon-cyan); color: var(--neon-cyan);" onclick="onboardingJoinBand()">Solicitar Unirme</button>
+        </div>
+      </div>
+      <div style="margin-top: 24px;">
+        <button class="btn-link" onclick="handleLogout()" style="color: var(--text-muted); font-size: 12px; background: none; border: none; cursor: pointer; text-decoration: underline;">Cerrar Sesión</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de auth removido en favor de auth.html -->
+
+  <script src="chords.js?v=2.0"></script>
+  <!-- SDK de Supabase desde CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js?v=2.0"></script>
+  <script src="songsService.js?v=2.0"></script>
+  <script src="app.js?v=2.0"></script>
 </body>
 </html>

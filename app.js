@@ -1,5 +1,19 @@
 // Lógica principal de la aplicación Repertorio Co-op
 
+// Regex para validar si un token luce como un acorde
+const CHORD_TOKEN_REGEX = /^[A-G][#b]?(m|min|maj|dim|aug|sus|add|maj7|m7|7|9|11|13|m7b5|dim7)?(\d)?(\/[A-G][#b]?)?$/i;
+
+// Detectar si una línea representa una cabecera de sección (ej: [VERSO 1], [CORO])
+function isSectionHeader(line) {
+  const t = line.trim();
+  if (t.startsWith("[") && t.endsWith("]") && t.indexOf("][") === -1) {
+    const inner = t.slice(1, -1).trim();
+    if (inner.includes("[") || inner.includes("]")) return false;
+    return !CHORD_TOKEN_REGEX.test(inner);
+  }
+  return false;
+}
+
 // --- DATOS POR DEFECTO ---
 const DEFAULT_SONGS = [
   {
@@ -197,66 +211,165 @@ let state = {
   // Modo de edición del editor
   editorMode: "chords", // "chords" | "interventions"
   horizontalLabels: false,
-  activeSectionIndex: null
+  activeSectionIndex: null,
+  selectedLineIndices: [],
+
+  // Autenticación y Multi-Tenant
+  currentUser: null,
+  currentBandId: null, // "KAWSAY" u otro ID
+  bandMetadata: {
+    name: "NYX Band-Pro", // Nombre por defecto o fallback
+    logoUrl: null,
+    settings: {}
+  },
+  isLoginMode: true // true: login, false: registro
 };
+window.state = state;
 
 // --- INICIALIZACIÓN ---
 document.addEventListener("DOMContentLoaded", () => {
-  loadLocalStorage();
-  checkSharedSong();
-  renderApp();
-  initEventHandlers();
-  
-  // Seleccionar acorde inicial
-  selectChord("C");
-  
-  // Inicializar manejadores de edición inline y editor de acordes
-  initChordPickerHandlers();
-  initInlineEditFields();
-  
-  // Inicializar popup de intervención arrastrable
-  initInterventionPopupDraggable();
+  try {
+    initEventHandlers();
+    clearObsoleteLocalStorage();
+  } catch (err) {
+    console.error("Error on DOMContentLoaded:", err);
+  }
 });
 
-function loadLocalStorage() {
-  const localSongs = localStorage.getItem("coop_songs");
-  if (localSongs) {
-    state.songs = JSON.parse(localSongs);
-  } else {
-    state.songs = [...DEFAULT_SONGS];
-    saveLocalStorage();
-  }
-  
-  const localFavChords = localStorage.getItem("coop_fav_chords");
-  if (localFavChords) {
-    state.favoritesChords = JSON.parse(localFavChords);
-  }
-  
-  const localRecordings = localStorage.getItem("coop_recordings");
-  if (localRecordings) {
-    state.recorder.recordings = JSON.parse(localRecordings);
-  }
+// Limpia datos obsoletos de localStorage para evitar contaminación de cache
+function clearObsoleteLocalStorage() {
+  localStorage.removeItem("coop_songs");
+  localStorage.removeItem("coop_members");
+  localStorage.removeItem("coop_band_metadata");
+  localStorage.removeItem("coop_fav_chords");
+  // Mantener solo currentBandId y requestedBandId para la inicialización rápida
+}
 
-  const localMembers = localStorage.getItem("coop_members");
-  if (localMembers) {
-    state.members = JSON.parse(localMembers);
+async function loadSongsFromDB() {
+  if (window.SongsService) {
+    try {
+      const fbSongs = await window.SongsService.getAllSongs();
+      if (fbSongs !== null && fbSongs !== undefined) {
+        state.songs = fbSongs;
+        
+        // Re-renderizar la UI
+        renderApp();
+        if (state.activeSongId) {
+          renderRehearsalRoom();
+        }
+      }
+    } catch (e) {
+      console.error("Error al cargar canciones de Firebase:", e);
+    }
+  }
+}
+
+async function loadMembersFromDB() {
+  if (window.supabaseClient && state.currentBandId) {
+    try {
+      const { data, error } = await window.supabaseClient
+        .from('members')
+        .select('*')
+        .eq('band_id', state.currentBandId);
+      if (error) throw error;
+      
+      // Adaptar el formato de la base de datos relacional al estado local de la app
+      state.members = (data || []).map(m => ({
+        name: m.name,
+        role: m.role,
+        instruments: m.instruments || "",
+        vocals: m.vocals || "Ninguna",
+        color: m.color || "#00e5ff",
+        linkedUid: m.user_id,
+        email: m.email || "",
+        unidoEn: m.joined_at
+      }));
+      renderMembersList();
+    } catch (e) {
+      console.error("Error al cargar integrantes de Supabase:", e);
+    }
+  }
+}
+
+async function loadFavoriteChordsFromDB() {
+  if (window.supabaseClient && state.currentBandId) {
+    try {
+      const { data, error } = await window.supabaseClient
+        .from('fav_chords')
+        .select('list')
+        .eq('band_id', state.currentBandId)
+        .maybeSingle();
+      if (error) throw error;
+      
+      state.favoritesChords = (data && data.list) ? data.list : [];
+      renderDictionary();
+    } catch (e) {
+      console.error("Error al cargar acordes favoritos de Supabase:", e);
+    }
+  }
+}
+
+function saveMembersToDB() {
+  if (window.supabaseClient && state.currentBandId) {
+    const records = state.members.map(m => ({
+      band_id: state.currentBandId,
+      user_id: m.linkedUid,
+      name: m.name,
+      email: m.email || "",
+      role: m.role || "Integrante",
+      instruments: m.instruments || "",
+      vocals: m.vocals || "Ninguna",
+      color: m.color || "#00e5ff"
+    }));
+
+    window.supabaseClient
+      .from('members')
+      .upsert(records, { onConflict: 'band_id,user_id' })
+      .then(({ error }) => {
+        if (error) console.error("Error al guardar integrantes en Supabase:", error);
+      });
   }
 }
 
 function saveLocalStorage() {
-  localStorage.setItem("coop_songs", JSON.stringify(state.songs));
+  // Guardado exclusivo en Supabase (sin localStorage)
+  if (window.SongsService) {
+    if (state.activeSongId) {
+      const activeSong = state.songs.find(s => String(s.id) === String(state.activeSongId));
+      if (activeSong) {
+        window.SongsService.saveSong(activeSong).catch(err => {
+          console.error("Error al guardar canción en Supabase:", err);
+        });
+        return;
+      }
+    }
+    // Fallback
+    window.SongsService.saveAllSongs(state.songs).catch(err => {
+      console.error("Error al guardar canciones en Supabase:", err);
+    });
+  }
 }
 
 function saveMembers() {
-  localStorage.setItem("coop_members", JSON.stringify(state.members));
+  saveMembersToDB();
 }
 
 function saveFavorites() {
-  localStorage.setItem("coop_fav_chords", JSON.stringify(state.favoritesChords));
+  if (window.supabaseClient && state.currentBandId) {
+    window.supabaseClient
+      .from('fav_chords')
+      .upsert({
+        band_id: state.currentBandId,
+        list: state.favoritesChords
+      })
+      .catch(err => {
+        console.error("Error al guardar acordes favoritos en Supabase:", err);
+      });
+  }
 }
 
 function saveRecordingsState() {
-  localStorage.setItem("coop_recordings", JSON.stringify(state.recorder.recordings));
+  // Grabaciones locales
 }
 
 // ============================================================
@@ -276,6 +389,7 @@ function getMemberByName(name) {
 
 // Abrir el modal de integrantes
 function openMembersModal() {
+  closeMobileDrawers();
   const modal = document.getElementById("modal-members");
   if (!modal) return;
   modal.classList.add("open");
@@ -315,22 +429,55 @@ function renderMembersList() {
     list.innerHTML = `<p style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px;">Aún no hay integrantes. ¡Agrega el primero!</p>`;
     return;
   }
-  list.innerHTML = state.members.map((m, i) => `
-    <div style="display:flex; align-items:center; gap:12px; padding:10px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius:10px;">
-      <div style="width:16px; height:16px; border-radius:50%; background:${m.color}; box-shadow:0 0 8px ${m.color}; flex-shrink:0;"></div>
-      <div style="flex:1;">
-        <span style="font-weight:700; color:${m.color}; text-shadow:0 0 6px ${m.color}; font-size:14px;">${m.name}</span>
-        <span style="color:var(--text-muted); font-size:11px; margin-left:8px;">${m.role || ""}</span>
+  
+  const isAdmin = state.currentUser && (
+    state.members.some(m => m.linkedUid === state.currentUser.uid && m.role === "Administrador") ||
+    state.members.some(m => m.name.toLowerCase() === state.currentUser.email.split("@")[0].toLowerCase() && m.role === "Administrador")
+  );
+
+  list.innerHTML = state.members.map((m, i) => {
+    const isLinked = m.linkedUid ? true : false;
+    const statusTag = isLinked
+      ? `<span style="color:var(--neon-green); font-size:10px; font-weight:bold; margin-left:6px;">● Activo</span>`
+      : `<span style="color:var(--text-muted); font-size:10px; margin-left:6px;">○ Creado</span>`;
+      
+    const removeBtn = isAdmin ? `<button onclick="removeBandMember(${i})" style="background:rgba(255,51,75,0.12); border:1px solid rgba(255,51,75,0.3); color:#ff334b; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:11px;">✕</button>` : '';
+
+    return `
+      <div style="display:flex; align-items:center; gap:12px; padding:10px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius:10px; flex-wrap: wrap;">
+        <div style="width:16px; height:16px; border-radius:50%; background:${m.color}; box-shadow:0 0 8px ${m.color}; flex-shrink:0;"></div>
+        <div style="flex:1; min-width: 150px;">
+          <span style="font-weight:700; color:${m.color}; text-shadow:0 0 6px ${m.color}; font-size:14px;">${m.name}</span>
+          <span style="display:inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.1); font-size:10px; color:var(--text-secondary);">${m.role || "Integrante"}</span>
+          ${statusTag}
+        </div>
+        <div style="flex: 2; min-width: 200px; font-size: 11px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center;">
+          ${m.instruments ? `<span style="background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.3); color: var(--neon-cyan); padding: 2px 6px; border-radius: 4px;">🎸 ${m.instruments}</span>` : ''}
+          ${m.vocals && m.vocals !== 'Ninguna' ? `<span style="background: rgba(255,0,127,0.1); border: 1px solid rgba(255,0,127,0.3); color: var(--neon-magenta); padding: 2px 6px; border-radius: 4px;">🎤 ${m.vocals}</span>` : ''}
+        </div>
+        ${removeBtn}
       </div>
-      <button onclick="removeBandMember(${i})" style="background:rgba(255,51,75,0.12); border:1px solid rgba(255,51,75,0.3); color:#ff334b; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:11px;">✕</button>
-    </div>
-  `).join("");
+    `;
+  }).join("");
+  
+  // Alternar sección de administración (Solicitudes pendientes)
+  const reqSection = document.getElementById("admin-requests-section");
+  if (reqSection) {
+    if (isAdmin) {
+      reqSection.style.display = "block";
+      renderPendingRequests();
+    } else {
+      reqSection.style.display = "none";
+    }
+  }
 }
 
 // Agregar un integrante
 function addBandMember() {
   const nameInput = document.getElementById("new-member-name");
   const roleInput = document.getElementById("new-member-role");
+  const instInput = document.getElementById("new-member-instruments");
+  const vocInput = document.getElementById("new-member-vocals");
   const activeSwatchEl = document.querySelector("#member-color-picker .color-swatch.active");
   
   const name = nameInput ? nameInput.value.trim() : "";
@@ -341,13 +488,18 @@ function addBandMember() {
   }
   
   const color = activeSwatchEl ? activeSwatchEl.getAttribute("data-color") : "#00e5ff";
-  const role = roleInput ? roleInput.value.trim() : "";
+  const role = roleInput ? roleInput.value : "Integrante";
+  const instruments = instInput ? instInput.value.trim() : "";
+  const vocals = vocInput ? vocInput.value : "Ninguna";
   
-  state.members.push({ name, role, color });
+  state.members.push({ name, role, instruments, vocals, color, linkedUid: null });
   saveMembers();
   
   if (nameInput) nameInput.value = "";
-  if (roleInput) roleInput.value = "";
+  if (instInput) instInput.value = "";
+  if (roleInput) roleInput.value = "Integrante";
+  if (vocInput) vocInput.value = "Ninguna";
+  
   renderMembersList();
 }
 
@@ -647,7 +799,7 @@ function applyIntervention() {
     if (hiddenTextarea) hiddenTextarea.value = finalRaw;
 
     if (state.activeSongId) {
-      const song = state.songs.find(s => s.id === state.activeSongId);
+      const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
       if (song) {
         song.lyrics = finalRaw;
         saveLocalStorage();
@@ -791,7 +943,7 @@ function renderNav() {
   // Update header active song title
   const activeIndicator = document.getElementById("nav-active-song");
   if (state.activeSongId) {
-    const song = state.songs.find(s => s.id === state.activeSongId);
+    const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
     activeIndicator.style.display = "flex";
     activeIndicator.querySelector(".song-name").textContent = song ? song.title : "Ensayo";
   } else {
@@ -807,10 +959,173 @@ function renderNav() {
       btnToggleMetronome.style.display = "none";
     }
   }
+  
+  // Mostrar/Ocultar botón flotante de edición y paneles de ensayo (Metrónomo y Grabación)
+  const editBtn = document.getElementById("rehearsal-fullscreen-edit-btn");
+  const recordFab = document.getElementById("rehearsal-record-fab-container");
+  const metronomeFab = document.getElementById("rehearsal-fab-container");
+  
+  const isRehearsalActive = (state.currentTab === "rehearsal" && state.activeSongId);
+  
+  if (editBtn) editBtn.style.display = isRehearsalActive ? "flex" : "none";
+  if (recordFab) recordFab.style.display = isRehearsalActive ? "block" : "none";
+  if (metronomeFab) metronomeFab.style.display = isRehearsalActive ? "block" : "none";
 }
 
 // --- EVENTOS Y CONTROLADORES ---
 function initEventHandlers() {
+  // Listener de Auth
+  if (window.supabaseClient) {
+    window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      const user = session ? session.user : null;
+      state.currentUser = user;
+      
+      if (user) {
+        try {
+          // Desuscribirse del anterior si existe
+          if (window._supabaseUserChannel) {
+            window._supabaseUserChannel.unsubscribe();
+          }
+
+          // Función para cargar/recargar datos de perfil desde Supabase
+          const loadUserProfile = async () => {
+            try {
+              const { data: userData, error: userError } = await window.supabaseClient
+                .from('users')
+                .select('*')
+                .eq('id', user.id)
+                .maybeSingle();
+
+              if (userError) throw userError;
+
+              if (!userData) {
+                // Usuario nuevo — crear perfil limpio en la tabla users
+                const name = user.user_metadata.nombre || user.email.split("@")[0];
+                const { error: insertError } = await window.supabaseClient.from('users').insert({
+                  id: user.id,
+                  email: user.email,
+                  nombre: name,
+                  current_band_id: null
+                });
+                if (insertError) throw insertError;
+                
+                window.location.href = "auth.html";
+                return;
+              }
+
+              const oldBandId = state.currentBandId;
+              const oldRequest = state.requestedBandId;
+
+              if (userData.current_band_id && userData.current_band_id !== "KAWSAY") {
+                state.currentBandId = userData.current_band_id;
+                state.requestedBandId = null;
+
+                // Cargar myBands desde la tabla members
+                const { data: memberBands } = await window.supabaseClient
+                  .from('members')
+                  .select('band_id')
+                  .eq('user_id', user.id);
+                
+                state.myBands = memberBands && memberBands.length > 0 
+                  ? memberBands.map(m => m.band_id) 
+                  : [userData.current_band_id];
+
+                const onboardingModal = document.getElementById("modal-onboarding");
+                if (onboardingModal) onboardingModal.style.display = "none";
+              } else {
+                // Forzar Onboarding
+                window.location.href = "auth.html";
+                return;
+              }
+
+              if (state.currentBandId) {
+                localStorage.setItem("coop_current_band_id", state.currentBandId);
+              }
+
+              const reloadNeeded = (oldBandId !== state.currentBandId || oldRequest !== state.requestedBandId || !state._initialDataLoaded);
+
+              if (reloadNeeded) {
+                state._initialDataLoaded = true;
+
+                if (state.currentBandId) {
+                  const { data: bandDoc, error: bandError } = await window.supabaseClient
+                    .from('bands')
+                    .select('*')
+                    .eq('id', state.currentBandId)
+                    .maybeSingle();
+
+                  if (bandError) throw bandError;
+
+                  if (bandDoc) {
+                    state.bandMetadata = {
+                      ...state.bandMetadata,
+                      name: bandDoc.name,
+                      logoUrl: bandDoc.logo_url
+                    };
+                  } else {
+                    state.bandMetadata = { name: state.currentBandId, logoUrl: null };
+                  }
+
+                  await loadSongsFromDB();
+                  await loadMembersFromDB();
+                  await loadFavoriteChordsFromDB();
+
+                  if (!state._uiInitialized) {
+                    state._uiInitialized = true;
+                    checkSharedSong();
+                    renderApp();
+                    selectChord("C");
+                    initChordPickerHandlers();
+                    initInlineEditFields();
+                    initInterventionPopupDraggable();
+                    makeChordBadgesDraggable();
+                    initQuickChordInsertion();
+                  }
+                } else {
+                  state.bandMetadata = { name: "Sin Grupo", logoUrl: null };
+                  state.songs = [];
+                  state.members = [];
+                  state.favoritesChords = [];
+                }
+                renderSetlist();
+                updateBandUI();
+                updateProfileBadge();
+                updatePermissionsUI();
+                
+                const overlay = document.getElementById("auth-guard-overlay");
+                if (overlay) overlay.style.display = "none";
+              }
+            } catch (err) {
+              console.error("Error en render/carga de datos de la app:", err);
+              alert("Error al cargar la aplicación:\n" + err.message);
+              const overlay = document.getElementById("auth-guard-overlay");
+              if (overlay) overlay.style.display = "none";
+            }
+          };
+
+          // Carga inicial
+          await loadUserProfile();
+
+          // Suscribirse a cambios en tiempo real en su propio registro de usuario
+          window._supabaseUserChannel = window.supabaseClient
+            .channel(`user-profile-${user.id}`)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` }, payload => {
+              loadUserProfile();
+            })
+            .subscribe();
+
+        } catch (e) {
+          console.error("Error cargando perfil multi-tenant de Supabase:", e);
+        }
+      } else {
+        window.location.href = "auth.html";
+      }
+
+      updateProfileBadge();
+      updatePermissionsUI();
+    });
+  }
+
   // Navegación
   document.querySelectorAll(".nav-pill").forEach(pill => {
     pill.addEventListener("click", () => {
@@ -819,10 +1134,10 @@ function initEventHandlers() {
     });
   });
   
-  // Filtros de Setlist
-  document.querySelectorAll(".filter-btn").forEach(btn => {
+  // Filtros de Setlist (Restringido para no interferir con el diccionario)
+  document.querySelectorAll(".search-filter-bar .filter-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".search-filter-bar .filter-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       state.filters.status = btn.getAttribute("data-filter");
       renderSetlist();
@@ -837,7 +1152,47 @@ function initEventHandlers() {
       renderSetlist();
     });
   }
-  
+
+  // Delegación de eventos en setlist-grid para el borrado de temas (2 pasos)
+  const grid = document.getElementById("setlist-grid");
+  if (grid) {
+    grid.addEventListener("click", (e) => {
+      const deleteBtn = e.target.closest(".btn-delete-song");
+      if (deleteBtn) {
+        e.stopPropagation();
+        const songId = deleteBtn.getAttribute("data-id");
+        
+        if (!deleteBtn.classList.contains("confirm-delete")) {
+          deleteBtn.classList.add("confirm-delete");
+          deleteBtn.style.color = "var(--magenta)";
+          deleteBtn.style.width = "auto";
+          deleteBtn.style.borderRadius = "14px";
+          deleteBtn.style.padding = "0 8px";
+          deleteBtn.innerHTML = `<i class="ti ti-check" style="color: var(--magenta);"></i><span style="font-size: 8px; font-weight: 700; color: var(--magenta); margin-left: 2px;">¿BORRAR?</span>`;
+          
+          // Resetear después de 3 segundos
+          const timeoutId = setTimeout(() => {
+            deleteBtn.classList.remove("confirm-delete");
+            deleteBtn.style.color = "var(--text-dim)";
+            deleteBtn.style.width = "28px";
+            deleteBtn.style.borderRadius = "50%";
+            deleteBtn.style.padding = "0";
+            deleteBtn.innerHTML = `<i class="ti ti-trash"></i>`;
+          }, 3000);
+          
+          deleteBtn.setAttribute("data-timeout-id", timeoutId);
+        } else {
+          // Limpiar timeout
+          const timeoutId = deleteBtn.getAttribute("data-timeout-id");
+          if (timeoutId) clearTimeout(parseInt(timeoutId));
+          
+          // Confirmar borrado
+          deleteSongFromRepertorio(songId);
+        }
+      }
+    });
+  }
+
   // Modal de Agregar Tema
   const btnAdd = document.getElementById("btn-add-song");
   const modal = document.getElementById("modal-add-song");
@@ -917,17 +1272,22 @@ function initEventHandlers() {
     });
   }
   
-  // Convertir letra tradicional
+  // Convertir letra tradicional + auto-etiquetar estrofas
   const btnConvert = document.getElementById("btn-convert-lyrics");
   if (btnConvert) {
     btnConvert.addEventListener("click", () => {
       const richEditor = document.getElementById("editor-rich-lyrics");
       const currentRaw = serializeRichLyrics();
       if (richEditor && currentRaw.trim() !== "") {
-        const converted = convertTraditionalToBracket(currentRaw);
-        richEditor.innerHTML = parseTextToRichLyrics(converted);
-        document.getElementById("song-lyrics").value = converted;
+        // 1. Convertir acordes tradicionales a formato [Acorde]
+        const bracketConverted = convertTraditionalToBracket(currentRaw);
+        // 2. Auto-etiquetar estrofas por bloques separados por líneas en blanco
+        const tagged = autoTagStanzas(bracketConverted);
+        richEditor.innerHTML = parseTextToRichLyrics(tagged);
+        document.getElementById("song-lyrics").value = tagged;
         bindChordBadgeEvents();
+        // 3. Actualizar panel de vista previa de estructura
+        updateStructurePreview();
       } else {
         alert("Por favor, escribe o pega primero la letra y acordes tradicionales en el editor.");
       }
@@ -994,6 +1354,8 @@ function switchTab(tabName) {
     }
   }
   
+
+  
   // Cerrar paneles móviles al cambiar de pestaña
   closeMobileDrawers();
   
@@ -1004,6 +1366,37 @@ function switchTab(tabName) {
 function renderSetlist() {
   const grid = document.getElementById("setlist-grid");
   if (!grid) return;
+  
+  // Si hay una solicitud pendiente de unirse a otra banda
+  if (state.requestedBandId) {
+    grid.innerHTML = `
+      <div style="grid-column: 1/-1; display:flex; align-items:center; justify-content:center; padding: 48px 24px;">
+        <div class="glass" style="text-align:center; max-width:380px; padding:32px; border:1px solid rgba(0, 229, 255, 0.25); border-radius:18px; background:var(--bg-panel); box-shadow: 0 0 24px rgba(0, 229, 255, 0.08);">
+          <div style="font-size:48px; margin-bottom:12px; filter: drop-shadow(0 0 10px rgba(0,229,255,0.4));">⏳</div>
+          <h3 style="font-size:20px; font-weight:700; color:var(--neon-cyan); margin-bottom:8px; text-shadow:0 0 10px rgba(0,229,255,0.2);">Solicitud Pendiente</h3>
+          <p style="color:var(--text-secondary); font-size:13px; line-height:1.6; margin-bottom:20px;">
+            Tu solicitud para unirte al grupo <strong id="waiting-band-name" style="color:#fff;">${state.requestedBandId}</strong> está esperando aprobación del Administrador.
+          </p>
+          <button class="btn btn-secondary" onclick="cancelPendingRequest()" style="border-radius:20px; font-size:12px; padding:8px 20px; border: 1px solid rgba(255,51,75,0.3); color: #ff334b; background: rgba(255,51,75,0.05); cursor: pointer; outline: none; font-weight: bold;">
+            Cancelar Solicitud
+          </button>
+        </div>
+      </div>
+    `;
+    
+    if (window.supabaseClient) {
+      window.supabaseClient.from('bands').select('name').eq('id', state.requestedBandId).maybeSingle().then(({ data }) => {
+        const el = document.getElementById("waiting-band-name");
+        if (el && data && data.name) {
+          el.textContent = data.name;
+        }
+      }).catch(() => {});
+    }
+    
+    const totalCount = document.getElementById("total-songs-count");
+    if (totalCount) totalCount.textContent = "0 Temas";
+    return;
+  }
   
   // Filtrar
   const filteredSongs = state.songs.filter(song => {
@@ -1042,18 +1435,21 @@ function renderSetlist() {
     }
     
     return `
-      <div class="song-card" onclick="openSongInRehearsal('${song.id}')">
+      <div class="song-card" onclick="openSongInRehearsal(event, '${song.id}')">
         <div class="song-card-bg" style="background-image: url('${song.image}')"></div>
         <span class="song-status-badge ${statusClass}">${statusText}</span>
+        <button class="btn-delete-song" data-id="${song.id}" title="Eliminar tema" style="position: absolute; top: 15px; left: 15px; z-index: 10; color: var(--text-dim); background: rgba(17, 18, 21, 0.7); border: 1px solid var(--border-soft); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; outline: none; padding: 0;">
+          <i class="ti ti-trash" style="font-size: 13px;"></i>
+        </button>
         
         <div class="song-card-content">
           <div class="card-top">
-            <span class="last-edit">LAST EDIT: ${song.lastEdit.toUpperCase()}</span>
-            <span class="artist-tag">${song.artist}</span>
+            <span class="last-edit" style="margin-left: 28px;">LAST EDIT: ${song.lastEdit.toUpperCase()}</span>
           </div>
           
           <div class="song-title-group">
             <h3 class="song-card-title">${song.title}</h3>
+            <div class="song-card-artist" style="margin-top: 4px; font-size: 13px; color: var(--text-secondary);">${song.artist}</div>
           </div>
           
           <div>
@@ -1083,26 +1479,49 @@ function renderSetlist() {
 }
 
 // --- CARGAR CANCION ---
-function openSongInRehearsal(songId) {
-  state.activeSongId = songId;
-  state.transposeOffset = 0;
-  state.autoscrollActivo = true;
-  state.enReproduccion = false;
-  state.tiempoActual = 0;
-  state.mostrarTransposer = false;
-  state.lineaActivaIndex = 0;
-  
-  const song = state.songs.find(s => s.id === songId);
-  if (song) {
-    const lines = parseLyricsToEnsayoModel(song.lyrics);
-    const structure = getSongEstructuraEnsayo(song, lines);
-    if (structure.length > 0) {
-      state.seccionActivaId = structure[0].id;
+function openSongInRehearsal(eventOrId, optionalSongId) {
+  try {
+    let songId;
+    let event;
+    
+    if (typeof eventOrId === "string") {
+      songId = eventOrId;
+    } else {
+      event = eventOrId;
+      songId = optionalSongId;
     }
+    
+    if (event && event.target && event.target.closest(".btn-delete-song")) {
+      return;
+    }
+    
+    if (!songId) {
+      console.error("openSongInRehearsal called without a song ID");
+      return;
+    }
+    
+    state.activeSongId = songId;
+    state.transposeOffset = 0;
+    state.autoscrollActivo = true;
+    state.enReproduccion = false;
+    state.tiempoActual = 0;
+    state.mostrarTransposer = false;
+    state.lineaActivaIndex = 0;
+    
+    const song = state.songs.find(s => String(s.id) === String(songId));
+    if (song) {
+      const lines = parseLyricsToEnsayoModel(song.lyrics);
+      const structure = getSongEstructuraEnsayo(song, lines);
+      if (structure.length > 0) {
+        state.seccionActivaId = structure[0].id;
+      }
+    }
+    
+    switchTab("rehearsal");
+    renderApp();
+  } catch (err) {
+    console.error("Error in openSongInRehearsal:", err);
   }
-  
-  switchTab("rehearsal");
-  renderApp();
 }
 
 // --- GUARDAR O EDITAR CANCIÓN ---
@@ -1134,7 +1553,8 @@ function saveSongFromForm() {
   const timeSig = document.getElementById("song-timesig").value;
   const status = document.getElementById("song-status").value;
   const rhythm = "↓ ↑ ↓ ↑";
-  const lyrics = document.getElementById("song-lyrics").value;
+  const rawLyrics = document.getElementById("song-lyrics").value;
+  const lyrics = convertTraditionalToBracket(rawLyrics.trim());
   
   if (!title || title.trim() === "" || title === "Título del Tema") {
     alert("Por favor, completa el título del tema.");
@@ -1149,28 +1569,36 @@ function saveSongFromForm() {
     return;
   }
   
+  let songToSave;
   if (songId) {
     // Editar existente
-    const index = state.songs.findIndex(s => s.id === songId);
+    const index = state.songs.findIndex(s => String(s.id) === String(songId));
     if (index !== -1) {
       state.songs[index] = {
         ...state.songs[index],
         title, artist, bpm, key, timeSig, status, rhythm, lyrics,
         lastEdit: "hace unos instantes"
       };
+      songToSave = state.songs[index];
     }
   } else {
     // Crear nueva
-    const newSong = {
+    songToSave = {
       id: "s_" + Date.now(),
       title, artist, bpm, key, timeSig, status, rhythm, lyrics,
       lastEdit: "creado recién",
       image: "./assets/yesterday.png" // Por defecto
     };
-    state.songs.unshift(newSong);
+    state.songs.unshift(songToSave);
   }
   
-  saveLocalStorage();
+  // Guardar directamente en Firestore la canción modificada/creada
+  if (songToSave && window.SongsService) {
+    window.SongsService.saveSong(songToSave).catch(err => {
+      console.error("Error al guardar canción en Firebase:", err);
+    });
+  }
+  
   document.getElementById("modal-add-song").classList.remove("open");
   renderApp();
 }
@@ -1184,42 +1612,72 @@ function parseLyricsToEnsayoModel(lyricsText) {
   const lines = lyricsText.split("\n");
   const result = [];
   let seccionId = "sec-intro";
+  let seccionNotas = "";
+  let nextIsNewParagraph = false;
   
   lines.forEach((line, index) => {
     const trimmed = line.trim();
-    if (trimmed === "") return;
-    
-    // Detectar cabecera de sección, e.g. [CORO] o [VERSE 1]
-    if (trimmed.startsWith("[") && trimmed.endsWith("]") && !trimmed.includes(" ")) {
-      const name = trimmed.slice(1, -1).toUpperCase();
-      seccionId = "sec-" + name.toLowerCase().replace(/\s+/g, "-");
+    if (trimmed === "") {
+      nextIsNewParagraph = true;
       return;
     }
     
-    // Extraer acordes entre corchetes
+    // Detectar cabecera de sección, e.g. [CORO // ENTRA BATERIA] o [INTRO]
+    if (isSectionHeader(trimmed)) {
+      let name = trimmed.slice(1, -1).trim();
+      let notes = "";
+      if (name.includes("//")) {
+        const parts = name.split("//");
+        name = parts[0].trim();
+        notes = parts[1].trim();
+      }
+      seccionId = "sec-" + name.toLowerCase().replace(/\s+/g, "-");
+      seccionNotas = notes;
+      nextIsNewParagraph = true;
+      return;
+    }
+    
+    // Extraer acordes entre corchetes y calcular su posición exacta relativa al texto limpio
     const chordRegex = /\[([^\]]+)\]/g;
     const lineChords = [];
     let match;
     
-    let wordIndex = 0;
+    let cleanLineText = "";
+    let lastIndex = 0;
+    let cleanIndex = 0;
+    
     while ((match = chordRegex.exec(line)) !== null) {
+      const segment = line.substring(lastIndex, match.index);
+      cleanLineText += segment;
+      cleanIndex += segment.length;
+      
       lineChords.push({
         id: `ac-${index}-${match.index}`,
         acorde: match[1],
-        posicionPalabra: wordIndex,
-        posicionCaracter: match.index
+        posicionCaracter: cleanIndex
       });
-      wordIndex += 2;
+      
+      lastIndex = chordRegex.lastIndex;
     }
+    cleanLineText += line.substring(lastIndex);
     
-    const cleanText = line.replace(/\[[^\]]+\]/g, "").replace(/\s+/g, " ").trim();
+    const trimmedLeadingSpaces = cleanLineText.length - cleanLineText.trimStart().length;
+    const cleanText = cleanLineText.trim();
+    
+    // Ajustar posiciones de acordes según los espacios eliminados al inicio por trim()
+    lineChords.forEach(c => {
+      c.posicionCaracter = Math.max(0, c.posicionCaracter - trimmedLeadingSpaces);
+    });
     
     result.push({
       id: `line-${index}`,
       texto: cleanText || "(Instrumental)",
       acordes: lineChords,
-      seccionId: seccionId
+      seccionId: seccionId,
+      seccionNotas: seccionNotas,
+      isNewParagraph: nextIsNewParagraph
     });
+    nextIsNewParagraph = false;
   });
   return result;
 }
@@ -1229,7 +1687,7 @@ function getSongEstructuraEnsayo(song, lines) {
   const uniqueSecIds = [...new Set(lines.map(l => l.seccionId))];
   
   uniqueSecIds.forEach((secId) => {
-    const name = secId.replace("sec-", "").toUpperCase();
+    const name = secId.replace("sec-", "").toUpperCase().replace(/-/g, " ");
     const secLines = lines.filter(l => l.seccionId === secId);
     if (secLines.length === 0) return;
     
@@ -1238,6 +1696,7 @@ function getSongEstructuraEnsayo(song, lines) {
     
     let type = "verso";
     if (name.includes("INTRO")) type = "intro";
+    else if (name.startsWith("PRE") || name.includes("PRE-CORO") || name.includes("PRE CORO")) type = "pre-coro";
     else if (name.includes("CORO") || name.includes("ESTRIBILLO") || name.includes("CHORUS")) type = "estribillo";
     else if (name.includes("PUENTE") || name.includes("BRIDGE")) type = "puente";
     else if (name.includes("SOLO")) type = "solo";
@@ -1245,11 +1704,11 @@ function getSongEstructuraEnsayo(song, lines) {
     
     sections.push({
       id: secId,
-      nombre: name.replace("-", " "),
+      nombre: name,
       tipo: type,
       lineaInicio: startIdx,
       lineaFin: endIdx,
-      notas: type === "estribillo" ? "Coro doble aquí · entra guitarra líder en el 3er verso" : ""
+      notas: secLines[0].seccionNotas || ""
     });
   });
   
@@ -1266,7 +1725,7 @@ function getSongEstructuraEnsayo(song, lines) {
   return sections;
 }
 
-const notasCromáticas = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const notasCromaticas = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const flatMap = { "Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#", "Bb": "A#" };
 
 function transposeChord(chord, offset) {
@@ -1276,11 +1735,11 @@ function transposeChord(chord, offset) {
   const root = match[1];
   const suffix = match[2];
   const normalizedRoot = flatMap[root] || root;
-  const index = notasCromáticas.indexOf(normalizedRoot);
+  const index = notasCromaticas.indexOf(normalizedRoot);
   if (index === -1) return chord;
   let newIndex = (index + offset) % 12;
   if (newIndex < 0) newIndex += 12;
-  return notasCromáticas[newIndex] + suffix;
+  return notasCromaticas[newIndex] + suffix;
 }
 
 function triggerEnsayoToast(msg) {
@@ -1290,13 +1749,13 @@ function triggerEnsayoToast(msg) {
   const toast = document.createElement("div");
   toast.className = "ensayo-toast glass";
   toast.innerHTML = `<span>🔔</span> ${msg}`;
-  document.querySelector(".hoja-ensayo").appendChild(toast);
+  const room = document.getElementById("rehearsal-room-content"); if(room) room.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
 }
 
 function scrollToEnsayoLine(index) {
   const el = document.getElementById(`ensayo-line-${index}`);
-  const container = document.querySelector(".lyric-scroll-container");
+  const container = document.getElementById("lyrics-editor-scroll");
   if (el && container) {
     const offsetTop = el.offsetTop - container.clientHeight / 2 + el.clientHeight / 2;
     container.scrollTo({
@@ -1306,266 +1765,151 @@ function scrollToEnsayoLine(index) {
   }
 }
 
-function renderRehearsalRoom() {
-  const room = document.getElementById("rehearsal-room-content");
-  if (!room) return;
-  
-  if (!state.activeSongId) {
-    room.innerHTML = `
-      <div style="background:#0A0A14; border-radius:26px; padding:28px 20px; text-align:center; max-width:340px; border:1px solid #23213A; margin: 40px auto; font-family:'Inter',sans-serif; color:#F3F1FF;">
-        <div style="font-size: 40px; margin-bottom: 12px;">🎙️</div>
-        <h3 class="rj" style="font-size:22px; font-weight:600; color:#FF3EA5; letter-spacing:0.3px;">Ensayo en Vivo</h3>
-        <p style="color:#9C97C4; font-size:12px; margin-bottom: 20px; line-height:1.5;">
-          Selecciona un tema de tu REPERTORIO en la pestaña principal para iniciar la Hoja de Ensayo.
-        </p>
-        <button class="btn btn-primary" onclick="switchTab('repertorio')" style="border-radius:20px; font-size:12px; padding:8px 20px;">Ver REPERTORIO</button>
-      </div>
-    `;
-    return;
-  }
-  
-  const song = state.songs.find(s => s.id === state.activeSongId);
-  if (!song) return;
-  
-  const lines = parseLyricsToEnsayoModel(song.lyrics);
-  const structure = getSongEstructuraEnsayo(song, lines);
-  
-  if (!state.seccionActivaId && structure.length > 0) {
-    state.seccionActivaId = structure[0].id;
-  }
-  
-  if (window.innerWidth < 768) {
-    renderMobileRehearsal(room, song, lines, structure);
-  } else {
-    renderDesktopRehearsal(room, song, lines, structure);
-  }
+
+// ─────────────────────────────────────────────────────────────
+// HOJA DE ENSAYO — SISTEMA UNIFICADO
+// ─────────────────────────────────────────────────────────────
+
+let ensayoPlayInterval = null;
+
+// Calcular color de línea según tipo de sección
+function getLineColor(lineSec) {
+  if (!lineSec) return "#29F0D6";
+  if (lineSec.tipo === "estribillo" || lineSec.tipo === "outro") return "#FF3EA5";
+  if (lineSec.tipo === "puente" || lineSec.tipo === "pre-coro") return "#FFD23F";
+  return "#29F0D6";
 }
 
-function renderMobileRehearsal(room, song, lines, structure) {
-  const tonalidadTranspuesta = transposeChord(song.key, state.transposeOffset || 0);
-  const activeSec = structure.find(s => s.id === state.seccionActivaId) || structure[0];
-  const activeNotas = activeSec ? (activeSec.notes || activeSec.notas || "") : "";
-  
-  const members = [
-    { id: "int-camila", nombre: "Camila", instrumento: "Voz", colorAvatar: "#FF3EA5", iniciales: "CA" },
-    { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro", colorAvatar: "#FF3EA5", iniciales: "RO" },
-    { id: "int-julian", nombre: "Julián", instrumento: "Bajo", colorAvatar: "#29F0D6", iniciales: "JU" },
-    { id: "int-male", nombre: "Male", instrumento: "Batería", colorAvatar: "#FFD23F", iniciales: "MA" }
-  ];
-  
+// Renderizar fila de acordes con posicionamiento real por carácter
+function renderChordRow(acordes, transposeOffset) {
+  if (!acordes || acordes.length === 0) return "";
+  // ~7.6px por carácter en 14px Inter (calibrado)
+  const charPx = 7.6;
+  const pills = acordes.map(ac => {
+    const x = Math.round((ac.posicionCaracter || 0) * charPx);
+    const chord = transposeChord(ac.acorde, transposeOffset);
+    return `<span class="chord-pill" style="left:${x}px">${chord}</span>`;
+  }).join("");
+  return `<div class="lyric-chord-row">${pills}</div>`;
+}
+
+// Renderizar el roster de integrantes para una sección
+function renderRosterHtml(activeSec, members) {
   const type = activeSec ? activeSec.tipo : "verso";
-  const rosterHtml = members.map(m => {
+  return members.map(m => {
     let activo = true;
     if (type === "intro" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
     else if (type === "solo" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
     else if (type === "verso" && m.id === "int-rodrigo") activo = false;
-    
-    if (activo) {
-      return `
-        <div style="flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:4px; width:58px;">
-          <div style="width:38px; height:38px; border-radius:50%; background:#2A0F20; border:2px solid #FF3EA5; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:500; color:#FF9FCB; box-shadow: 0 0 10px rgba(255, 62, 165, 0.35);">${m.iniciales}</div>
-          <div style="font-size:10px; color:#F3F1FF; text-align:center;">${m.nombre}</div>
-          <div style="font-size:9px; color:#6E699A; text-align:center;">${m.instrumento}</div>
-        </div>
-      `;
-    } else {
-      return `
-        <div style="flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:4px; width:58px; opacity:0.5;">
-          <div style="width:38px; height:38px; border-radius:50%; background:#151329; border:1px solid #2A2840; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:500; color:#9C97C4;">${m.iniciales}</div>
-          <div style="font-size:10px; color:#9C97C4; text-align:center;">${m.nombre}</div>
-          <div style="font-size:9px; color:#6E699A; text-align:center;">${m.instrumento}</div>
-        </div>
-      `;
-    }
+
+    return `
+      <div class="roster-member ${activo ? 'active' : 'inactive'}">
+        <div class="roster-avatar-circle">${m.iniciales}</div>
+        <div class="roster-member-name">${m.nombre}</div>
+        <div class="roster-member-role">${m.instrumento}</div>
+      </div>`;
   }).join("");
-
-  const duration = song.duracionSegundos || 220;
-  const progressRatio = state.tiempoActual / duration;
-  const currentLineIndex = Math.min(
-    Math.floor(progressRatio * lines.length),
-    lines.length - 1
-  );
-  
-  if (state.enReproduccion) {
-    state.lineaActivaIndex = currentLineIndex;
-    const currentLine = lines[currentLineIndex];
-    if (currentLine && currentLine.seccionId !== state.seccionActivaId) {
-      state.seccionActivaId = currentLine.seccionId;
-    }
-  }
-
-  const linesHtml = lines.map((line, idx) => {
-    const isActive = state.lineaActivaIndex === idx;
-    const lineSec = structure.find(s => s.id === line.seccionId);
-    let colorType = "#29F0D6";
-    if (lineSec) {
-      if (lineSec.tipo === "estribillo" || lineSec.tipo === "outro") colorType = "#FF3EA5";
-      else if (lineSec.tipo === "puente" || lineSec.tipo === "pre-coro") colorType = "#FFD23F";
-    }
-    
-    if (isActive) {
-      return `
-        <div id="ensayo-line-${idx}" style="position:relative; background:rgba(255,62,165,0.07); border-left:2px solid #FF3EA5; border-radius:0 8px 8px 0; padding:8px 10px; margin-left:-10px; margin-bottom:14px; transition:all 0.28s;">
-          <div style="position:absolute; left:-18px; top:11px; width:8px; height:8px; border-radius:50%; background:#FF3EA5; box-shadow:0 0 10px #FF3EA5;"></div>
-          ${line.acordes.length > 0 ? `
-            <div class="mono" style="font-size:12px; color:#FF3EA5; display:flex; gap:30px; margin-bottom:3px;">
-              ${line.acordes.map(ac => `<span style="font-weight:500;">${transposeChord(ac.acorde, state.transposeOffset || 0)}</span>`).join("")}
-            </div>
-          ` : ''}
-          <div style="font-size:14px; color:#F3F1FF; line-height:1.5; font-weight:500;">${line.texto}</div>
-          ${activeNotas ? `<div style="font-size:11px; color:#D48FB0; margin-top:4px;">${activeNotas}</div>` : ''}
-        </div>
-      `;
-    } else {
-      return `
-        <div id="ensayo-line-${idx}" style="position:relative; margin-bottom:14px; transition:all 0.28s;">
-          <div style="position:absolute; left:-18px; top:2px; width:8px; height:8px; border-radius:50%; background:${colorType}; box-shadow:0 0 6px ${colorType};"></div>
-          ${line.acordes.length > 0 ? `
-            <div class="mono" style="font-size:12px; color:${colorType}; display:flex; gap:26px; margin-bottom:3px;">
-              ${line.acordes.map(ac => `<span style="font-weight:500;">${transposeChord(ac.acorde, state.transposeOffset || 0)}</span>`).join("")}
-            </div>
-          ` : ''}
-          <div style="font-size:14px; color:#F3F1FF; line-height:1.5;">${line.texto}</div>
-        </div>
-      `;
-    }
-  }).join("");
-
-  room.innerHTML = `
-    <div style="background:transparent; display:flex; justify-content:center; padding:10px 0;">
-      <div class="hoja-ensayo" style="width:340px; background:#0A0A14; border-radius:26px; padding:16px 15px 14px; font-family:'Inter',sans-serif; color:#F3F1FF; border:1px solid #23213A; display:flex; flex-direction:column; box-sizing:border-box;">
-        
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-          <div>
-            <div class="rj" id="ensayo-title-click" style="font-size:22px; font-weight:600; letter-spacing:0.3px; color:#FF3EA5; text-shadow:0 0 10px rgba(255, 62, 165, 0.4); cursor:pointer;">${song.title}</div>
-            <div style="font-size:11px; color:#9C97C4; margin-top:1px;">Ensayo · en vivo</div>
-          </div>
-          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; position:relative;">
-            <button class="chip mono" id="ensayo-key-chip" style="background:rgba(41,240,214,0.12); color:#29F0D6; border:1px solid rgba(41,240,214,0.35); cursor:pointer; outline:none;">
-              ${tonalidadTranspuesta}
-            </button>
-            <div class="transposer-dropdown glass" id="ensayo-transposer-dropdown" style="display:none; position:absolute; top:30px; right:0; width:160px; background:rgba(10,10,20,0.95); border:1px solid #23213A; border-radius:12px; padding:8px; z-index:100; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-              <div class="dropdown-title" style="font-size:10px; color:#6E699A; margin-bottom:6px; text-transform:uppercase;">Transponer</div>
-              <div class="transposer-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px;">
-                ${[-3, -2, -1, 0, 1, 2, 3].map(offset => `
-                  <button class="transpose-btn mono ${state.transposeOffset === offset ? 'active' : ''}" data-offset="${offset}" style="background:rgba(255,255,255,0.03); border:1px solid #2A2840; color:#F3F1FF; font-size:10px; padding:3px 0; border-radius:4px; cursor:pointer;">
-                    ${offset === 0 ? 'Orig' : offset > 0 ? `+${offset}` : offset}
-                  </button>
-                `).join("")}
-              </div>
-            </div>
-            <span class="chip mono" style="background:rgba(255,210,63,0.12); color:#FFD23F; border:1px solid rgba(255,210,63,0.35);">${song.bpm} bpm</span>
-          </div>
-        </div>
-
-        <div style="display:flex; gap:6px; overflow-x:auto; margin-bottom:16px; padding-bottom:4px;">
-          ${structure.map(sec => {
-            const isActive = state.seccionActivaId === sec.id;
-            if (isActive) {
-              return `<button class="rj chip section-tab" data-id="${sec.id}" style="background:#FF3EA5; color:#3C0A2A; border:1px solid #FF3EA5; font-size:12px; font-weight:600; cursor:pointer; outline:none;">${sec.nombre}</button>`;
-            } else {
-              return `<button class="rj chip section-tab" data-id="${sec.id}" style="background:transparent; color:#6E699A; border:1px solid #2A2840; font-size:12px; cursor:pointer; outline:none;">${sec.nombre}</button>`;
-            }
-          }).join("")}
-        </div>
-
-        <div class="lyric-scroll-container" style="position:relative; padding-left:18px; margin-bottom:16px; max-height:280px; overflow-y:auto; scroll-behavior:smooth;">
-          <div style="position:absolute; left:5px; top:2px; bottom:2px; width:2px; background:linear-gradient(#29F0D6,#29F0D6); opacity:0.35; box-shadow:0 0 6px #29F0D6;"></div>
-          <div class="lyric-content-wrapper">
-            ${linesHtml}
-          </div>
-        </div>
-
-        <div style="border-top:1px solid #23213A; padding-top:12px; margin-bottom:14px;">
-          <div style="font-size:11px; color:#6E699A; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Participación en esta sección</div>
-          <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
-            ${rosterHtml}
-          </div>
-        </div>
-
-        <div style="display:flex; align-items:center; justify-content:space-between; background:#111022; border:1px solid #23213A; border-radius:16px; padding:8px 14px;">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-size:11px; color:#6E699A;">Tono</span>
-            <span class="mono" style="font-size:12px; color:#F3F1FF;">${song.key}</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:14px;">
-            <i class="ti ti-player-skip-back" style="font-size:18px; color:#9C97C4; cursor:pointer;" id="btn-ensayo-prev"></i>
-            <div style="width:34px; height:34px; border-radius:50%; background:#FF3EA5; display:flex; align-items:center; justify-content:center; cursor:pointer;" id="btn-ensayo-play">
-              <i class="ti ${state.enReproduccion ? 'ti-player-pause' : 'ti-player-play'}" style="font-size:16px; color:#3C0A2A;" id="btn-ensayo-play-icon"></i>
-            </div>
-            <i class="ti ti-player-skip-forward" style="font-size:18px; color:#9C97C4; cursor:pointer;" id="btn-ensayo-next"></i>
-          </div>
-          <div style="display:flex; align-items:center; gap:6px; cursor:pointer;" id="btn-ensayo-autoscroll">
-            <i class="ti ti-arrows-vertical" style="font-size:15px; color:${state.autoscrollActivo ? '#29F0D6' : '#9C97C4'};" id="autoscroll-icon"></i>
-            <span style="font-size:10px; color:${state.autoscrollActivo ? '#29F0D6' : '#9C97C4'};" id="autoscroll-label">${state.autoscrollActivo ? 'auto' : 'manual'}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  bindMobileRehearsalEvents(structure, lines, song);
 }
 
-function renderDesktopRehearsal(room, song, lines, structure) {
-  const tonalidadTranspuesta = transposeChord(song.key, state.transposeOffset || 0);
+// Función principal unificada de render
+function renderRehearsalRoom() {
+  try {
+    const room = document.getElementById("rehearsal-room-content");
+    if (!room) return;
+
+  if (!state.activeSongId) {
+    room.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:center; height:100%; background:var(--bg-stage);">
+        <div style="text-align:center; max-width:320px; padding:24px; border:1px solid var(--border); border-radius:18px; background:var(--bg-panel);">
+          <div style="font-size:38px; margin-bottom:12px;">🎙️</div>
+          <h3 style="font-size:20px; font-weight:700; color:var(--magenta); margin-bottom:8px; text-shadow:0 0 10px rgba(255,62,165,0.4);">Hoja de Ensayo</h3>
+          <p style="color:var(--text-muted); font-size:12px; line-height:1.6; margin-bottom:20px;">
+            Selecciona un tema de tu REPERTORIO para iniciar la hoja de ensayo en vivo.
+          </p>
+          <button class="btn-primary btn" onclick="switchTab('repertorio')" style="border-radius:20px; font-size:12px; padding:8px 20px;">
+            <i class="ti ti-music"></i> Ver REPERTORIO
+          </button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song) return;
+
+  const lines = parseLyricsToEnsayoModel(song.lyrics);
+  const structure = getSongEstructuraEnsayo(song, lines);
+
+  if (!state.seccionActivaId && structure.length > 0) {
+    state.seccionActivaId = structure[0].id;
+  }
+
+  const tonalidadTranspuesta = transposeChord(song.key || "C", state.transposeOffset || 0);
   const activeSec = structure.find(s => s.id === state.seccionActivaId) || structure[0];
   const activeNotas = activeSec ? (activeSec.notes || activeSec.notas || "") : "";
+  const duration = song.duracionSegundos || 220;
+  const progressPercent = Math.min(100, ((state.tiempoActual || 0) / duration) * 100);
+  const selectedCount = state.selectedLineIndices ? state.selectedLineIndices.length : 0;
+  const isMultiSelect = selectedCount > 0;
 
+  const members = [
+    { id: "int-camila",  nombre: "Camila",  instrumento: "Voz",    iniciales: "CA" },
+    { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro",   iniciales: "RO" },
+    { id: "int-julian",  nombre: "Julián",  instrumento: "Bajo",   iniciales: "JU" },
+    { id: "int-male",    nombre: "Male",    instrumento: "Batería", iniciales: "MA" },
+    { id: "int-franco",  nombre: "Franco",  instrumento: "Teclado", iniciales: "FR" }
+  ];
+
+  // — STRUCTURE SIDEBAR —
   const structureHtml = structure.map(sec => {
     const isActive = state.seccionActivaId === sec.id;
     return `
       <div class="section-item ${isActive ? 'active' : ''}" data-id="${sec.id}">
         <i class="ti ti-music section-icon"></i>
         <div class="section-label">${sec.nombre}</div>
-        <div class="section-time">0:30</div>
         <i class="ti ti-menu-2 section-menu"></i>
-      </div>
-    `;
+      </div>`;
   }).join("");
 
+  // — SECTION TAB CHIPS (mobile) —
+  const sectionChipsHtml = structure.map(sec => {
+    const isActive = state.seccionActivaId === sec.id;
+    return `<button class="section-tab-chip ${isActive ? 'active' : ''}" data-id="${sec.id}">${sec.nombre}</button>`;
+  }).join("");
+
+  // — LYRIC LINES —
   const linesHtml = lines.map((line, idx) => {
     const isActive = state.lineaActivaIndex === idx;
-    const lineChords = line.acordes && line.acordes.length > 0 ? line.acordes : [{ acorde: "" }, { acorde: "" }];
-    const chordInputsHtml = lineChords.map((ac, cidx) => {
-      const chordVal = ac.acorde ? transposeChord(ac.acorde, state.transposeOffset || 0) : "";
-      return `
-        <input class="chord-input desktop-chord-${idx}" data-line="${idx}" data-chord-idx="${cidx}" value="${chordVal}" placeholder="" />
-        ${cidx < lineChords.length - 1 ? '<span class="chord-separator" style="flex:1;"></span>' : ''}
-      `;
-    }).join("");
+    const isSelected = state.selectedLineIndices && state.selectedLineIndices.includes(idx);
+    const lineSec = structure.find(s => s.id === line.seccionId);
+    const dotColor = getLineColor(lineSec);
+    const chordRow = renderChordRow(line.acordes, state.transposeOffset || 0);
+    const lineNotes = isActive && activeNotas ? `<div class="lyric-notes">💡 ${activeNotas}</div>` : "";
+
+    const marginStyle = line.isNewParagraph && idx > 0 ? "margin-top: 32px;" : "";
 
     return `
-      <div class="lyric-line-editor ${isActive ? 'active' : ''}" id="ensayo-line-${idx}" data-index="${idx}">
+      <div class="lyric-line-editor ${isActive ? 'active' : ''} ${isSelected ? 'selected' : ''}" id="ensayo-line-${idx}" data-index="${idx}" style="${marginStyle}">
         <span class="line-number">${idx + 1}</span>
-        <div class="lyric-chords">
-          ${chordInputsHtml}
-        </div>
-        <input class="lyric-text-input" id="desktop-text-${idx}" data-line="${idx}" value="${line.texto}" />
-        ${isActive && activeNotas ? `<div class="lyric-notes">💡 ${activeNotas}</div>` : ''}
+        <div class="line-dot" style="background:${dotColor}; box-shadow:0 0 7px ${dotColor};"></div>
+        ${chordRow}
+        <div class="lyric-text-display">${line.texto}</div>
+        ${lineNotes}
         <div class="lyric-controls">
           <button class="btn-small btn-desktop-duplicate" data-index="${idx}"><i class="ti ti-copy"></i> Duplicar</button>
           <button class="btn-small btn-desktop-delete" data-index="${idx}" style="color:#E24B4A;"><i class="ti ti-trash"></i> Eliminar</button>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join("");
 
-  const members = [
-    { id: "int-camila", nombre: "Camila", instrumento: "Voz", colorAvatar: "#FF3EA5", iniciales: "CA" },
-    { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro", colorAvatar: "#FF3EA5", iniciales: "RO" },
-    { id: "int-julian", nombre: "Julián", instrumento: "Bajo", colorAvatar: "#29F0D6", iniciales: "JU" },
-    { id: "int-male", nombre: "Male", instrumento: "Batería", colorAvatar: "#FFD23F", iniciales: "MA" },
-    { id: "int-franco", nombre: "Franco", instrumento: "Teclado", colorAvatar: "#29F0D6", iniciales: "FR" }
-  ];
-
+  // — PARTICIPANTS (right sidebar) —
   const type = activeSec ? activeSec.tipo : "verso";
   const participantsHtml = members.map(m => {
     let activo = true;
     if (type === "intro" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
     else if (type === "solo" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
     else if (type === "verso" && m.id === "int-rodrigo") activo = false;
-    
+
     return `
       <div class="participant-card ${activo ? 'active' : ''}" data-id="${m.id}">
         <div class="participant-avatar">${m.iniciales}</div>
@@ -1573,332 +1917,352 @@ function renderDesktopRehearsal(room, song, lines, structure) {
           <div class="participant-name">${m.nombre}</div>
           <div class="participant-role">${m.instrumento}</div>
         </div>
-        <i class="ti ti-check participant-check" style="font-size:14px; color:var(--cyan);"></i>
-      </div>
-    `;
+        <i class="ti ti-check participant-check"></i>
+      </div>`;
   }).join("");
 
-  const duration = song.duracionSegundos || 220;
-  const progressPercent = (state.tiempoActual / duration) * 100;
+  // — ROSTER STRIP (mobile) —
+  const rosterStripHtml = renderRosterHtml(activeSec, members);
 
   room.innerHTML = `
     <div class="layout">
+
+      <!-- TOPBAR -->
       <div class="topbar">
         <div class="topbar-left">
-          <div class="topbar-title">${song.title}</div>
-          <div class="topbar-meta">
-            <span class="meta-chip meta-chip-cyan mono" id="ensayo-key-chip">${tonalidadTranspuesta}</span>
-            <div class="transposer-dropdown glass" id="ensayo-transposer-dropdown" style="display:none; position:absolute; top:45px; right:auto; width:160px; background:rgba(10,10,20,0.95); border:1px solid #23213A; border-radius:12px; padding:8px; z-index:100; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-              <div class="dropdown-title" style="font-size:10px; color:#6E699A; margin-bottom:6px; text-transform:uppercase;">Transponer</div>
-              <div class="transposer-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px;">
-                ${[-3, -2, -1, 0, 1, 2, 3].map(offset => `
-                  <button class="transpose-btn mono ${state.transposeOffset === offset ? 'active' : ''}" data-offset="${offset}" style="background:rgba(255,255,255,0.03); border:1px solid #2A2840; color:#F3F1FF; font-size:10px; padding:3px 0; border-radius:4px; cursor:pointer;">
-                    ${offset === 0 ? 'Orig' : offset > 0 ? `+${offset}` : offset}
-                  </button>
-                `).join("")}
+          <div class="topbar-title" id="ensayo-title-click" style="cursor:pointer">${song.title}</div>
+          <div class="topbar-meta" style="position:relative;">
+            <span class="meta-chip meta-chip-cyan" id="ensayo-key-chip">${tonalidadTranspuesta}</span>
+            <div class="transposer-dropdown" id="ensayo-transposer-dropdown" style="display:none;">
+              <div class="dropdown-title">Transponer</div>
+              <div class="transposer-grid">
+                ${[-5,-4,-3,-2,-1,0,1,2,3,4,5].map(o => `
+                  <button class="transpose-btn ${(state.transposeOffset||0)===o?'active':''}" data-offset="${o}">
+                    ${o===0?'Orig':o>0?'+'+o:o}
+                  </button>`).join("")}
               </div>
             </div>
-            <span class="meta-chip meta-chip-amber mono">${song.bpm} bpm</span>
-            <span class="meta-chip" style="color:var(--text-dim); border-color:var(--border-soft);">Versión: ensayo</span>
-            <span class="meta-chip" style="color:var(--text-dim); border-color:var(--border-soft);">${formatTime(duration)}</span>
+            <span class="meta-chip meta-chip-amber">${song.bpm || 90} bpm</span>
+            <span class="meta-chip" style="color:var(--text-dim); border-color:var(--border-soft); cursor:default;">${formatTime(duration)}</span>
           </div>
         </div>
         <div class="topbar-right">
-          <button class="btn" onclick="alert('Descargar como PDF')"><i class="ti ti-download" style="font-size:14px; margin-right:4px;"></i> PDF</button>
-          <button class="btn" onclick="alert('Descargar como imagen')"><i class="ti ti-photo" style="font-size:14px; margin-right:4px;"></i> Imagen</button>
-          <button class="btn-primary" id="btn-desktop-save"><i class="ti ti-check" style="font-size:14px; margin-right:6px;"></i> Guardar</button>
+          <button class="btn" onclick="alert('Exportar como PDF — Próximamente')">📥 PDF</button>
+          <button class="btn-primary btn" id="btn-desktop-save">✓ Guardar</button>
         </div>
       </div>
 
-      <div class="main-content-ensayo">
+      <!-- SECTION TABS (mobile only) -->
+      <div class="section-tabs-strip">${sectionChipsHtml}</div>
+
+      <!-- BODY -->
+      <div class="ensayo-body">
+
+        <!-- LEFT SIDEBAR (desktop) -->
         <div class="left-sidebar-ensayo">
           <div class="sidebar-title">Estructura</div>
           <div class="section-tree">${structureHtml}</div>
-          <div class="add-section-btn" id="btn-desktop-add-sec"><i class="ti ti-plus" style="font-size:12px; margin-right:4px;"></i> Nueva sección</div>
-        </div>
-
-        <div class="center-pane-ensayo">
-          <div class="editor-tabs">
-            <button class="editor-tab active"><i class="ti ti-edit" style="font-size:12px; margin-right:4px;"></i> Acordes</button>
-            <button class="editor-tab" onclick="alert('Notas de referencia cargadas')"><i class="ti ti-music" style="font-size:12px; margin-right:4px;"></i> Notas de referencia</button>
-            <button class="editor-tab" onclick="alert('Historial de Grabación de Audio')"><i class="ti ti-volume-2" style="font-size:12px; margin-right:4px;"></i> Audio</button>
+          <div class="add-section-btn" id="btn-desktop-add-sec">
+            <i class="ti ti-plus" style="font-size:11px;"></i> Nueva sección
           </div>
-          <div class="lyrics-editor">${linesHtml}</div>
-        </div>
-
-        <div class="right-sidebar-ensayo">
-          <div class="sidebar-section">
-            <div class="sidebar-section-title">Propiedades de la sección</div>
+          <div style="padding:12px 14px; border-top:1px solid var(--border); margin-top:auto;">
+            <div class="sidebar-title" style="padding:0 0 8px;">${isMultiSelect ? `Propiedades (${selectedCount} versos)` : 'Propiedades'}</div>
             <div class="property-row">
-              <label class="property-label">Nombre</label>
-              <input class="property-input" id="desktop-sec-name-input" value="${activeSec ? activeSec.nombre : 'Sin sección'}" />
+              <label class="property-label">Nombre de sección</label>
+              <input class="property-input" id="desktop-sec-name-input" value="${isMultiSelect ? 'Múltiples versos' : (activeSec ? activeSec.nombre : 'Sin sección')}" ${isMultiSelect ? 'disabled style="opacity: 0.6"' : ''} />
             </div>
             <div class="property-row">
               <label class="property-label">Tipo</label>
               <select class="property-input" id="desktop-sec-type-select">
-                <option value="verso" ${type === 'verso' ? 'selected' : ''}>Verso</option>
-                <option value="estribillo" ${type === 'estribillo' ? 'selected' : ''}>Estribillo</option>
-                <option value="puente" ${type === 'puente' ? 'selected' : ''}>Puente</option>
-                <option value="intro" ${type === 'intro' ? 'selected' : ''}>Intro</option>
-                <option value="outro" ${type === 'outro' ? 'selected' : ''}>Outro</option>
-                <option value="solo" ${type === 'solo' ? 'selected' : ''}>Solo</option>
+                <option value="verso" ${type==='verso'?'selected':''}>Verso</option>
+                <option value="pre-coro" ${type==='pre-coro'?'selected':''}>Pre-Coro</option>
+                <option value="estribillo" ${type==='estribillo'?'selected':''}>Coro / Estribillo</option>
+                <option value="puente" ${type==='puente'?'selected':''}>Puente</option>
+                <option value="intro" ${type==='intro'?'selected':''}>Intro</option>
+                <option value="outro" ${type==='outro'?'selected':''}>Outro</option>
+                <option value="solo" ${type==='solo'?'selected':''}>Solo</option>
               </select>
             </div>
             <div class="property-row">
-              <label class="property-label">Notas</label>
-              <input class="property-input" id="desktop-sec-notes-input" value="${activeNotas}" placeholder="Notas de sección..." />
+              <label class="property-label">Notas de sección</label>
+              <input class="property-input" id="desktop-sec-notes-input" value="${isMultiSelect ? 'Múltiples versos' : activeNotas}" ${isMultiSelect ? 'disabled style="opacity: 0.6"' : ''} placeholder="Ej: entra guitarra líder aquí..." />
             </div>
           </div>
+        </div>
 
-          <div class="sidebar-section">
-            <div class="sidebar-section-title">Participantes</div>
-            <div class="participants-grid">${participantsHtml}</div>
-            <div class="add-participant-btn" onclick="alert('Agregar nuevo integrante')"><i class="ti ti-plus"></i> Agregar músico</div>
+        <!-- CENTER PANE -->
+        <div class="center-pane-ensayo">
+          <div class="editor-tabs" style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; gap: 4px;">
+              <button class="editor-tab active"><i class="ti ti-music" style="font-size:11px;"></i> Acordes &amp; Letra</button>
+              <button class="editor-tab" onclick="triggerEnsayoToast('Notas de referencia — Próximamente')"><i class="ti ti-file-text" style="font-size:11px;"></i> Notas</button>
+              <button class="editor-tab" onclick="triggerEnsayoToast('Audio — Próximamente')"><i class="ti ti-volume-2" style="font-size:11px;"></i> Audio</button>
+            </div>
+            <button class="btn btn-secondary" onclick="editActiveSong()" style="padding: 4px 10px; font-size: 11px; border: 1px solid rgba(0, 229, 255, 0.2); background: rgba(0, 229, 255, 0.05); display: flex; align-items: center; gap: 4px; border-radius: 6px; cursor: pointer; color: var(--neon-cyan); outline: none; margin-right: 4px;">
+              ✏️ Editar Letra
+            </button>
           </div>
+          <div class="lyrics-editor" id="lyrics-editor-scroll">
+            <div class="lyric-cable"></div>
+            ${linesHtml}
+          </div>
+        </div>
 
+        <!-- RIGHT SIDEBAR (desktop) -->
+        <div class="right-sidebar-ensayo">
           <div class="sidebar-section">
-            <div class="sidebar-section-title">Notas de línea</div>
-            <textarea class="property-input" id="desktop-line-notes-textarea" rows="4" placeholder="Notas de ensayo para esta línea..."></textarea>
+            <div class="sidebar-section-title">Participantes en sección</div>
+            <div class="participants-grid">${participantsHtml}</div>
+            <div class="add-participant-btn" onclick="triggerEnsayoToast('Agregar músico — Próximamente')">
+              <i class="ti ti-plus"></i> Agregar músico
+            </div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">Notas de línea activa</div>
+            <textarea class="property-input" id="desktop-line-notes-textarea" rows="4" placeholder="Notas de ensayo para esta línea...">${activeNotas}</textarea>
           </div>
         </div>
       </div>
 
+      <!-- ROSTER STRIP (mobile only) -->
+      <div class="roster-strip">
+        <div class="roster-strip-title">Participación · ${activeSec ? activeSec.nombre : 'Sección'}</div>
+        <div class="roster-avatars">${rosterStripHtml}</div>
+      </div>
+
+      <!-- TRANSPORT BAR -->
       <div class="transport-bar-ensayo">
         <div class="transport-group">
-          <button class="btn-icon" id="btn-desktop-prev"><i class="ti ti-player-skip-back"></i></button>
-          <button class="play-btn" id="btn-desktop-play"><i class="ti ${state.enReproduccion ? 'ti-player-pause' : 'ti-player-play'}"></i></button>
-          <button class="btn-icon" id="btn-desktop-next"><i class="ti ti-player-skip-forward"></i></button>
+          <button class="btn-icon" id="btn-desktop-prev" title="Sección anterior">⏮</button>
+          <button class="play-btn" id="btn-desktop-play" title="${state.enReproduccion ? 'Pausar' : 'Reproducir'}">
+            ${state.enReproduccion ? '⏸' : '▶'}
+          </button>
+          <button class="btn-icon" id="btn-desktop-next" title="Siguiente sección">⏭</button>
         </div>
-        <div class="transport-group" style="flex:1; gap:12px;">
-          <span class="time-display">${formatTime(state.tiempoActual)}</span>
-          <div class="progress-bar" id="desktop-progress-bar"><div class="progress-fill" style="width: ${progressPercent}%;"></div></div>
+
+        <div class="transport-group" style="flex:1; gap:10px;">
+          <span class="time-display" id="ensayo-time-current">${formatTime(state.tiempoActual)}</span>
+          <div class="progress-bar" id="desktop-progress-bar">
+            <div class="progress-fill" style="width:${progressPercent}%;"></div>
+          </div>
           <span class="time-display">${formatTime(duration)}</span>
         </div>
+
         <div class="transport-controls">
-          <div class="control-group"><span class="control-label">Tono:</span><span class="control-value">${song.key}</span></div>
-          <div class="control-group"><span class="control-label">Transponer:</span><div class="transpose-btns"><button class="tp-btn" id="btn-desktop-tp-down">−</button><input class="control-input" id="desktop-tp-val" value="${state.transposeOffset || 0}" style="width:40px; text-align:center;" readonly /><button class="tp-btn" id="btn-desktop-tp-up">+</button></div></div>
-          <div class="control-group"><button class="btn-icon ${state.autoscrollActivo ? 'active' : ''}" id="btn-desktop-autoscroll" style="color: ${state.autoscrollActivo ? 'var(--cyan)' : 'var(--text-muted)'};" title="Autoscroll"><i class="ti ti-arrows-vertical"></i></button></div>
+          <div class="control-group">
+            <span class="control-label">Tono:</span>
+            <span class="control-value">${song.key || 'C'}</span>
+          </div>
+          <div class="control-group">
+            <span class="control-label">+/−</span>
+            <div class="transpose-btns">
+              <button class="tp-btn" id="btn-desktop-tp-down">−</button>
+              <input class="control-input" id="desktop-tp-val" value="${state.transposeOffset || 0}" readonly />
+              <button class="tp-btn" id="btn-desktop-tp-up">+</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <button class="btn-icon ${state.autoscrollActivo ? 'active' : ''}" id="btn-desktop-autoscroll" title="${state.autoscrollActivo ? 'Auto-scroll ON' : 'Auto-scroll OFF'}">
+              ${state.autoscrollActivo ? '🔄' : '↕️'}
+            </button>
+            <span style="font-size:10px; color:${state.autoscrollActivo ? 'var(--cyan)' : 'var(--text-dim)'};">
+              ${state.autoscrollActivo ? 'auto' : 'manual'}
+            </span>
+          </div>
         </div>
       </div>
 
+      <!-- MODAL: Nueva sección -->
       <div class="modal-overlay" id="modalAddSection">
         <div class="modal-box">
-          <div class="modal-title">Nueva sección</div>
-          <div class="modal-field"><label class="modal-label">Nombre</label><input class="modal-input" id="modal-sec-name" placeholder="Ej: Verso 3, Puente, Solo..." /></div>
-          <div class="modal-field"><label class="modal-label">Tipo</label><select class="modal-input" id="modal-sec-type"><option value="verso">Verso</option><option value="estribillo" selected>Estribillo</option><option value="puente">Puente</option><option value="intro">Intro</option><option value="outro">Outro</option><option value="solo">Solo</option></select></div>
-          <div class="modal-buttons"><button class="modal-btn" id="btn-modal-cancel">Cancelar</button><button class="modal-btn modal-btn-primary" id="btn-modal-create">Crear</button></div>
+          <div class="modal-title">Nueva Sección</div>
+          <div class="modal-field">
+            <label class="modal-label">Nombre</label>
+            <input class="modal-input" id="modal-sec-name" placeholder="Ej: Verso 3, Puente, Solo..." />
+          </div>
+          <div class="modal-field">
+            <label class="modal-label">Tipo</label>
+            <select class="modal-input" id="modal-sec-type">
+              <option value="verso">Verso</option>
+              <option value="estribillo" selected>Estribillo</option>
+              <option value="puente">Puente</option>
+              <option value="intro">Intro</option>
+              <option value="outro">Outro</option>
+              <option value="solo">Solo</option>
+            </select>
+          </div>
+          <div class="modal-buttons">
+            <button class="modal-btn" id="btn-modal-cancel">Cancelar</button>
+            <button class="modal-btn modal-btn-primary" id="btn-modal-create">Crear</button>
+          </div>
         </div>
       </div>
-    </div>
-  `;
 
-  bindDesktopRehearsalEvents(structure, lines, song);
-}
+      <!-- MODAL: Editar Estrofa / Sección -->
+      <div class="modal-overlay" id="modalEditStanza">
+        <div class="modal-box" style="width: 480px; max-width: 90vw;">
+          <div class="modal-title">Editar Estrofa / Sección</div>
+          <div class="modal-field">
+            <label class="modal-label">Nombre de Sección</label>
+            <input class="modal-input" id="modal-edit-sec-name" placeholder="Ej: VERSO 1, CORO..." />
+          </div>
+          <div class="modal-field">
+            <label class="modal-label">Clasificación (Tipo)</label>
+            <select class="modal-input" id="modal-edit-sec-type">
+              <option value="verso">Verso</option>
+              <option value="estribillo">Estribillo</option>
+              <option value="puente">Puente</option>
+              <option value="intro">Intro</option>
+              <option value="outro">Outro</option>
+              <option value="solo">Solo</option>
+            </select>
+          </div>
+          <div class="modal-field">
+            <label class="modal-label">Notas de Sección</label>
+            <input class="modal-input" id="modal-edit-sec-notes" placeholder="Notas de ensayo para esta sección..." />
+          </div>
+          <div class="modal-field">
+            <label class="modal-label">Letra &amp; Acordes (Formato [Acorde]Letra)</label>
+            <textarea class="modal-input" id="modal-edit-sec-lyrics" rows="8" style="font-family:'JetBrains Mono', monospace; font-size:12px; resize:vertical; background:var(--bg-stage); color:var(--text); border:1px solid var(--border-soft); padding:8px; border-radius:6px; width:100%; outline:none;"></textarea>
+          </div>
+          <div class="modal-buttons">
+            <button class="modal-btn" id="btn-modal-edit-cancel">Cancelar</button>
+            <button class="modal-btn modal-btn-primary" id="btn-modal-edit-save">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
 
-function bindMobileRehearsalEvents(structure, lines, song) {
-  const titleClick = document.getElementById("ensayo-title-click");
-  if (titleClick) {
-    titleClick.addEventListener("click", () => triggerEnsayoToast("Abriendo editor de acordes..."));
-  }
-
-  const keyChip = document.getElementById("ensayo-key-chip");
-  const dropdown = document.getElementById("ensayo-transposer-dropdown");
-  if (keyChip && dropdown) {
-    keyChip.addEventListener("click", (e) => {
-      e.stopPropagation();
-      dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
-    });
-  }
-
-  document.querySelectorAll(".transpose-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      const offset = parseInt(e.target.getAttribute("data-offset")) || 0;
-      state.transposeOffset = offset;
-      renderRehearsalRoom();
-      triggerEnsayoToast(`Tono ajustado: ${offset > 0 ? '+' : ''}${offset} semitonos`);
-    });
-  });
-
-  document.querySelectorAll(".section-tab").forEach(tab => {
-    tab.addEventListener("click", (e) => {
-      const id = e.target.getAttribute("data-id");
-      const targetSec = structure.find(s => s.id === id);
-      if (targetSec) {
-        state.seccionActivaId = id;
-        state.lineaActivaIndex = targetSec.lineaInicio;
-        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
-        renderRehearsalRoom();
-        scrollToEnsayoLine(targetSec.lineaInicio);
-      }
-    });
-  });
-
-  const btnPlay = document.getElementById("btn-ensayo-play");
-  if (btnPlay) {
-    btnPlay.addEventListener("click", () => {
-      togglePlayState(song, lines);
-    });
-  }
-
-  const btnPrev = document.getElementById("btn-ensayo-prev");
-  const btnNext = document.getElementById("btn-ensayo-next");
-  const currentSecIdx = structure.findIndex(s => s.id === state.seccionActivaId);
-
-  if (btnPrev) {
-    btnPrev.addEventListener("click", () => {
-      let targetIdx = currentSecIdx - 1;
-      if (targetIdx >= 0) {
-        const targetSec = structure[targetIdx];
-        state.seccionActivaId = targetSec.id;
-        state.lineaActivaIndex = targetSec.lineaInicio;
-        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
-        renderRehearsalRoom();
-        scrollToEnsayoLine(targetSec.lineaInicio);
-      }
-    });
-  }
-
-  if (btnNext) {
-    btnNext.addEventListener("click", () => {
-      let targetIdx = currentSecIdx + 1;
-      if (targetIdx < structure.length) {
-        const targetSec = structure[targetIdx];
-        state.seccionActivaId = targetSec.id;
-        state.lineaActivaIndex = targetSec.lineaInicio;
-        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
-        renderRehearsalRoom();
-        scrollToEnsayoLine(targetSec.lineaInicio);
-      }
-    });
-  }
-
-  const btnScroll = document.getElementById("btn-ensayo-autoscroll");
-  if (btnScroll) {
-    btnScroll.addEventListener("click", () => {
-      state.autoscrollActivo = !state.autoscrollActivo;
-      renderRehearsalRoom();
-    });
+  bindRehearsalEvents(structure, lines, song);
+  } catch (err) {
+    console.error("Error in renderRehearsalRoom:", err);
   }
 }
 
-function bindDesktopRehearsalEvents(structure, lines, song) {
+// ─────────────────────────────────────────────────────────────
+// BINDING DE EVENTOS — UNIFICADO
+// ─────────────────────────────────────────────────────────────
+function bindRehearsalEvents(structure, lines, song) {
+  const duration = song.duracionSegundos || 220;
+
+  // Título click
+  const titleEl = document.getElementById("ensayo-title-click");
+  if (titleEl) titleEl.addEventListener("click", () => triggerEnsayoToast("Toca el chip de tonalidad para transponer"));
+
+  // Transposer chip toggle
   const keyChip = document.getElementById("ensayo-key-chip");
   const dropdown = document.getElementById("ensayo-transposer-dropdown");
   if (keyChip && dropdown) {
-    keyChip.addEventListener("click", (e) => {
+    keyChip.addEventListener("click", e => {
       e.stopPropagation();
       dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
     });
+    document.addEventListener("click", () => { if (dropdown) dropdown.style.display = "none"; }, { once: true });
   }
 
+  // Transpose buttons
   document.querySelectorAll(".transpose-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      const offset = parseInt(e.target.getAttribute("data-offset")) || 0;
+    btn.addEventListener("click", e => {
+      const offset = parseInt(btn.getAttribute("data-offset")) || 0;
       state.transposeOffset = offset;
       renderRehearsalRoom();
     });
   });
 
-  document.querySelectorAll(".section-item").forEach(item => {
-    item.addEventListener("click", (e) => {
-      const id = item.getAttribute("data-id");
+  // Section items (sidebar, mobile chips)
+  document.querySelectorAll(".section-item, .section-tab-chip").forEach(el => {
+    el.addEventListener("click", () => {
+      const id = el.getAttribute("data-id");
       const targetSec = structure.find(s => s.id === id);
       if (targetSec) {
         state.seccionActivaId = id;
         state.lineaActivaIndex = targetSec.lineaInicio;
-        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
+        state.tiempoActual = (targetSec.lineaInicio / lines.length) * duration;
         renderRehearsalRoom();
         scrollToEnsayoLine(targetSec.lineaInicio);
       }
     });
   });
 
-  document.querySelectorAll(".lyric-line-editor").forEach(editor => {
-    editor.addEventListener("click", (e) => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON" || e.target.tagName === "I") return;
-      const index = parseInt(editor.getAttribute("data-index"));
-      state.lineaActivaIndex = index;
-      const line = lines[index];
-      if (line) {
-        state.seccionActivaId = line.seccionId;
+  // Line click (activate line or multi-select with CTRL)
+  document.querySelectorAll(".lyric-line-editor").forEach(el => {
+    el.addEventListener("click", e => {
+      if (e.target.tagName === "BUTTON" || e.target.tagName === "I" || e.target.tagName === "INPUT" || e.target.closest(".lyric-controls")) return;
+      const idx = parseInt(el.getAttribute("data-index"));
+      
+      if (e.ctrlKey) {
+        e.preventDefault();
+        if (!state.selectedLineIndices) state.selectedLineIndices = [];
+        const pos = state.selectedLineIndices.indexOf(idx);
+        if (pos > -1) {
+          state.selectedLineIndices.splice(pos, 1);
+        } else {
+          state.selectedLineIndices.push(idx);
+        }
+        renderRehearsalRoom();
+      } else {
+        state.selectedLineIndices = []; // Limpiar selección múltiple
+        state.lineaActivaIndex = idx;
+        const line = lines[idx];
+        if (line) state.seccionActivaId = line.seccionId;
+        renderRehearsalRoom();
       }
-      renderRehearsalRoom();
     });
   });
 
+  // Duplicate / Delete line
   document.querySelectorAll(".btn-desktop-duplicate").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      const idx = parseInt(btn.getAttribute("data-index"));
-      duplicateDesktopLine(song, idx);
-    });
+    btn.addEventListener("click", e => { e.stopPropagation(); duplicateDesktopLine(song, parseInt(btn.getAttribute("data-index"))); });
   });
-
   document.querySelectorAll(".btn-desktop-delete").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      const idx = parseInt(btn.getAttribute("data-index"));
-      deleteDesktopLine(song, idx);
-    });
+    btn.addEventListener("click", e => { e.stopPropagation(); deleteDesktopLine(song, parseInt(btn.getAttribute("data-index"))); });
   });
 
+  // Save button
   const btnSave = document.getElementById("btn-desktop-save");
-  if (btnSave) {
-    btnSave.addEventListener("click", () => {
-      saveDesktopLyrics(song, lines, structure);
-    });
-  }
+  if (btnSave) btnSave.addEventListener("click", () => saveDesktopLyrics(song, lines, structure));
 
+  // Transport: Play/Pause
   const btnPlay = document.getElementById("btn-desktop-play");
-  if (btnPlay) {
-    btnPlay.addEventListener("click", () => {
-      togglePlayState(song, lines);
-    });
-  }
+  if (btnPlay) btnPlay.addEventListener("click", () => togglePlayState(song, lines));
 
+  // Transport: Prev/Next section
+  const currentSecIdx = structure.findIndex(s => s.id === state.seccionActivaId);
   const btnPrev = document.getElementById("btn-desktop-prev");
   const btnNext = document.getElementById("btn-desktop-next");
-  const currentSecIdx = structure.findIndex(s => s.id === state.seccionActivaId);
-
   if (btnPrev) {
     btnPrev.addEventListener("click", () => {
-      let targetIdx = currentSecIdx - 1;
-      if (targetIdx >= 0) {
-        const targetSec = structure[targetIdx];
-        state.seccionActivaId = targetSec.id;
-        state.lineaActivaIndex = targetSec.lineaInicio;
-        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
-        renderRehearsalRoom();
-        scrollToEnsayoLine(targetSec.lineaInicio);
-      }
+      const idx = Math.max(0, currentSecIdx - 1);
+      const sec = structure[idx];
+      if (sec) { state.seccionActivaId = sec.id; state.lineaActivaIndex = sec.lineaInicio; state.tiempoActual = (sec.lineaInicio / lines.length) * duration; renderRehearsalRoom(); scrollToEnsayoLine(sec.lineaInicio); }
     });
   }
-
   if (btnNext) {
     btnNext.addEventListener("click", () => {
-      let targetIdx = currentSecIdx + 1;
-      if (targetIdx < structure.length) {
-        const targetSec = structure[targetIdx];
-        state.seccionActivaId = targetSec.id;
-        state.lineaActivaIndex = targetSec.lineaInicio;
-        state.tiempoActual = (targetSec.lineaInicio / lines.length) * (song.duracionSegundos || 220);
-        renderRehearsalRoom();
-        scrollToEnsayoLine(targetSec.lineaInicio);
-      }
+      const idx = Math.min(structure.length - 1, currentSecIdx + 1);
+      const sec = structure[idx];
+      if (sec) { state.seccionActivaId = sec.id; state.lineaActivaIndex = sec.lineaInicio; state.tiempoActual = (sec.lineaInicio / lines.length) * duration; renderRehearsalRoom(); scrollToEnsayoLine(sec.lineaInicio); }
     });
   }
 
+  // Transport: Transpose +/-
   const btnTpDown = document.getElementById("btn-desktop-tp-down");
-  const btnTpUp = document.getElementById("btn-desktop-tp-up");
-  if (btnTpDown && btnTpUp) {
-    btnTpDown.addEventListener("click", () => {
-      state.transposeOffset = Math.max(-5, (state.transposeOffset || 0) - 1);
-      renderRehearsalRoom();
-    });
-    btnTpUp.addEventListener("click", () => {
-      state.transposeOffset = Math.min(5, (state.transposeOffset || 0) + 1);
+  const btnTpUp   = document.getElementById("btn-desktop-tp-up");
+  if (btnTpDown) btnTpDown.addEventListener("click", () => { state.transposeOffset = Math.max(-5, (state.transposeOffset||0)-1); renderRehearsalRoom(); });
+  if (btnTpUp)   btnTpUp.addEventListener("click",   () => { state.transposeOffset = Math.min(5,  (state.transposeOffset||0)+1); renderRehearsalRoom(); });
+
+  // Transport: Progress bar click
+  const progBar = document.getElementById("desktop-progress-bar");
+  if (progBar) {
+    progBar.addEventListener("click", e => {
+      const rect = progBar.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width;
+      state.tiempoActual = pct * duration;
       renderRehearsalRoom();
     });
   }
 
+  // Transport: Autoscroll toggle
   const btnScroll = document.getElementById("btn-desktop-autoscroll");
   if (btnScroll) {
     btnScroll.addEventListener("click", () => {
@@ -1907,25 +2271,31 @@ function bindDesktopRehearsalEvents(structure, lines, song) {
     });
   }
 
-  const progBar = document.getElementById("desktop-progress-bar");
-  if (progBar) {
-    progBar.addEventListener("click", (e) => {
-      const rect = progBar.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const percent = clickX / rect.width;
-      state.tiempoActual = percent * (song.duracionSegundos || 220);
-      renderRehearsalRoom();
-    });
+  // Manual scroll → disable autoscroll
+  const scrollEl = document.getElementById("lyrics-editor-scroll");
+  if (scrollEl) {
+    let scrollTimer = null;
+    scrollEl.addEventListener("scroll", () => {
+      if (state.autoscrollActivo && state.enReproduccion) {
+        state.autoscrollActivo = false;
+        // Update label without full re-render
+        const lbl = document.querySelector("#btn-desktop-autoscroll + span");
+        const icon = document.getElementById("btn-desktop-autoscroll");
+        if (lbl) { lbl.textContent = "manual"; lbl.style.color = "var(--text-dim)"; }
+        if (icon) icon.classList.remove("active");
+      }
+    }, { passive: true });
   }
 
+  // Section name / notes inputs (desktop)
   const secNameInp = document.getElementById("desktop-sec-name-input");
   if (secNameInp) {
-    secNameInp.addEventListener("change", (e) => {
-      const activeSec = structure.find(s => s.id === state.seccionActivaId);
-      if (activeSec) {
-        const oldName = activeSec.nombre.toUpperCase();
+    secNameInp.addEventListener("change", e => {
+      const sec = structure.find(s => s.id === state.seccionActivaId);
+      if (sec) {
+        const oldName = sec.nombre.toUpperCase();
         const newName = e.target.value.trim().toUpperCase();
-        if (newName !== "" && newName !== oldName) {
+        if (newName && newName !== oldName) {
           song.lyrics = song.lyrics.replace(`[${oldName}]`, `[${newName}]`);
           saveLocalStorage();
           renderRehearsalRoom();
@@ -1933,45 +2303,377 @@ function bindDesktopRehearsalEvents(structure, lines, song) {
       }
     });
   }
+  // Section type change (desktop - supports group edit)
+  const secTypeSel = document.getElementById("desktop-sec-type-select");
+  if (secTypeSel) {
+    secTypeSel.addEventListener("change", e => {
+      const newType = e.target.value;
+      const typeKeywords = {
+        verso: "VERSO",
+        "pre-coro": "PRE-CORO",
+        estribillo: "CORO",
+        puente: "PUENTE",
+        intro: "INTRO",
+        outro: "OUTRO",
+        solo: "SOLO"
+      };
+      const keyword = typeKeywords[newType] || "VERSO";
+      
+      let sectionsToUpdate = [];
+      if (state.selectedLineIndices && state.selectedLineIndices.length > 0) {
+        const selectedLines = state.selectedLineIndices.map(idx => lines[idx]);
+        const uniqueSecIds = [...new Set(selectedLines.map(l => l.seccionId))];
+        sectionsToUpdate = uniqueSecIds.map(id => structure.find(s => s.id === id)).filter(Boolean);
+      } else {
+        const activeSec = structure.find(s => s.id === state.seccionActivaId);
+        if (activeSec) sectionsToUpdate = [activeSec];
+      }
+      
+      if (sectionsToUpdate.length === 0) return;
+      
+      let updatedLyrics = song.lyrics || "";
+      sectionsToUpdate.forEach(sec => {
+        const oldName = sec.nombre.toUpperCase();
+        const suffix = sec.nombre.replace(/^(verso|coro|estribillo|chorus|puente|bridge|intro|outro|final|solo)/i, "").trim();
+        const newName = (keyword + " " + suffix).trim().toUpperCase();
+        
+        if (oldName !== newName) {
+          const linesOfLyrics = updatedLyrics.split("\n");
+          for (let i = 0; i < linesOfLyrics.length; i++) {
+            const trimmedLine = linesOfLyrics[i].trim().toUpperCase();
+            if (trimmedLine.startsWith(`[${oldName}`) && trimmedLine.endsWith("]")) {
+              const inner = linesOfLyrics[i].slice(1, -1);
+              if (inner.includes("//")) {
+                const parts = inner.split("//");
+                linesOfLyrics[i] = `[${newName} //${parts[1]}]`;
+              } else {
+                linesOfLyrics[i] = `[${newName}]`;
+              }
+              break;
+            }
+          }
+          updatedLyrics = linesOfLyrics.join("\n");
+        }
+      });
+      
+      song.lyrics = updatedLyrics;
+      saveLocalStorage();
+      renderRehearsalRoom();
+      triggerEnsayoToast("Clasificación de estrofa actualizada");
+    });
+  }
 
+  // Add Section Modal
   const btnAddSec = document.getElementById("btn-desktop-add-sec");
   const modal = document.getElementById("modalAddSection");
   const btnModalCancel = document.getElementById("btn-modal-cancel");
   const btnModalCreate = document.getElementById("btn-modal-create");
-
-  if (btnAddSec && modal) {
-    btnAddSec.addEventListener("click", () => {
-      modal.classList.add("active");
-    });
-  }
-  if (btnModalCancel && modal) {
-    btnModalCancel.addEventListener("click", () => {
-      modal.classList.remove("active");
-    });
-  }
+  if (btnAddSec && modal) btnAddSec.addEventListener("click", () => modal.classList.add("active"));
+  if (btnModalCancel && modal) btnModalCancel.addEventListener("click", () => modal.classList.remove("active"));
   if (btnModalCreate && modal) {
     btnModalCreate.addEventListener("click", () => {
       const name = document.getElementById("modal-sec-name").value.trim();
-      if (name !== "") {
-        addDesktopSection(song, name);
-      }
+      if (name) addDesktopSection(song, name);
       modal.classList.remove("active");
     });
   }
+
+  // Edit Stanza Modal click bindings (line dot and number)
+  document.querySelectorAll(".lyric-line-editor .line-dot, .lyric-line-editor .line-number").forEach(el => {
+    el.addEventListener("click", e => {
+      e.stopPropagation();
+      const parent = el.closest(".lyric-line-editor");
+      if (parent) {
+        const idx = parseInt(parent.getAttribute("data-index"));
+        openEditStanzaModal(idx);
+      }
+    });
+  });
+
+  const btnEditCancel = document.getElementById("btn-modal-edit-cancel");
+  const btnEditSave = document.getElementById("btn-modal-edit-save");
+  const modalEdit = document.getElementById("modalEditStanza");
+  if (btnEditCancel && modalEdit) {
+    btnEditCancel.addEventListener("click", () => modalEdit.classList.remove("active"));
+  }
+  if (btnEditSave) {
+    btnEditSave.addEventListener("click", saveStanzaChanges);
+  }
 }
 
-// Escuchar cambios de tamaño de pantalla para renderizar vista móvil o PC
+// Escuchar cambios de tamaño de pantalla
 window.addEventListener("resize", () => {
   if (state.currentTab === "rehearsal") {
     renderRehearsalRoom();
   }
 });
 
+
+
+// ─────────────────────────────────────────────────────────────
+// HELPERS DE LA HOJA DE ENSAYO
+// ─────────────────────────────────────────────────────────────
+
+function togglePlayState(song, lines) {
+  if (!song) return;
+  state.enReproduccion = !state.enReproduccion;
+  const duration = song.duracionSegundos || 220;
+
+  if (state.enReproduccion) {
+    if (ensayoPlayInterval) clearInterval(ensayoPlayInterval);
+    ensayoPlayInterval = setInterval(() => {
+      state.tiempoActual += 0.5;
+      if (state.tiempoActual >= duration) {
+        state.tiempoActual = 0;
+        state.enReproduccion = false;
+        clearInterval(ensayoPlayInterval);
+        ensayoPlayInterval = null;
+      }
+      // Advance active line based on time
+      const ratio = state.tiempoActual / duration;
+      const newIdx = Math.min(Math.floor(ratio * lines.length), lines.length - 1);
+      if (newIdx !== state.lineaActivaIndex) {
+        state.lineaActivaIndex = newIdx;
+        const currentLine = lines[newIdx];
+        if (currentLine) state.seccionActivaId = currentLine.seccionId;
+        // Update progress bar without full re-render
+        const fill = document.querySelector(".progress-fill");
+        if (fill) fill.style.width = (ratio * 100) + "%";
+        const timeLbl = document.getElementById("ensayo-time-current");
+        if (timeLbl) timeLbl.textContent = formatTime(state.tiempoActual);
+        // Highlight active line
+        document.querySelectorAll(".lyric-line-editor").forEach((el, i) => {
+          el.classList.toggle("active", i === newIdx);
+        });
+        if (state.autoscrollActivo) scrollToEnsayoLine(newIdx);
+      }
+    }, 500);
+  } else {
+    if (ensayoPlayInterval) { clearInterval(ensayoPlayInterval); ensayoPlayInterval = null; }
+  }
+  // Update play button icon
+  const icon = document.querySelector("#btn-desktop-play i");
+  if (icon) {
+    icon.className = state.enReproduccion ? "ti ti-player-pause" : "ti ti-player-play";
+  }
+}
+
+function saveDesktopLyrics(song, lines, structure) {
+  if (!song) return;
+  let newLyrics = "";
+  let currentSecId = null;
+  lines.forEach(line => {
+    if (line.seccionId !== currentSecId) {
+      currentSecId = line.seccionId;
+      const sec = structure.find(s => s.id === currentSecId);
+      if (sec) newLyrics += "[" + sec.nombre.toUpperCase() + "]\n";
+    }
+    newLyrics += line.texto + "\n";
+  });
+  song.lyrics = newLyrics.trim();
+  saveLocalStorage();
+  triggerEnsayoToast("Letra guardada correctamente");
+}
+
+function duplicateDesktopLine(song, idx) {
+  if (!song) return;
+  const lines = song.lyrics.split("\n");
+  const allLines = [];
+  let lineCount = 0;
+  lines.forEach(l => {
+    const t = l.trim();
+    if (isSectionHeader(t)) {
+      allLines.push(l);
+    } else if (t !== "") {
+      if (lineCount === idx) allLines.push(l);
+      allLines.push(l);
+      lineCount++;
+    } else {
+      allLines.push(l);
+    }
+  });
+  song.lyrics = allLines.join("\n");
+  saveLocalStorage();
+  renderRehearsalRoom();
+}
+
+function deleteDesktopLine(song, idx) {
+  if (!song) return;
+  const lines = song.lyrics.split("\n");
+  const allLines = [];
+  let lineCount = 0;
+  lines.forEach(l => {
+    const t = l.trim();
+    if (isSectionHeader(t)) {
+      allLines.push(l);
+    } else if (t !== "") {
+      if (lineCount !== idx) allLines.push(l);
+      lineCount++;
+    } else {
+      allLines.push(l);
+    }
+  });
+  song.lyrics = allLines.join("\n");
+  saveLocalStorage();
+  renderRehearsalRoom();
+}
+
+function addDesktopSection(song, name) {
+  if (!song || !name) return;
+  const tag = "[" + name.trim().toUpperCase() + "]\n";
+  song.lyrics = (song.lyrics || "") + "\n" + tag + "Nueva línea de letra\n";
+  saveLocalStorage();
+  renderRehearsalRoom();
+}
+
+// Variables globales para la edición de estrofas
+let currentEditingSectionId = null;
+let currentEditingSectionOldName = null;
+
+function openEditStanzaModal(lineIndex) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song) return;
+  
+  const lines = parseLyricsToEnsayoModel(song.lyrics);
+  const line = lines[lineIndex];
+  if (!line) return;
+  
+  const structure = getSongEstructuraEnsayo(song, lines);
+  const sec = structure.find(s => s.id === line.seccionId);
+  if (!sec) return;
+  
+  currentEditingSectionId = sec.id;
+  currentEditingSectionOldName = sec.nombre;
+  
+  // Reconstruct section raw text
+  const secLines = lines.filter(l => l.seccionId === sec.id);
+  const rawText = secLines.map(l => {
+    let raw = l.texto;
+    const sortedChords = [...l.acordes].sort((a, b) => b.posicionCaracter - a.posicionCaracter);
+    sortedChords.forEach(ac => {
+      const pos = ac.posicionCaracter || 0;
+      raw = raw.slice(0, pos) + `[${ac.acorde}]` + raw.slice(pos);
+    });
+    return raw;
+  }).join("\n");
+  
+  // Set inputs
+  const nameInp = document.getElementById("modal-edit-sec-name");
+  const typeSel = document.getElementById("modal-edit-sec-type");
+  const notesInp = document.getElementById("modal-edit-sec-notes");
+  const lyricsTextarea = document.getElementById("modal-edit-sec-lyrics");
+  
+  if (nameInp) nameInp.value = sec.nombre;
+  if (typeSel) typeSel.value = sec.tipo;
+  if (notesInp) notesInp.value = sec.notas || "";
+  if (lyricsTextarea) lyricsTextarea.value = rawText;
+  
+  // Show modal
+  const modal = document.getElementById("modalEditStanza");
+  if (modal) modal.classList.add("active");
+}
+
+function saveStanzaChanges() {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song) return;
+  
+  const nameInp = document.getElementById("modal-edit-sec-name");
+  const typeSel = document.getElementById("modal-edit-sec-type");
+  const notesInp = document.getElementById("modal-edit-sec-notes");
+  const lyricsTextarea = document.getElementById("modal-edit-sec-lyrics");
+  
+  if (!nameInp || !typeSel || !notesInp || !lyricsTextarea) return;
+  
+  const newName = nameInp.value.trim().toUpperCase();
+  const newNotes = notesInp.value.trim();
+  const newLyrics = lyricsTextarea.value.trim();
+  
+  if (!newName) {
+    alert("El nombre de la sección no puede estar vacío.");
+    return;
+  }
+  
+  updateSongSection(song, currentEditingSectionOldName, newName, newNotes, newLyrics);
+  
+  // Close modal
+  const modal = document.getElementById("modalEditStanza");
+  if (modal) modal.classList.remove("active");
+  
+  // Re-render
+  renderRehearsalRoom();
+  triggerEnsayoToast("Estrofa editada correctamente");
+}
+
+function updateSongSection(song, oldSecName, newSecName, newSectionNotes, newSectionLyrics) {
+  const raw = song.lyrics || "";
+  const lines = raw.split("\n");
+  
+  let sectionStartIndex = -1;
+  let sectionEndIndex = -1;
+  
+  const targetTag = oldSecName.toUpperCase().trim();
+  
+  // We search for oldSecName header tag. It might have notes, so we check if it starts with [oldSecName
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i].trim().toUpperCase();
+    if (l.startsWith(`[${targetTag}`) && l.endsWith("]")) {
+      sectionStartIndex = i;
+      break;
+    }
+  }
+  
+  if (sectionStartIndex === -1) {
+    if (targetTag === "INTRO" || targetTag === "SIN SECCION" || targetTag === "SIN-SECCION") {
+      let firstTagIndex = -1;
+      for (let i = 0; i < lines.length; i++) {
+        if (isSectionHeader(lines[i])) {
+          firstTagIndex = i;
+          break;
+        }
+      }
+      sectionStartIndex = 0;
+      if (firstTagIndex !== -1) {
+        sectionEndIndex = firstTagIndex;
+      } else {
+        sectionEndIndex = lines.length;
+      }
+    } else {
+      console.error("Section tag not found:", oldSecName);
+      return;
+    }
+  } else {
+    for (let i = sectionStartIndex + 1; i < lines.length; i++) {
+      if (isSectionHeader(lines[i])) {
+        sectionEndIndex = i;
+        break;
+      }
+    }
+    if (sectionEndIndex === -1) {
+      sectionEndIndex = lines.length;
+    }
+  }
+  
+  const before = lines.slice(0, sectionStartIndex);
+  const after = lines.slice(sectionEndIndex);
+  
+  let header = `[${newSecName.toUpperCase().trim()}`;
+  if (newSectionNotes.trim() !== "") {
+    header += ` // ${newSectionNotes.trim()}`;
+  }
+  header += "]";
+  
+  const middle = [header, newSectionLyrics.trim()];
+  const newRawLyrics = [...before, ...middle, ...after].join("\n");
+  song.lyrics = newRawLyrics;
+  saveLocalStorage();
+}
+
 function changeTimeSignature(sig) {
+
   state.metronome.beatsPerMeasure = parseInt(sig.split("/")[0]) || 4;
   state.metronome.beatUnit = parseInt(sig.split("/")[1]) || 4;
   if (state.activeSongId) {
-    const song = state.songs.find(s => s.id === state.activeSongId);
+    const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
     if (song) {
       song.timeSig = sig;
       saveLocalStorage();
@@ -2000,7 +2702,7 @@ function applyCustomTimeSig() {
     state.metronome.beatUnit = unit;
     
     if (state.activeSongId) {
-      const song = state.songs.find(s => s.id === state.activeSongId);
+      const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
       if (song) {
         song.timeSig = sig;
         saveLocalStorage();
@@ -2021,7 +2723,7 @@ function applyCustomTimeSig() {
 function saveMetronomeParamsToSong() {
   if (!state.activeSongId) return;
   
-  const song = state.songs.find(s => s.id === state.activeSongId);
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (song) {
     const beatsInput = document.getElementById("custom-beats-num");
     const unitSelect = document.getElementById("custom-beats-unit");
@@ -2444,7 +3146,7 @@ function renderStrummingArrows(rhythmString) {
 
 // --- EDITAR CANCIÓN DESDE SALA ---
 function editActiveSong() {
-  const song = state.songs.find(s => s.id === state.activeSongId);
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (!song) return;
   
   document.getElementById("form-song-id").value = song.id;
@@ -2490,7 +3192,7 @@ function editActiveSong() {
 
 // --- ENLACE COMPARTIDO (BASE64) ---
 function shareActiveSong() {
-  const song = state.songs.find(s => s.id === state.activeSongId);
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (!song) return;
   
   // Limpiar ID local y auditorias temporales antes de exportar
@@ -2875,7 +3577,7 @@ function startRecording() {
         const audioUrl = URL.createObjectURL(audioBlob);
         
         // Agregar grabación al listado local
-        const songName = state.activeSongId ? state.songs.find(s => s.id === state.activeSongId).title : "Ensayo Libre";
+        const songName = state.activeSongId ? state.songs.find(s => String(s.id) === String(state.activeSongId)).title : "Ensayo Libre";
         const newRecord = {
           id: "r_" + Date.now(),
           songId: state.activeSongId,
@@ -3143,7 +3845,7 @@ function updatePlaybackUI() {
   }
   
   // 2. Volver a pintar las listas de reproducción para que cambien los iconos de play/pause
-  const activeSong = state.songs.find(s => s.id === state.activeSongId);
+  const activeSong = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (activeSong) {
     const listContainer = document.getElementById("recordings-list");
     if (listContainer) {
@@ -3637,9 +4339,6 @@ function toggleHeaderRecording() {
 
 // --- IMPORTADOR Y AUTO-CONVERSOR DE ACORDES ---
 
-// Regex para validar si un token luce como un acorde
-const CHORD_TOKEN_REGEX = /^[A-G][#b]?(m|min|maj|dim|aug|sus|add|maj7|m7|7|9|11|13|m7b5|dim7)?(\d)?(\/[A-G][#b]?)?$/i;
-
 // Detecta si una línea contiene predominantemente acordes
 function isChordLine(line) {
   const trimmed = line.trim();
@@ -3658,10 +4357,134 @@ function isChordLine(line) {
   return (validChords / tokens.length) >= 0.7;
 }
 
+// ─────────────────────────────────────────────────────────────
+// AUTO-CATEGORIZACIÓN DE ESTROFAS
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Analiza texto de letra sin formato y etiqueta automáticamente cada bloque:
+ * - Preserva etiquetas existentes como [CORO], [VERSO 1], [BRIDGE], etc.
+ * - Detecta coros por repetición exacta de bloques
+ * - Numera los versos secuencialmente: [VERSO 1], [VERSO 2], ...
+ * - Detecta intro si el primer bloque es de 1 sola línea o solo acordes
+ * @param {string} rawText - Texto plano de la letra
+ * @returns {string} Texto con etiquetas de sección insertadas
+ */
+function autoTagStanzas(rawText) {
+  if (!rawText || !rawText.trim()) return rawText;
+
+  // Normalizar saltos de línea
+  const normalized = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+  // Dividir en bloques por una o más líneas en blanco consecutivas
+  const rawBlocks = normalized.split(/\n{2,}/);
+
+  // Filtrar bloques vacíos
+  const blocks = rawBlocks.map(b => b.trim()).filter(b => b.length > 0);
+
+  if (blocks.length === 0) return rawText;
+
+  // Detectar qué bloques ya tienen una etiqueta de sección al inicio
+  const SECTION_HEADER_RE = /^\[([^\]]+)\]/;
+  const KNOWN_TAGS_RE = /^(VERSO|CORO|CHORUS|ESTRIBILLO|PUENTE|BRIDGE|INTRO|OUTRO|FINAL|PRE.CORO|PRE.CHORUS|SOLO|INTERLUDE|INSTRUMENTAL)/i;
+
+  function hasTag(block) {
+    const firstLine = block.split("\n")[0].trim();
+    if (!SECTION_HEADER_RE.test(firstLine)) return false;
+    const inner = firstLine.slice(1, -1).trim();
+    return KNOWN_TAGS_RE.test(inner);
+  }
+
+  // Extraer el contenido de un bloque sin su etiqueta de sección (primera línea)
+  function blockContent(block) {
+    if (hasTag(block)) {
+      const lines = block.split("\n");
+      const firstLine = lines[0];
+      const withoutTag = firstLine.replace(/^\[[^\]]+\]/, "").trim();
+      if (withoutTag) {
+        lines[0] = withoutTag;
+        return lines.join("\n").trim();
+      }
+      return lines.slice(1).join("\n").trim();
+    }
+    return block;
+  }
+
+  // Normalizar el contenido de un bloque para comparación
+  // Eliminamos acordes y espacios extra para detectar repeticiones semánticas
+  function normalizeForComparison(text) {
+    return text
+      .replace(/\[[^\]]+\]/g, "") // quitar acordes [C], [Am], etc.
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  // Paso 1: Mapear contenidos normalizados para detectar repeticiones
+  const contentMap = new Map(); // normalized content → first occurrence index
+  const blocksMeta = blocks.map((block, idx) => {
+    const content = blockContent(block);
+    const norm = normalizeForComparison(content);
+    return { block, idx, content, norm, hasExistingTag: hasTag(block) };
+  });
+
+  // Contar repeticiones
+  const normCounts = new Map();
+  blocksMeta.forEach(m => {
+    if (m.norm.length > 20) { // ignorar bloques muy cortos para esta comparación
+      normCounts.set(m.norm, (normCounts.get(m.norm) || 0) + 1);
+    }
+  });
+
+  // Paso 2: Detectar bloques que son intro
+  // → primer bloque sin etiqueta, una sola línea no vacía o solo acordes
+  function looksLikeIntro(block, idx) {
+    if (idx !== 0) return false;
+    const lines = block.split("\n").filter(l => l.trim());
+    if (lines.length <= 2) {
+      // Si todas las líneas son solo acordes o muy cortas
+      const allChords = lines.every(l => {
+        const noChords = l.replace(/\[[^\]]+\]/g, "").trim();
+        return noChords.length < 10;
+      });
+      return allChords;
+    }
+    return false;
+  }
+
+  // Paso 3: Asignar etiquetas
+  let versoCount = 0;
+  let coroCount = 0;
+  const labeledBlocks = blocksMeta.map((m, idx) => {
+    if (m.hasExistingTag) {
+      return m.block; // preservar etiqueta existente
+    }
+
+    let label = "";
+    const isRepeat = m.norm.length > 20 && (normCounts.get(m.norm) || 0) >= 2;
+
+    if (isRepeat) {
+      // Es un bloque repetido → es el CORO
+      coroCount++;
+      label = coroCount === 1 ? "[CORO]" : "[CORO]"; // siempre el mismo coro
+    } else if (looksLikeIntro(m.block, idx)) {
+      label = "[INTRO]";
+    } else {
+      versoCount++;
+      label = `[VERSO ${versoCount}]`;
+    }
+
+    return label + "\n" + m.block;
+  });
+
+  return labeledBlocks.join("\n\n");
+}
+
 // Convierte acordes arriba de la letra en formato de corchetes
 function convertTraditionalToBracket(text) {
   const lines = text.split("\n");
   const result = [];
+
   
   for (let i = 0; i < lines.length; i++) {
     const currentLine = lines[i];
@@ -3781,17 +4604,198 @@ function importLyricsFile(file) {
     
     const lyricsField = document.getElementById("song-lyrics");
     const richEditor = document.getElementById("editor-rich-lyrics");
-    const converted = convertTraditionalToBracket(lyricsText.trim());
+    // 1. Convertir acordes tradicionales a formato [Acorde]
+    const bracketConverted = convertTraditionalToBracket(lyricsText.trim());
+    // 2. Auto-etiquetar estrofas por bloques separados por líneas en blanco
+    const tagged = autoTagStanzas(bracketConverted);
     if (lyricsField) {
-      lyricsField.value = converted;
+      lyricsField.value = tagged;
     }
     if (richEditor) {
-      richEditor.innerHTML = parseTextToRichLyrics(converted);
+      richEditor.innerHTML = parseTextToRichLyrics(tagged);
       bindChordBadgeEvents();
     }
+    // 3. Actualizar panel de vista previa de estructura
+    updateStructurePreview();
   };
   
   reader.readAsText(file);
+}
+
+// ─────────────────────────────────────────────────────────────
+// VISTA PREVIA DE ESTRUCTURA EN EL MODAL DE IMPORTACIÓN
+// ─────────────────────────────────────────────────────────────
+
+const STANZA_TYPE_COLORS = {
+  "intro":      { bg: "rgba(41,240,214,0.12)",  border: "#29F0D6", text: "#29F0D6",  label: "Intro" },
+  "verso":      { bg: "rgba(41,240,214,0.08)",  border: "#29F0D6", text: "#29F0D6",  label: "Verso" },
+  "pre-coro":   { bg: "rgba(255,210,63,0.10)",  border: "#FFD23F", text: "#FFD23F",  label: "Pre-Coro" },
+  "coro":       { bg: "rgba(255,62,165,0.12)",  border: "#FF3EA5", text: "#FF3EA5",  label: "Coro" },
+  "estribillo": { bg: "rgba(255,62,165,0.12)",  border: "#FF3EA5", text: "#FF3EA5",  label: "Estribillo" },
+  "puente":     { bg: "rgba(255,210,63,0.10)",  border: "#FFD23F", text: "#FFD23F",  label: "Puente" },
+  "bridge":     { bg: "rgba(255,210,63,0.10)",  border: "#FFD23F", text: "#FFD23F",  label: "Bridge" },
+  "solo":       { bg: "rgba(255,62,165,0.08)",  border: "#FF3EA5", text: "#FF3EA5",  label: "Solo" },
+  "outro":      { bg: "rgba(120,120,120,0.12)", border: "#888",    text: "#aaa",     label: "Outro" },
+  "final":      { bg: "rgba(120,120,120,0.12)", border: "#888",    text: "#aaa",     label: "Final" },
+  "instrumental":{ bg: "rgba(120,120,120,0.10)",border: "#888",    text: "#aaa",     label: "Instrumental" },
+};
+
+const STANZA_TYPE_OPTIONS = [
+  { value: "verso",       label: "Verso" },
+  { value: "pre-coro",    label: "Pre-Coro" },
+  { value: "coro",        label: "Coro / Estribillo" },
+  { value: "puente",      label: "Puente / Bridge" },
+  { value: "intro",       label: "Intro" },
+  { value: "outro",       label: "Outro / Final" },
+  { value: "solo",        label: "Solo" },
+  { value: "instrumental",label: "Instrumental" },
+];
+
+/**
+ * Determina el tipo semántico de una etiqueta de sección
+ */
+function resolveStanzaType(labelName) {
+  const n = labelName.toLowerCase().trim();
+  if (n.startsWith("intro")) return "intro";
+  if (n.startsWith("coro") || n.startsWith("chorus") || n.startsWith("estribillo")) return "coro";
+  if (n.startsWith("pre")) return "pre-coro";
+  if (n.startsWith("puente") || n.startsWith("bridge")) return "puente";
+  if (n.startsWith("solo")) return "solo";
+  if (n.startsWith("outro") || n.startsWith("final")) return "outro";
+  if (n.startsWith("instrumental") || n.startsWith("interlude")) return "instrumental";
+  return "verso";
+}
+
+/**
+ * Lee el texto actual del editor, detecta las secciones y renderiza
+ * un panel de chips editables en #structure-preview-panel
+ */
+function updateStructurePreview() {
+  const panel = document.getElementById("structure-preview-panel");
+  if (!panel) return;
+
+  // Leer el texto plano serializado
+  const text = serializeRichLyrics() || document.getElementById("song-lyrics").value || "";
+  if (!text.trim()) {
+    panel.innerHTML = "";
+    panel.style.display = "none";
+    return;
+  }
+
+  // Detectar secciones etiquetadas
+  const SECTION_RE = /^\[([^\]]+)\]/;
+  const blocks = text.replace(/\r\n/g, "\n").split(/\n{2,}/);
+  const sections = [];
+
+  blocks.forEach(block => {
+    const trimmed = block.trim();
+    if (!trimmed) return;
+    const firstLine = trimmed.split("\n")[0].trim();
+    const m = firstLine.match(SECTION_RE);
+    if (m) {
+      const labelName = m[1].trim();
+      sections.push({ label: labelName, type: resolveStanzaType(labelName) });
+    }
+  });
+
+  if (sections.length === 0) {
+    panel.innerHTML = "";
+    panel.style.display = "none";
+    return;
+  }
+
+  // Construir el HTML de chips
+  const chipsHtml = sections.map((sec, idx) => {
+    const style = STANZA_TYPE_COLORS[sec.type] || STANZA_TYPE_COLORS["verso"];
+    const opts = STANZA_TYPE_OPTIONS.map(o =>
+      `<div class="stanza-type-opt" onclick="changeStanzaType(${idx}, '${o.value}')">${o.label}</div>`
+    ).join("");
+    return `
+      <div class="stanza-chip-wrap" id="stanza-chip-${idx}">
+        <div class="stanza-chip"
+          style="background:${style.bg}; border-color:${style.border}; color:${style.text};"
+          onclick="toggleStanzaTypeMenu(${idx})">
+          <span class="stanza-chip-label">${sec.label}</span>
+          <i class="ti ti-chevron-down" style="font-size:9px; margin-left:4px; opacity:0.7;"></i>
+        </div>
+        <div class="stanza-type-menu" id="stanza-menu-${idx}" style="display:none;">
+          ${opts}
+        </div>
+      </div>`;
+  }).join("");
+
+  panel.style.display = "block";
+  panel.innerHTML = `
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <span style="font-size:10px; font-weight:700; color:var(--text-secondary); letter-spacing:0.08em; text-transform:uppercase;">Estructura detectada</span>
+      <span style="font-size:10px; color:var(--text-dim);">· Clic en cada sección para reclasificar</span>
+    </div>
+    <div class="stanza-chips-row">${chipsHtml}</div>`;
+}
+
+/**
+ * Muestra/oculta el menú desplegable de tipo de una sección
+ */
+function toggleStanzaTypeMenu(idx) {
+  document.querySelectorAll(".stanza-type-menu").forEach((m, i) => {
+    m.style.display = (i === idx && m.style.display === "none") ? "block" : "none";
+  });
+}
+
+/**
+ * Cambia el tipo de una sección en el texto del editor:
+ * - Reemplaza la etiqueta [VERSO N] → [CORO], etc.
+ * - Actualiza el chip visualmente
+ * - Llama a updateStructurePreview para re-sincronizar
+ */
+function changeStanzaType(sectionIdx, newType) {
+  // Cerrar menús
+  document.querySelectorAll(".stanza-type-menu").forEach(m => m.style.display = "none");
+
+  const typeInfo = STANZA_TYPE_OPTIONS.find(o => o.value === newType);
+  if (!typeInfo) return;
+
+  // Calcular la nueva etiqueta en mayúsculas
+  const newLabel = typeInfo.label.toUpperCase().replace(" / ", " ").replace("VERSO", "VERSO");
+  // Para coro/estribillo: [CORO], para pre-coro: [PRE-CORO], etc.
+  const newTag = newLabel.replace("CORO / ESTRIBILLO", "CORO")
+                         .replace("PUENTE / BRIDGE", "PUENTE")
+                         .replace("OUTRO / FINAL", "OUTRO");
+
+  // Leer texto plano actual
+  const lyricsField = document.getElementById("song-lyrics");
+  const richEditor = document.getElementById("editor-rich-lyrics");
+  let text = serializeRichLyrics() || lyricsField.value || "";
+
+  // Encontrar el bloque N-ésimo y reemplazar su etiqueta
+  const SECTION_RE = /^\[([^\]]+)\]/;
+  const blocks = text.replace(/\r\n/g, "\n").split(/\n{2,}/);
+  let labeledCount = 0;
+
+  const newBlocks = blocks.map(block => {
+    const trimmed = block.trim();
+    if (!trimmed) return block;
+    const firstLine = trimmed.split("\n")[0].trim();
+    if (SECTION_RE.test(firstLine)) {
+      if (labeledCount === sectionIdx) {
+        labeledCount++;
+        return trimmed.replace(firstLine, `[${newTag}]`);
+      }
+      labeledCount++;
+    }
+    return block;
+  });
+
+  const newText = newBlocks.join("\n\n");
+
+  if (lyricsField) lyricsField.value = newText;
+  if (richEditor) {
+    richEditor.innerHTML = parseTextToRichLyrics(newText);
+    bindChordBadgeEvents();
+  }
+
+  // Re-renderizar el panel de vista previa
+  updateStructurePreview();
 }
 
 // --- NUEVOS MÉTODOS DE EDICIÓN INLINE Y EDITOR EN VIVO ---
@@ -3806,7 +4810,7 @@ function parseTextToRichLyrics(text) {
   const lines = text.split("\n");
   const parsedLines = lines.map(line => {
     const htmlLine = line.replace(/\[([^\]]+)\]/g, (match, chord) => {
-      return `<span class="editor-chord-badge" data-chord="${chord}">[${chord}]</span>`;
+      return `<span class="editor-chord-badge" contenteditable="false" data-chord="${chord}">[${chord}]</span>`;
     });
     return `<div>${htmlLine || "<br>"}</div>`;
   });
@@ -4123,6 +5127,23 @@ function showInlineSelector(element, field) {
 
 let activeChordBadge = null;
 
+// Escuchar cambios en el editor de letras para actualizar la vista previa de estructura en tiempo real
+(function initStructurePreviewListener() {
+  let previewDebounceTimer = null;
+  document.addEventListener("input", (e) => {
+    if (e.target && e.target.id === "editor-rich-lyrics") {
+      clearTimeout(previewDebounceTimer);
+      previewDebounceTimer = setTimeout(updateStructurePreview, 600);
+    }
+  });
+  document.addEventListener("paste", (e) => {
+    if (e.target && e.target.id === "editor-rich-lyrics") {
+      clearTimeout(previewDebounceTimer);
+      previewDebounceTimer = setTimeout(updateStructurePreview, 800);
+    }
+  });
+})();
+
 function bindChordBadgeEvents() {
   const badges = document.querySelectorAll(".editor-chord-badge");
   badges.forEach(badge => {
@@ -4232,6 +5253,28 @@ function initChordPickerHandlers() {
   
   if (confirmBtn) {
     confirmBtn.addEventListener("click", applyChordFromPicker);
+  }
+  
+  const deleteBtn = document.getElementById("btn-picker-delete");
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", () => {
+      const index = popup._activeChordIndex;
+      const badges = document.querySelectorAll(".editor-chord-badge");
+      let targetBadge = activeChordBadge;
+      if (index !== undefined && index !== -1 && badges[index]) {
+        targetBadge = badges[index];
+      }
+      if (targetBadge) {
+        targetBadge.remove();
+        activeChordBadge = null;
+        popup.style.display = "none";
+        
+        // Sincronizar
+        const serialized = serializeRichLyrics();
+        const rawInput = document.getElementById("song-lyrics");
+        if (rawInput) rawInput.value = serialized;
+      }
+    });
   }
   
   if (customInput) {
@@ -4476,7 +5519,7 @@ function applyDrumPattern(pattern) {
 
 function saveDrumMachineSettingsToActiveSong() {
   if (!state.activeSongId) return;
-  const song = state.songs.find(s => s.id === state.activeSongId);
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (song) {
     song.drumEnabled = state.drumMachine.enabled;
     song.drumPattern = state.drumMachine.selectedPattern;
@@ -4720,3 +5763,999 @@ function toggleModalFullscreen() {
     }
   }
 }
+
+function deleteSongFromRepertorio(songId) {
+  state.songs = state.songs.filter(s => String(s.id) !== String(songId));
+  
+  // Eliminar en Firestore directamente
+  if (window.SongsService) {
+    window.SongsService.deleteSong(songId).catch(err => {
+      console.error("Error al eliminar canción en Firebase:", err);
+    });
+  }
+  
+  if (String(state.activeSongId) === String(songId)) {
+    state.activeSongId = null;
+    const indicator = document.getElementById("nav-active-song");
+    if (indicator) indicator.style.display = "none";
+  }
+  
+  renderSetlist();
+  triggerEnsayoToast("Tema eliminado correctamente");
+}
+
+// Sobrescribir triggerEnsayoToast para que sea utilizable en toda la app
+function triggerEnsayoToast(msg) {
+  const existing = document.querySelector(".ensayo-toast");
+  if (existing) existing.remove();
+  
+  const toast = document.createElement("div");
+  toast.className = "ensayo-toast glass";
+  toast.innerHTML = `<span>🔔</span> ${msg}`;
+  
+  // Agregar al contenedor de la app o al body
+  const container = document.querySelector(".app-container") || document.body;
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// ============================================================
+// --- AUTENTICACIÓN (NUEVA LÓGICA VINCULADA A auth.html) ---
+// ============================================================
+
+function handleProfileClick() {
+  closeMobileDrawers();
+  if (state.currentUser) {
+    // Si ya está logueado, confirmamos si quiere cerrar sesión
+    const logout = confirm("¿Deseas cerrar sesión en NYX Band-Pro?");
+    if (logout) {
+      handleLogout();
+    }
+  } else {
+    // Si no está logueado, lo mandamos a auth.html
+    window.location.href = "auth.html";
+  }
+}
+
+function handleLogout() {
+  if (window.supabaseClient) {
+    window.supabaseClient.auth.signOut().then(() => {
+      window.location.reload();
+    });
+  }
+}
+
+function updateProfileBadge() {
+  const avatar = document.getElementById("current-user-avatar");
+  const name = document.getElementById("current-user-name");
+  const role = document.getElementById("current-user-role");
+  
+  if (!name || !role) return;
+
+  if (state.currentUser) {
+    name.textContent = state.currentUser.email.split("@")[0];
+    role.textContent = "Conectado";
+    avatar.textContent = "🎙️";
+    // Podríamos verificar el rol desde state.members cruzando el email,
+    // pero por ahora lo dejamos como "Conectado".
+    const memberObj = state.members.find(m => m.name.toLowerCase() === name.textContent.toLowerCase());
+    if (memberObj && memberObj.role) {
+      role.textContent = memberObj.role;
+    }
+  } else {
+    name.textContent = "Invitado";
+    role.textContent = "Haz clic para entrar";
+    avatar.textContent = "👤";
+  }
+}
+
+function updatePermissionsUI() {
+  const btnAdd = document.getElementById("btn-add-song");
+  const btnMembers = document.getElementById("btn-members-registry");
+  const grid = document.getElementById("setlist-grid");
+  
+  // Mostrar los botones de agregar e integrantes para todos temporalmente
+  // para evitar confusión (luego se restringirá la acción con un alert si es necesario)
+  if (btnAdd) btnAdd.style.display = "";
+  if (btnMembers) btnMembers.style.display = "";
+  
+  if (state.currentUser) {
+    if (grid) grid.classList.remove("guest-mode");
+  } else {
+    if (grid) grid.classList.add("guest-mode");
+  }
+}
+
+// ============================================================
+// --- CONFIGURACIÓN DE BANDA (MULTI-TENANT) ---
+// ============================================================
+
+function isCurrentUserAdmin() {
+  if (!state.currentUser) return false;
+  if (state.currentBandId === "KAWSAY") return false;
+  
+  // 1. Si es el creador de la banda registrado en la metadata
+  if (state.bandMetadata && state.bandMetadata.createdBy === state.currentUser.uid) {
+    return true;
+  }
+  
+  // 2. Si está en la lista de miembros como Administrador
+  if (state.members && state.members.length > 0) {
+    const isMemberAdmin = state.members.some(m => m.linkedUid === state.currentUser.uid && m.role === "Administrador") ||
+                          state.members.some(m => m.name.toLowerCase() === state.currentUser.email.split("@")[0].toLowerCase() && m.role === "Administrador");
+    if (isMemberAdmin) return true;
+  }
+  
+  // 3. Fallback: Si es el único integrante del grupo, consideramos que es el administrador
+  if (state.members && state.members.length === 1) {
+    const singleMember = state.members[0];
+    if (singleMember.linkedUid === state.currentUser.uid || 
+        singleMember.email === state.currentUser.email || 
+        singleMember.name.toLowerCase() === state.currentUser.email.split("@")[0].toLowerCase()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function openBandSettingsModal() {
+  closeMobileDrawers();
+  const nameInput = document.getElementById("band-settings-name");
+  const logoStatus = document.getElementById("band-settings-logo-status");
+  const idInput = document.getElementById("band-settings-id");
+  const uploadBtn = document.getElementById("btn-band-settings-upload-logo");
+  const saveBtn = document.getElementById("btn-band-settings-save");
+  const warningEl = document.getElementById("band-settings-permissions-warning");
+  const previewImg = document.getElementById("band-settings-logo-preview");
+  const previewContainer = document.getElementById("band-settings-logo-preview-container");
+  const regenerateBtn = document.getElementById("btn-regenerate-code");
+  
+  // Determinar si el usuario actual es Administrador de la banda actual
+  const userIsAdmin = isCurrentUserAdmin();
+  
+  // Mostrar / ocultar botón de regenerar código
+  if (regenerateBtn) {
+    regenerateBtn.style.display = userIsAdmin ? "inline-block" : "none";
+  }
+  
+  // Ocultar botón de crear grupo si ya tiene uno real
+  const createBandBtn = document.querySelector("button[onclick='createNewBandFlow()']");
+  if (createBandBtn) {
+    if (state.currentBandId && state.currentBandId !== "KAWSAY") {
+      createBandBtn.style.display = "none";
+    } else {
+      createBandBtn.style.display = "inline-block";
+    }
+  }
+
+  // Renderizar lista de mis grupos
+  const groupsListEl = document.getElementById("band-settings-groups-list");
+  if (groupsListEl && state.myBands && window.supabaseClient) {
+    groupsListEl.innerHTML = `<p style="color:var(--text-muted); font-size:12px;">Cargando tus grupos...</p>`;
+    
+    (async () => {
+      try {
+        const { data: bandsData, error: bandsError } = await window.supabaseClient
+          .from('bands')
+          .select('id, name')
+          .in('id', state.myBands);
+
+        if (bandsError) throw bandsError;
+        
+        let html = "";
+        (bandsData || []).forEach(b => {
+          const isActive = b.id === state.currentBandId;
+          html += `
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(255,255,255,0.03); border:1px solid ${isActive ? 'var(--neon-magenta)' : 'rgba(255,255,255,0.08)'}; border-radius:8px; width:100%;">
+              <span style="font-size:13px; font-weight:${isActive ? '700' : '400'}; color:${isActive ? '#fff' : 'var(--text-secondary)'};">${b.name} ${isActive ? '<span style="font-size:10px; color:var(--neon-magenta); margin-left:6px;">(Activo)</span>' : ''}</span>
+              ${!isActive ? `<button onclick="switchActiveGroup('${b.id}')" class="btn btn-secondary" style="padding:4px 8px; font-size:11px; border-radius:6px; border-color:var(--neon-cyan); color:var(--neon-cyan); width:auto; cursor:pointer;">Cambiar</button>` : ''}
+            </div>
+          `;
+        });
+        groupsListEl.innerHTML = html || `<p style="color:var(--text-muted); font-size:12px;">No estás unido a ningún grupo.</p>`;
+      } catch(err) {
+        console.error("Error al cargar grupos del usuario:", err);
+        groupsListEl.innerHTML = `<p style="color:var(--red); font-size:12px;">Error al cargar grupos.</p>`;
+      }
+    })();
+  }
+  
+  // Habilitar o deshabilitar campos según rol
+  if (nameInput) {
+    nameInput.value = state.bandMetadata.name || "";
+    nameInput.disabled = !userIsAdmin;
+    nameInput.style.opacity = userIsAdmin ? "1" : "0.6";
+  }
+  if (idInput) {
+    idInput.value = state.currentBandId || "KAWSAY";
+  }
+  if (uploadBtn) {
+    uploadBtn.disabled = !userIsAdmin;
+    uploadBtn.style.opacity = userIsAdmin ? "1" : "0.5";
+  }
+  if (saveBtn) {
+    saveBtn.disabled = !userIsAdmin;
+    saveBtn.style.opacity = userIsAdmin ? "1" : "0.5";
+  }
+  if (warningEl) {
+    if (!userIsAdmin) {
+      if (state.currentBandId === "KAWSAY") {
+        warningEl.innerHTML = `⚠️ Estás en el grupo de demostración pública KAWSAY. Crea tu propio grupo para poder cambiar el nombre y subir tu logo.`;
+      } else {
+        warningEl.innerHTML = `⚠️ Solo los Administradores de este grupo pueden modificar el nombre o el logo.`;
+      }
+      warningEl.style.display = "block";
+    } else {
+      warningEl.style.display = "none";
+    }
+  }
+  
+  // Configurar vista previa del logo actual
+  if (state.bandMetadata.logoUrl) {
+    if (logoStatus) {
+      logoStatus.innerHTML = `<span style="color:var(--neon-green)">✓ Logo actual cargado</span>`;
+    }
+    if (previewImg && previewContainer) {
+      previewImg.src = state.bandMetadata.logoUrl;
+      previewContainer.style.display = "flex";
+    }
+  } else {
+    if (logoStatus) {
+      logoStatus.innerHTML = "Ningún logo cargado.";
+    }
+    if (previewContainer) {
+      previewContainer.style.display = "none";
+    }
+  }
+  
+  document.getElementById("modal-band-settings").classList.add("open");
+}
+
+function handleLogoUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const statusEl = document.getElementById("band-settings-logo-status");
+  const previewImg = document.getElementById("band-settings-logo-preview");
+  const previewContainer = document.getElementById("band-settings-logo-preview-container");
+  
+  statusEl.innerHTML = "Optimizando imagen...";
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement("canvas");
+      const MAX_HEIGHT = 100; // Altura máxima para el logo
+      const MAX_WIDTH = 300;  // Ancho máximo para el logo
+      let width = img.width;
+      let height = img.height;
+      
+      // Ajuste proporcional según límites máximos
+      if (width > MAX_WIDTH) {
+        height = Math.round((height * MAX_WIDTH) / width);
+        width = MAX_WIDTH;
+      }
+      if (height > MAX_HEIGHT) {
+        width = Math.round((width * MAX_HEIGHT) / height);
+        height = MAX_HEIGHT;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext("2d");
+      // Limpiar canvas para asegurar transparencia de base
+      ctx.clearRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convertir a PNG para mantener la transparencia
+      const compressedBase64 = canvas.toDataURL("image/png");
+      state.bandMetadata.logoUrl = compressedBase64;
+      
+      // Actualizar estado visual
+      statusEl.innerHTML = `<span style="color:var(--neon-green)">✓ Logo optimizado y listo</span>`;
+      
+      // Mostrar vista previa en vivo
+      if (previewImg && previewContainer) {
+        previewImg.src = compressedBase64;
+        previewContainer.style.display = "flex";
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveBandSettings() {
+  const nameInput = document.getElementById("band-settings-name");
+  if (!nameInput || !nameInput.value.trim()) {
+    alert("El nombre de la banda es requerido.");
+    return;
+  }
+  
+  const newName = nameInput.value.trim();
+  state.bandMetadata.name = newName;
+  
+  if (window.supabaseClient && state.currentBandId) {
+    try {
+      const { error } = await window.supabaseClient
+        .from('bands')
+        .update({
+          name: state.bandMetadata.name,
+          logo_url: state.bandMetadata.logoUrl || null
+        })
+        .eq('id', state.currentBandId);
+      
+      if (error) throw error;
+      
+      updateBandUI();
+      document.getElementById("modal-band-settings").classList.remove("open");
+    } catch(e) {
+      console.error("Error guardando settings en Supabase:", e);
+      alert("Guardado localmente. Hubo un problema al sincronizar con Supabase.");
+      updateBandUI();
+      document.getElementById("modal-band-settings").classList.remove("open");
+    }
+  } else {
+    updateBandUI();
+    document.getElementById("modal-band-settings").classList.remove("open");
+  }
+}
+
+function updateBandUI() {
+  const headerTitle = document.getElementById("header-band-title");
+  const headerLogo = document.getElementById("header-band-logo");
+  const welcomeBanner = document.getElementById("band-welcome-banner");
+  
+  const bandName = state.bandMetadata.name || "KAWSAY";
+  
+  if (headerLogo) {
+    if (state.bandMetadata.logoUrl) {
+      headerLogo.src = state.bandMetadata.logoUrl;
+      headerLogo.style.display = "block";
+      if (headerTitle) headerTitle.style.display = "none";
+    } else {
+      headerLogo.style.display = "none";
+      if (headerTitle) {
+        headerTitle.textContent = bandName;
+        headerTitle.style.display = "block";
+      }
+    }
+  } else if (headerTitle) {
+    headerTitle.textContent = bandName;
+    headerTitle.style.display = "block";
+  }
+  
+  // Renderizar banner de bienvenida en KAWSAY (si el usuario no tiene bandas creadas)
+  if (welcomeBanner) {
+    if (state.currentBandId === "KAWSAY" && state.currentUser) {
+      welcomeBanner.innerHTML = `
+        <div class="glass" style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 20px; border:1px solid rgba(0, 229, 255, 0.2); border-radius:12px; background:rgba(0, 229, 255, 0.03); box-shadow:0 0 15px rgba(0, 229, 255, 0.05); flex-wrap:wrap;">
+          <div style="flex:1; min-width:260px;">
+            <strong style="color:var(--neon-cyan); display:block; margin-bottom:4px; font-size:14px;">👋 ¡Estás en el grupo de demostración KAWSAY!</strong>
+            <span style="font-size:12px; color:var(--text-secondary); line-height:1.5;">Este es un grupo de demostración pública. Crea tu propio grupo de banda para poder cambiar la configuración del grupo, invitar a músicos reales mediante un código y personalizar a tu gusto.</span>
+          </div>
+          <button class="btn btn-secondary" onclick="createNewBandFlow()" style="border:1px solid var(--neon-magenta); color:var(--neon-magenta); background:rgba(255,0,127,0.05); padding:8px 16px; border-radius:8px; font-size:12px; cursor:pointer; font-weight:600; transition:all 0.2s; white-space:nowrap;">
+            + Crear Mi Grupo
+          </button>
+        </div>
+      `;
+      welcomeBanner.style.display = "block";
+    } else {
+      welcomeBanner.style.display = "none";
+    }
+  }
+}
+
+// Llamar a updateBandUI cuando sea necesario
+const originalRenderApp = renderApp;
+renderApp = function() {
+  originalRenderApp();
+  updateBandUI();
+};
+
+function copyBandIdCode() {
+  const idInput = document.getElementById("band-settings-id");
+  if (!idInput || !idInput.value) return;
+  
+  idInput.select();
+  idInput.setSelectionRange(0, 99999); // Para móviles
+  
+  try {
+    navigator.clipboard.writeText(idInput.value);
+    alert("Código de Grupo copiado al portapapeles: " + idInput.value);
+  } catch (err) {
+    alert("Código del Grupo: " + idInput.value);
+  }
+}
+
+async function joinBandByCode() {
+  const joinInput = document.getElementById("band-join-code");
+  if (!joinInput || !joinInput.value.trim()) {
+    alert("Ingresa un código de banda válido.");
+    return;
+  }
+  
+  const code = joinInput.value.trim().toUpperCase();
+  
+  if (code.length < 5) {
+    alert("El código de invitación debe tener al menos 5 caracteres.");
+    return;
+  }
+  
+  if (state.myBands && state.myBands.includes(code)) {
+    alert("Ya perteneces a este grupo.");
+    return;
+  }
+  
+  if (!state.currentUser || !window.supabaseClient) {
+    alert("Inicia sesión para unirte a un grupo.");
+    return;
+  }
+  
+  try {
+    // 1. Validar que la banda existe
+    const { data: bandDoc, error: bandError } = await window.supabaseClient
+      .from('bands')
+      .select('*')
+      .eq('id', code)
+      .maybeSingle();
+
+    if (bandError) throw bandError;
+    if (!bandDoc) {
+      alert("Este código de grupo no existe. Verifica con tu administrador.");
+      return;
+    }
+    
+    // 2. Unirse a la banda en la tabla members
+    const email = state.currentUser.email;
+    const userName = state.currentUser.user_metadata.nombre || email.split("@")[0];
+    
+    const { error: memberError } = await window.supabaseClient
+      .from('members')
+      .insert({
+        band_id: code,
+        user_id: state.currentUser.id,
+        name: userName,
+        email: email,
+        role: "Integrante"
+      });
+
+    if (memberError) throw memberError;
+    
+    // 3. Actualizar la banda activa en users
+    const { error: userError } = await window.supabaseClient
+      .from('users')
+      .update({
+        current_band_id: code
+      })
+      .eq('id', state.currentUser.id);
+
+    if (userError) throw userError;
+    
+    alert(`¡Te has unido con éxito al grupo "${bandDoc.name || code}"!`);
+    joinInput.value = "";
+    document.getElementById("modal-band-settings").classList.remove("open");
+  } catch (err) {
+    console.error("Error al unirse al grupo por código:", err);
+    alert("Error al intentar unirse: " + err.message);
+  }
+}
+
+async function createNewBandFlow() {
+  if (state.currentBandId && state.currentBandId !== "KAWSAY") {
+    alert("Ya perteneces a un grupo. Solo se permite crear un grupo por usuario.");
+    return;
+  }
+
+  const proposedName = prompt("Ingresa el nombre del nuevo grupo:");
+  if (!proposedName || !proposedName.trim()) return;
+  
+  if (!state.currentUser || !window.supabaseClient) {
+    alert("Debes iniciar sesión con tu cuenta para crear un grupo.");
+    return;
+  }
+  
+  const cleanName = proposedName.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const randNum = Math.floor(1000 + Math.random() * 9000);
+  const bandIdCode = `${cleanName}-${randNum}`;
+  
+  try {
+    // 1. Crear registro en la tabla bands
+    const { error: bandError } = await window.supabaseClient
+      .from('bands')
+      .insert({
+        id: bandIdCode,
+        name: proposedName.trim(),
+        created_by: state.currentUser.id
+      });
+    if (bandError) throw bandError;
+    
+    // 2. Crear miembro creador como Administrador
+    const email = state.currentUser.email;
+    const creatorName = state.currentUser.user_metadata.nombre || email.split("@")[0];
+    const { error: memberError } = await window.supabaseClient
+      .from('members')
+      .insert({
+        band_id: bandIdCode,
+        user_id: state.currentUser.id,
+        name: creatorName,
+        email: email,
+        role: "Administrador"
+      });
+    if (memberError) throw memberError;
+    
+    // 3. Establecer la banda activa en users
+    const { error: userError } = await window.supabaseClient
+      .from('users')
+      .update({
+        current_band_id: bandIdCode
+      })
+      .eq('id', state.currentUser.id);
+    if (userError) throw userError;
+    
+    // 4. Crear estructura básica de acordes favoritos
+    await window.supabaseClient
+      .from('fav_chords')
+      .insert({
+        band_id: bandIdCode,
+        list: []
+      });
+
+    // 5. Actualizar estado local
+    state.currentBandId = bandIdCode;
+    state.bandMetadata = { name: proposedName.trim(), logoUrl: null };
+    if (!state.myBands.includes(bandIdCode)) {
+      state.myBands.push(bandIdCode);
+    }
+    
+    await loadSongsFromDB();
+    await loadMembersFromDB();
+    
+    alert("¡Grupo creado con éxito!\nCódigo de Invitación: " + bandIdCode);
+    document.getElementById("modal-band-settings").classList.remove("open");
+    renderApp();
+  } catch (e) {
+    console.error("Error al crear grupo:", e);
+    alert("Error al crear el grupo: " + e.message);
+  }
+}
+
+async function switchActiveGroup(bandId) {
+  if (!state.currentUser || !window.supabaseClient) return;
+  try {
+    const { error } = await window.supabaseClient
+      .from('users')
+      .update({
+        current_band_id: bandId
+      })
+      .eq('id', state.currentUser.id);
+
+    if (error) throw error;
+    
+    document.getElementById("modal-band-settings").classList.remove("open");
+  } catch(e) {
+    alert("Error al cambiar de grupo: " + e.message);
+  }
+}
+
+async function regenerateBandInviteCode() {
+  if (!state.currentBandId || !window.supabaseClient) return;
+  if (!isCurrentUserAdmin()) {
+    alert("Solo los Administradores pueden regenerar el código de invitación.");
+    return;
+  }
+
+  if (confirm("¿Estás seguro de que deseas regenerar el código de invitación? El código anterior dejará de ser válido.")) {
+    try {
+      const cleanName = state.bandMetadata.name.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      const randNum = Math.floor(1000 + Math.random() * 9000);
+      const nuevoCodigo = `${cleanName}-${randNum}`;
+
+      // 1. Obtener datos actuales
+      const { data: bandData } = await window.supabaseClient.from('bands').select('*').eq('id', state.currentBandId).maybeSingle();
+      const { data: membersList } = await window.supabaseClient.from('members').select('*').eq('band_id', state.currentBandId);
+      const { data: songsList } = await window.supabaseClient.from('songs').select('*').eq('band_id', state.currentBandId);
+      const { data: favChordsDoc } = await window.supabaseClient.from('fav_chords').select('*').eq('band_id', state.currentBandId).maybeSingle();
+
+      // 2. Crear nueva banda
+      const { error: newBandError } = await window.supabaseClient.from('bands').insert({
+        id: nuevoCodigo,
+        name: bandData.name,
+        logo_url: bandData.logo_url,
+        created_by: bandData.created_by
+      });
+      if (newBandError) throw newBandError;
+
+      // 3. Copiar miembros a la nueva banda
+      if (membersList && membersList.length > 0) {
+        const newMembers = membersList.map(m => ({
+          band_id: nuevoCodigo,
+          user_id: m.user_id,
+          name: m.name,
+          email: m.email,
+          role: m.role,
+          instruments: m.instruments,
+          vocals: m.vocals,
+          color: m.color
+        }));
+        const { error: newMembersError } = await window.supabaseClient.from('members').insert(newMembers);
+        if (newMembersError) throw newMembersError;
+      }
+
+      // 4. Copiar canciones
+      if (songsList && songsList.length > 0) {
+        const newSongs = songsList.map(s => ({
+          id: s.id,
+          band_id: nuevoCodigo,
+          title: s.title,
+          artist: s.artist,
+          lyrics: s.lyrics,
+          chords: s.chords,
+          bpm: s.bpm,
+          status: s.status
+        }));
+        const { error: newSongsError } = await window.supabaseClient.from('songs').insert(newSongs);
+        if (newSongsError) throw newSongsError;
+      }
+
+      // 5. Copiar favoritos
+      if (favChordsDoc) {
+        await window.supabaseClient.from('fav_chords').insert({
+          band_id: nuevoCodigo,
+          list: favChordsDoc.list
+        });
+      }
+
+      // 6. Actualizar la banda activa para los usuarios en la tabla users
+      if (membersList && membersList.length > 0) {
+        const memberUserIds = membersList.map(m => m.user_id);
+        
+        // Actualizar todos los usuarios que tenían de activa esta banda al nuevo código
+        const { error: updateActiveError } = await window.supabaseClient
+          .from('users')
+          .update({ current_band_id: nuevoCodigo })
+          .eq('current_band_id', state.currentBandId)
+          .in('id', memberUserIds);
+        
+        if (updateActiveError) throw updateActiveError;
+      }
+
+      // 7. Borrar la banda antigua (esto por cascada eliminará miembros, canciones y favoritos de la antigua en Supabase)
+      const { error: deleteError } = await window.supabaseClient.from('bands').delete().eq('id', state.currentBandId);
+      if (deleteError) throw deleteError;
+
+      // 8. Cambiar estado local
+      const antiguoCodigo = state.currentBandId;
+      state.currentBandId = nuevoCodigo;
+      state.myBands = state.myBands.map(b => b === antiguoCodigo ? nuevoCodigo : b);
+      
+      alert("¡Código de invitación regenerado con éxito!\nNuevo Código: " + nuevoCodigo);
+      document.getElementById("modal-band-settings").classList.remove("open");
+    } catch (err) {
+      console.error("Error regenerando código en Supabase:", err);
+      alert("Error al regenerar código: " + err.message);
+    }
+  }
+}
+
+
+async function onboardingCreateBand() {
+  const input = document.getElementById("onboarding-new-band-name");
+  const proposedName = input ? input.value.trim() : "";
+  if (!proposedName) {
+    alert("Ingresa un nombre para tu banda.");
+    return;
+  }
+  
+  if (!state.currentUser || !window.supabaseClient) return;
+  
+  const cleanName = proposedName.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const randNum = Math.floor(1000 + Math.random() * 9000);
+  const bandIdCode = `${cleanName}-${randNum}`;
+  
+  try {
+    const { error: bandError } = await window.supabaseClient
+      .from('bands')
+      .insert({
+        id: bandIdCode,
+        name: proposedName,
+        created_by: state.currentUser.id
+      });
+    if (bandError) throw bandError;
+    
+    const email = state.currentUser.email;
+    const creatorName = state.currentUser.user_metadata.nombre || email.split("@")[0];
+    const { error: memberError } = await window.supabaseClient
+      .from('members')
+      .insert({
+        band_id: bandIdCode,
+        user_id: state.currentUser.id,
+        name: creatorName,
+        email: email,
+        role: "Administrador"
+      });
+    if (memberError) throw memberError;
+    
+    await window.supabaseClient
+      .from('users')
+      .update({
+        current_band_id: bandIdCode
+      })
+      .eq('id', state.currentUser.id);
+    
+    document.getElementById("modal-onboarding").style.display = "none";
+  } catch (e) {
+    console.error("Error al crear grupo en onboarding:", e);
+    alert("Error al crear grupo: " + e.message);
+  }
+}
+
+async function onboardingJoinBand() {
+  const input = document.getElementById("onboarding-join-code");
+  const code = input ? input.value.trim().toUpperCase() : "";
+  if (!code) {
+    alert("Ingresa un código válido.");
+    return;
+  }
+  
+  if (!state.currentUser || !window.supabaseClient) return;
+  
+  try {
+    const { data: bandDoc, error: bandError } = await window.supabaseClient
+      .from('bands')
+      .select('*')
+      .eq('id', code)
+      .maybeSingle();
+
+    if (bandError) throw bandError;
+    if (!bandDoc) {
+      alert("Este código de grupo no existe.");
+      return;
+    }
+    
+    const email = state.currentUser.email;
+    const userName = state.currentUser.user_metadata.nombre || email.split("@")[0];
+    
+    const { error: memberError } = await window.supabaseClient
+      .from('members')
+      .insert({
+        band_id: code,
+        user_id: state.currentUser.id,
+        name: userName,
+        email: email,
+        role: "Integrante"
+      });
+
+    if (memberError && memberError.code !== '23505') { // Si es error de duplicado (ya es miembro), continuamos
+      throw memberError;
+    }
+
+    await window.supabaseClient
+      .from('users')
+      .update({
+        current_band_id: code
+      })
+      .eq('id', state.currentUser.id);
+    
+    document.getElementById("modal-onboarding").style.display = "none";
+  } catch(e) {
+    console.error("Error uniendo al grupo:", e);
+    alert("Error al intentar unirse: " + e.message);
+  }
+}
+
+// ============================================================
+// --- ARRASTRE HORIZONTAL DE ACORDES EN EL EDITOR ---
+// ============================================================
+
+let draggedBadge = null;
+
+function makeChordBadgesDraggable() {
+  const editor = document.getElementById("editor-rich-lyrics");
+  if (!editor) return;
+  
+  editor.addEventListener("mousedown", handleDragStart);
+  editor.addEventListener("touchstart", handleDragStart, { passive: false });
+  
+  document.addEventListener("mousemove", handleDragMove);
+  document.addEventListener("touchmove", handleDragMove, { passive: false });
+  
+  document.addEventListener("mouseup", handleDragEnd);
+  document.addEventListener("touchend", handleDragEnd);
+}
+
+function handleDragStart(e) {
+  const badge = e.target.closest(".editor-chord-badge");
+  if (!badge) return;
+  
+  draggedBadge = badge;
+  badge.classList.add("dragging");
+  
+  // Retroalimentación visual
+  badge.style.opacity = "0.5";
+  badge.style.border = "1px dashed var(--neon-cyan)";
+  
+  // Evitar selección nativa al arrastrar
+  e.preventDefault();
+}
+
+function handleDragMove(e) {
+  if (!draggedBadge) return;
+  
+  const x = e.clientX || (e.touches && e.touches[0].clientX);
+  const y = e.clientY || (e.touches && e.touches[0].clientY);
+  if (!x || !y) return;
+  
+  let range;
+  if (document.caretRangeFromPoint) {
+    range = document.caretRangeFromPoint(x, y);
+  } else if (document.caretPositionFromPoint) {
+    const pos = document.caretPositionFromPoint(x, y);
+    if (pos) {
+      range = document.createRange();
+      range.setStart(pos.offsetNode, pos.offset);
+      range.setEnd(pos.offsetNode, pos.offset);
+    }
+  }
+  
+  if (range && range.startContainer) {
+    const container = range.startContainer;
+    
+    // Evitar auto-inserción
+    if (draggedBadge.contains(container)) return;
+    
+    const editor = document.getElementById("editor-rich-lyrics");
+    if (editor && editor.contains(container)) {
+      // Encontrar la línea (DIV) de origen y destino
+      const targetLine = container.nodeType === Node.TEXT_NODE ? container.parentNode.closest("div") : container.closest("div");
+      const sourceLine = draggedBadge.parentNode.closest("div");
+      
+      // Restringir el arrastre horizontal a la misma línea
+      if (targetLine && sourceLine && targetLine === sourceLine) {
+        range.insertNode(draggedBadge);
+      }
+    }
+  }
+  
+  e.preventDefault();
+}
+
+function handleDragEnd(e) {
+  if (!draggedBadge) return;
+  
+  draggedBadge.classList.remove("dragging");
+  draggedBadge.style.opacity = "";
+  draggedBadge.style.border = "";
+  draggedBadge = null;
+  
+  // Normalizar los nodos de texto de la línea para evitar fragmentaciones
+  const editor = document.getElementById("editor-rich-lyrics");
+  if (editor) {
+    editor.normalize();
+    
+    // Sincronizar el campo de texto textarea oculto
+    const rawInput = document.getElementById("song-lyrics");
+    if (rawInput) {
+      rawInput.value = serializeRichLyrics();
+    }
+  }
+}
+
+// Inserta un objeto de acorde en la posición del cursor (caret) actual
+function insertChordAtCaret(chordName = "C") {
+  const editor = document.getElementById("editor-rich-lyrics");
+  if (!editor) return;
+  
+  editor.focus();
+  
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+  
+  const range = selection.getRangeAt(0);
+  if (!editor.contains(range.commonAncestorContainer)) return;
+  
+  // Crear el elemento de badge de acorde
+  const badge = document.createElement("span");
+  badge.className = "editor-chord-badge";
+  badge.setAttribute("contenteditable", "false");
+  badge.setAttribute("data-chord", chordName);
+  badge.textContent = `[${chordName}]`;
+  
+  range.insertNode(badge);
+  
+  // Mover el cursor (caret) justo después del acorde insertado
+  range.setStartAfter(badge);
+  range.setEndAfter(badge);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  
+  // Vincular eventos (clic derecho / long press y drag-and-drop)
+  bindChordBadgeEvents();
+  
+  // Sincronizar con el textarea oculto
+  const rawInput = document.getElementById("song-lyrics");
+  if (rawInput) {
+    rawInput.value = serializeRichLyrics();
+  }
+}
+
+// Inicializa la inserción rápida de acordes con doble clic (PC) o doble toque (móvil)
+function initQuickChordInsertion() {
+  const editor = document.getElementById("editor-rich-lyrics");
+  if (!editor) return;
+  
+  // Manejador de doble clic para desktop
+  editor.addEventListener("dblclick", (e) => {
+    // Evitar si ya se hizo clic sobre un acorde
+    if (e.target.closest(".editor-chord-badge")) return;
+    
+    let range;
+    if (document.caretRangeFromPoint) {
+      range = document.caretRangeFromPoint(e.clientX, e.clientY);
+    } else if (document.caretPositionFromPoint) {
+      const pos = document.caretPositionFromPoint(e.clientX, e.clientY);
+      if (pos) {
+        range = document.createRange();
+        range.setStart(pos.offsetNode, pos.offset);
+        range.setEnd(pos.offsetNode, pos.offset);
+      }
+    }
+    
+    if (range && range.startContainer) {
+      const container = range.startContainer;
+      if (editor.contains(container)) {
+        e.preventDefault(); // Evitar selección de palabra nativa
+        
+        const badge = document.createElement("span");
+        badge.className = "editor-chord-badge";
+        badge.setAttribute("contenteditable", "false");
+        badge.setAttribute("data-chord", "C");
+        badge.textContent = "[C]";
+        
+        range.insertNode(badge);
+        
+        // Limpiar selección
+        window.getSelection().removeAllRanges();
+        
+        // Vincular eventos del nuevo acorde (clic derecho/drag)
+        bindChordBadgeEvents();
+        
+        // Sincronizar
+        const rawInput = document.getElementById("song-lyrics");
+        if (rawInput) rawInput.value = serializeRichLyrics();
+      }
+    }
+  });
+  
+  // Manejador de doble toque para mobile (evita zoom y selecciona el carácter)
+  let lastTapTime = 0;
+  editor// Permite a un usuario cancelar su solicitud de acceso pendiente
+async function cancelPendingRequest() {
+  state.requestedBandId = null;
+  state.currentBandId = "KAWSAY";
+  localStorage.setItem("coop_current_band_id", "KAWSAY");
+  await loadSongsFromDB();
+  await loadMembersFromDB();
+  renderApp();
+}
+
+// Renderiza solicitudes pendientes (mockeado para Supabase)
+async function renderPendingRequests() {
+  const requestsList = document.getElementById("requests-list");
+  if (!requestsList) return;
+  requestsList.innerHTML = `<p style="color:var(--text-muted); font-size:12px; text-align:center; padding:10px;">No hay solicitudes pendientes.</p>`;
+}
+
+async function approveRequest(reqUid, email, name) {
+  // Las uniones son directas en esta versión
+}
+
+}
+
