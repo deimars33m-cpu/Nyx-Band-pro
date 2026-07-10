@@ -3,7 +3,7 @@
 // Reemplaza estas credenciales con las de tu proyecto real de Supabase.
 
 const supabaseUrl = "https://ozzxvackrzbwheizczmi.supabase.co"; // Tu URL del proyecto (Ej: https://xxxx.supabase.co)
-const supabaseAnonKey = "sb_publishable_-8hn6CLEuBkhSWzAb7zYdQ_la9R9e5F"; // Tu clave pública anónima (Anon Key)
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96enh2YWNrcnpid2hlaXpjem1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTUwMjUsImV4cCI6MjA5OTI5MTAyNX0.UaEzglE6XZEgGTqAN8lbZx07vLoiCC8OJP0e9xYvkcU"; // Tu clave pública anónima (Anon Key)
 
 let supabase = null;
 
