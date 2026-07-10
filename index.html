@@ -27,6 +27,16 @@
     }
     @keyframes spin-auth { to { transform: rotate(360deg); } }
   </style>
+  <script>
+    // Safety timeout: Si Supabase no responde en 4 segundos, redirigir a auth.html
+    window._authTimeout = setTimeout(() => {
+      const overlay = document.getElementById('auth-guard-overlay');
+      if (overlay && overlay.style.display !== 'none') {
+        console.warn('Auth timeout alcanzado — redirigiendo a auth.html');
+        window.location.href = 'auth.html';
+      }
+    }, 4000);
+  </script>
 </head>
 <body>
   <!-- AUTH GUARD: Oculta la app hasta que Firebase verifique el usuario -->

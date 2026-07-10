@@ -977,9 +977,18 @@ function initEventHandlers() {
   // Listener de Auth
   if (window.supabaseClient) {
     window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      // Cancelar el timeout de seguridad
+      if (window._authTimeout) clearTimeout(window._authTimeout);
+
       const user = session ? session.user : null;
       state.currentUser = user;
       
+      if (!user) {
+        // No hay sesión activa — redirigir inmediatamente a auth.html
+        window.location.href = "auth.html";
+        return;
+      }
+
       if (user) {
         try {
           // Desuscribirse del anterior si existe
