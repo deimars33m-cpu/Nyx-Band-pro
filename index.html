@@ -352,7 +352,7 @@
       <div class="modal-content glass">
         <div class="modal-header">
           <h3 class="modal-title" id="modal-song-title">Agregar Nuevo Tema</h3>
-          <button type="button" class="btn-toggle-modal-fullscreen" onclick="toggleModalFullscreen()">📺 Expandir</button>
+          
           <button class="close-modal-btn">×</button>
         </div>
         
@@ -365,6 +365,7 @@
           <input type="hidden" id="song-key" value="C">
           <input type="hidden" id="song-timesig" value="4/4">
           <input type="hidden" id="song-status" value="todo">
+          <input type="hidden" id="song-image" value="">
           
           <!-- FICHA TÉCNICA DE INFORMACIÓN COMPACTA Y SIN CUADROS (Inline-Editing) -->
           <div class="song-meta-panel glass">
@@ -375,6 +376,10 @@
             </div>
             
             <div class="meta-badges-group">
+              <div class="meta-badge-inline" style="grid-column: span 2; min-width: 140px;">
+                <span class="meta-label">FOTO (URL)</span>
+                <span id="meta-image" class="meta-inline-edit value-field" data-field="image" contenteditable="false" placeholder="Pega URL de imagen..." style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; display: inline-block;"></span>
+              </div>
               <div class="meta-badge-inline">
                 <span class="meta-label">BPM</span>
                 <span id="meta-bpm" class="meta-inline-edit value-field" data-field="bpm" contenteditable="false">120</span>
@@ -413,8 +418,8 @@
                 <button type="button" id="btn-editor-mode-chords" class="editor-mode-btn active" onclick="setEditorMode('chords')">
                   🎵 Acordes
                 </button>
-                <button type="button" id="btn-editor-mode-interventions" class="editor-mode-btn" onclick="setEditorMode('interventions')">
-                  👥 Intervenciones
+                <button type="button" id="btn-editor-mode-instrumental" class="editor-mode-btn" onclick="setEditorMode('instrumental')">
+                  🎸 Instrumental
                 </button>
               </div>
             </div>
@@ -582,34 +587,7 @@
     </div>
   </div>
 
-  <!-- POPUP ASIGNADOR DE INTERVENCIONES -->
-  <div id="intervention-picker-popup" class="popover-picker glass" style="display: none; min-width: 280px;">
-    <div class="popover-header">
-      <span>👥 Asignar Intervención</span>
-      <button type="button" class="close-popover-btn" onclick="closeInterventionPicker()">×</button>
-    </div>
-    <div class="popover-body">
-      <!-- Tipo de participación -->
-      <div class="popover-section-title">Tipo de Participación</div>
-      <div style="display:flex; gap:6px; margin-bottom:12px;">
-        <button type="button" class="intervention-type-btn active" data-type="solo" onclick="selectInterventionType('solo')">Solo</button>
-        <button type="button" class="intervention-type-btn" data-type="duo" onclick="selectInterventionType('duo')">Dúo</button>
-        <button type="button" class="intervention-type-btn" data-type="trio" onclick="selectInterventionType('trio')">Trío</button>
-        <button type="button" class="intervention-type-btn" data-type="coro" onclick="selectInterventionType('coro')">🎤 Coro</button>
-      </div>
-      <!-- Lista de integrantes para seleccionar -->
-      <div class="popover-section-title">Integrantes</div>
-      <div id="intervention-members-list" style="display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto; margin-bottom:12px;">
-        <!-- Renderizado dinámico -->
-      </div>
-      <!-- Texto a anotar (opcional) -->
-      <div style="margin-bottom: 12px;">
-        <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:4px;">Nota adicional (opcional)</label>
-        <input type="text" id="intervention-note-text" placeholder="Ej: Toca solo de guitarra, Armonía UUUU..." style="width:100%; padding: 7px 10px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size:12px; box-sizing:border-box;">
-      </div>
-      <button type="button" class="btn btn-primary" onclick="applyIntervention()" style="width:100%;">✅ Aplicar</button>
-    </div>
-  </div>
+  
 
   <!-- BOTÓN FLOTANTE SUPERIOR DERECHA: EDICIÓN EN PANTALLA COMPLETA -->
   <button id="rehearsal-fullscreen-edit-btn" class="fullscreen-floating-edit-btn" onclick="editActiveSong()" title="Editar Letra y Acordes">✏️</button>

@@ -526,25 +526,29 @@ function setEditorMode(mode) {
   state.editorMode = mode;
   
   const btnChords = document.getElementById("btn-editor-mode-chords");
-  const btnInterventions = document.getElementById("btn-editor-mode-interventions");
+  const btnInstrumental = document.getElementById("btn-editor-mode-instrumental");
   const hint = document.getElementById("editor-hint");
   
-  if (btnChords && btnInterventions) {
+  if (btnChords && btnInstrumental) {
     btnChords.classList.toggle("active", mode === "chords");
-    btnInterventions.classList.toggle("active", mode === "interventions");
+    btnInstrumental.classList.toggle("active", mode === "instrumental");
   }
   
   const editor = document.getElementById("editor-rich-lyrics");
   if (editor) {
-    if (mode === "interventions") {
-      editor.setAttribute("data-mode", "interventions");
-      // Desactivar edición → el toque en móvil selecciona texto en lugar de abrir teclado
+    if (mode === "instrumental") {
+      editor.setAttribute("data-mode", "instrumental");
+      // Desactivar edición
       editor.contentEditable = "false";
-      editor.style.cursor = "text";
-      editor.style.userSelect = "text";
-      editor.style.webkitUserSelect = "text";
-      if (hint) hint.textContent = "Modo Intervenciones: Selecciona un fragmento de letra para asignar quién lo canta. Los acordes se atenúan para facilitar la lectura.";
-      bindInterventionSelectionDetector();
+      editor.style.cursor = "default";
+      editor.style.userSelect = "none";
+      editor.style.webkitUserSelect = "none";
+      if (hint) hint.textContent = "Modo Instrumental: Muestra una vista limpia con la estructura de acordes de la canción, excluyendo la letra.";
+      
+      // Guardar cambios actuales y renderizar instrumental
+      const serialized = serializeRichLyrics();
+      document.getElementById("song-lyrics").value = serialized;
+      editor.innerHTML = parseTextToInstrumentalLyrics(serialized);
     } else {
       editor.setAttribute("data-mode", "chords");
       // Restaurar edición normal
@@ -553,9 +557,44 @@ function setEditorMode(mode) {
       editor.style.userSelect = "";
       editor.style.webkitUserSelect = "";
       if (hint) hint.textContent = "Escribe con corchetes (ej: [C]Letra). Clic derecho (PC) o 3s (móvil) en acordes para editarlos.";
-      unbindInterventionSelectionDetector();
+      
+      // Restaurar letra con acordes original
+      const originalRaw = document.getElementById("song-lyrics").value || "";
+      editor.innerHTML = parseTextToRichLyrics(originalRaw);
+      bindChordBadgeEvents();
     }
   }
+}
+
+function parseTextToInstrumentalLyrics(text) {
+  if (!text) return "";
+  const lines = text.split("\n");
+  const parsedLines = lines.map(line => {
+    // Si la línea es una cabecera de sección, la preservamos
+    if (isSectionHeader(line)) {
+      return `<div class="editor-section-header" style="color: var(--neon-magenta); font-weight: bold; margin-top: 10px; margin-bottom: 5px; user-select: none;">${line}</div>`;
+    }
+    
+    // Extraer los acordes
+    const chords = [];
+    const regex = /\[([^\]]+)\]/g;
+    let match;
+    while ((match = regex.exec(line)) !== null) {
+      chords.push(match[1]);
+    }
+    
+    if (chords.length === 0) {
+      return "<div><br></div>";
+    }
+    
+    // Generar spans de acordes juntos
+    const htmlLine = chords.map(chord => {
+      return `<span class="editor-chord-badge" contenteditable="false" data-chord="${chord}">[${chord}]</span>`;
+    }).join(" ");
+    
+    return `<div>${htmlLine}</div>`;
+  });
+  return parsedLines.join("");
 }
 
 let _interventionMouseUpHandler = null;
@@ -567,261 +606,23 @@ let _interventionLongPressActive = false;
 let _pendingSelectionText = "";
 let _savedInterventionRange = null; // Respaldo estable del DOM Range para evitar pérdida de selección al enfocar el popup
 
-function bindInterventionSelectionDetector() {
-  // Escuchar en document (no en el editor) para capturar el mouseup
-  // incluso si la selección cruza el borde del elemento
-  if (_interventionMouseUpHandler) {
-    document.removeEventListener("mouseup", _interventionMouseUpHandler);
-    document.removeEventListener("touchend", _interventionMouseUpHandler);
-  }
-
-  _interventionMouseUpHandler = (e) => {
-    if (state.editorMode !== "interventions") return;
-
-    // Ignorar si el clic ocurre dentro del propio popup de intervención
-    const popup = document.getElementById("intervention-picker-popup");
-    if (popup && (popup === e.target || popup.contains(e.target))) {
-      return;
-    }
-
-    // Verificar que la selección ocurre DENTRO del editor
-    const editor = document.getElementById("editor-rich-lyrics");
-    if (!editor) return;
-
-    // Capturar la selección INMEDIATAMENTE (antes del setTimeout)
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-
-    const selectedText = sel.toString().trim();
-    if (!selectedText) return;
-
-    // Verificar que la selección está dentro del editor
-    const range = sel.getRangeAt(0);
-    if (!editor.contains(range.commonAncestorContainer)) return;
-
-    // Guardar texto seleccionado AHORA, antes de que el clic en popup lo limpie
-    _pendingSelectionText = selectedText;
-    _interventionSelection = { text: selectedText };
-    _savedInterventionRange = range.cloneRange(); // Clonamos y respaldamos el rango DOM
-
-    // Abrir el picker — usamos requestAnimationFrame para que el render esté listo
-    requestAnimationFrame(() => {
-      openInterventionPicker(e);
-    });
-  };
-
-  document.addEventListener("mouseup", _interventionMouseUpHandler);
-  document.addEventListener("touchend", _interventionMouseUpHandler);
-}
-
-function unbindInterventionSelectionDetector() {
-  if (_interventionMouseUpHandler) {
-    document.removeEventListener("mouseup", _interventionMouseUpHandler);
-    document.removeEventListener("touchend", _interventionMouseUpHandler);
-    _interventionMouseUpHandler = null;
-  }
-  _pendingSelectionText = "";
-  _savedInterventionRange = null;
-}
 
 
-function openInterventionPicker(e) {
-  const popup = document.getElementById("intervention-picker-popup");
-  if (!popup) return;
-
-  _interventionType = "solo";
-  _selectedMembersForIntervention = [];
-
-  // Resetear tipo buttons
-  document.querySelectorAll(".intervention-type-btn").forEach(b => {
-    b.classList.toggle("active", b.getAttribute("data-type") === "solo");
-  });
-
-  // Render member checkboxes
-  renderInterventionMemberList();
-
-  // Clear optional note
-  const noteInput = document.getElementById("intervention-note-text");
-  if (noteInput) noteInput.value = "";
-
-  // Posicionar popup cerca del cursor/toque
-  let x, y;
-  if (e.type === "touchend" && e.changedTouches && e.changedTouches[0]) {
-    x = e.changedTouches[0].clientX;
-    y = e.changedTouches[0].clientY;
-  } else {
-    x = e.clientX || window.innerWidth / 2;
-    y = e.clientY || window.innerHeight / 2;
-  }
-
-  popup.style.display = "block";
-  popup.style.position = "fixed";
-  popup.style.left = Math.min(x + 10, window.innerWidth - 310) + "px";
-  popup.style.top = Math.max(y - 10, 60) + "px";
-  popup.style.zIndex = "9999";
-}
-
-function renderInterventionMemberList() {
-  const list = document.getElementById("intervention-members-list");
-  if (!list) return;
-  
-  if (_interventionType === "coro") {
-    list.innerHTML = `<p style="color:#ffeb3b; font-size:13px; padding:8px;">Se pintará con el color de Coro (amarillo neón) para todo el grupo.</p>`;
-    return;
-  }
-  
-  const maxSel = _interventionType === "solo" ? 1 : _interventionType === "duo" ? 2 : 3;
-  
-  if (state.members.length === 0) {
-    list.innerHTML = `<p style="color:var(--text-muted); font-size:12px; padding:8px;">No hay integrantes registrados. Ve a 👥 Integrantes en la página principal.</p>`;
-    return;
-  }
-  
-  list.innerHTML = state.members.map(m => {
-    const isChecked = _selectedMembersForIntervention.includes(m.name);
-    return `
-      <label style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:6px 8px; border-radius:8px; border:1px solid ${isChecked ? m.color : 'rgba(255,255,255,0.07)'}; background:${isChecked ? m.color + '18' : 'transparent'}; transition:all 0.15s; user-select:none;">
-        <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleInterventionMember('${m.name}', ${maxSel})" style="accent-color:${m.color}; width:15px; height:15px;">
-        <span style="width:12px; height:12px; border-radius:50%; background:${m.color}; box-shadow:0 0 6px ${m.color}; display:inline-block; flex-shrink:0;"></span>
-        <span style="color:${m.color}; font-weight:700; font-size:13px;">${m.name}</span>
-        <span style="color:var(--text-muted); font-size:11px; margin-left:auto;">${m.role || ""}</span>
-      </label>
-    `;
-  }).join("");
-}
-
-function toggleInterventionMember(name, maxSel) {
-  if (_selectedMembersForIntervention.includes(name)) {
-    _selectedMembersForIntervention = _selectedMembersForIntervention.filter(n => n !== name);
-  } else {
-    if (_selectedMembersForIntervention.length >= maxSel) {
-      _selectedMembersForIntervention.shift(); // Remove oldest to keep limit
-    }
-    _selectedMembersForIntervention.push(name);
-  }
-  renderInterventionMemberList();
-}
-
-function selectInterventionType(type) {
-  _interventionType = type;
-  _selectedMembersForIntervention = [];
-  document.querySelectorAll(".intervention-type-btn").forEach(b => {
-    b.classList.toggle("active", b.getAttribute("data-type") === type);
-  });
-  renderInterventionMemberList();
-}
-
-function closeInterventionPicker() {
-  const popup = document.getElementById("intervention-picker-popup");
-  if (popup) popup.style.display = "none";
-  _interventionSelection = null;
-  _savedInterventionRange = null;
-}
 
 
-function applyIntervention() {
-  // En lugar de consultar window.getSelection() (que puede haberse perdido o cambiado al enfocar el input),
-  // utilizamos el rango que guardamos establemente al soltar el mouse
-  const range = _savedInterventionRange;
-  if (!range) {
-    alert("No hay texto seleccionado. Selecciona una porción de la letra primero.");
-    closeInterventionPicker();
-    return;
-  }
-  
-  const rangeText = range.toString().trim();
-  const finalText = rangeText || _pendingSelectionText;
-  if (!finalText) {
-    alert("No hay texto seleccionado. Selecciona una porción de la letra primero.");
-    closeInterventionPicker();
-    return;
-  }
-  
-  const editor = document.getElementById("editor-rich-lyrics");
-  if (!editor || !editor.contains(range.commonAncestorContainer)) {
-    alert("La selección debe estar dentro de la letra del tema.");
-    closeInterventionPicker();
-    return;
-  }
-
-  const noteInput = document.getElementById("intervention-note-text");
-  const extraNote = noteInput ? noteInput.value.trim() : "";
-
-  // Construir la anotación que envuelve el texto seleccionado
-  let wrappedText;
-  if (_interventionType === "coro") {
-    wrappedText = extraNote
-      ? `(Coro: ${finalText} - ${extraNote})`
-      : `(Coro: ${finalText})`;
-  } else {
-    const names = _selectedMembersForIntervention;
-    if (names.length === 0 && !extraNote) {
-      alert("Selecciona al menos un integrante o escribe una nota adicional.");
-      return;
-    }
-    
-    const prefix = names.length === 0 ? "Nota" : names.join(", ");
-    wrappedText = extraNote
-      ? `(${prefix}: ${finalText} - ${extraNote})`
-      : `(${prefix}: ${finalText})`;
-  }
 
 
-  try {
-    // Temporalmente reactivar el editor para poder modificarlo
-    const wasEditable = editor.contentEditable;
-    editor.contentEditable = "true";
-
-    // Reemplazar la selección en el DOM con el texto envuelto
-    range.deleteContents();
-    const newTextNode = document.createTextNode(wrappedText);
-    range.insertNode(newTextNode);
-
-    // Limpiar selección activa del navegador si existe
-    const sel = window.getSelection();
-    if (sel) {
-      sel.removeAllRanges();
-    }
 
 
-    // Serializar el contenido final del editor
-    const finalRaw = serializeRichLyrics();
 
-    // Re-parsear para asegurar que los acordes y badges se reconstruyan correctamente
-    editor.innerHTML = parseTextToRichLyrics(finalRaw);
 
-    // Restaurar el modo lectura (intervenciones)
-    editor.contentEditable = "false";
-    editor.setAttribute("data-mode", "interventions");
 
-    // Re-vincular eventos de acordes
-    bindChordBadgeEvents();
 
-    // Guardar en textarea y local storage
-    const hiddenTextarea = document.getElementById("song-lyrics");
-    if (hiddenTextarea) hiddenTextarea.value = finalRaw;
 
-    if (state.activeSongId) {
-      const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
-      if (song) {
-        song.lyrics = finalRaw;
-        saveLocalStorage();
-      }
-    }
 
-    // Feedback visual momentáneo
-    editor.style.outline = "2px solid #00ff66";
-    editor.style.transition = "outline 0.3s";
-    setTimeout(() => { editor.style.outline = ""; }, 800);
 
-  } catch (err) {
-    console.error("Error al aplicar intervención:", err);
-    alert("Error al aplicar la intervención. Revisa la consola.");
-  }
 
-  closeInterventionPicker();
-  _pendingSelectionText = "";
-}
+
 
 // ============================================================
 // --- HELPERS DE COLOR PARA ANOTACIONES ---
@@ -1199,6 +1000,7 @@ function initEventHandlers() {
       document.getElementById("song-timesig").value = "4/4";
       document.getElementById("song-status").value = "todo";
       document.getElementById("song-lyrics").value = "";
+      document.getElementById("song-image").value = "";
       
       // Restablecer campos inline
       const metaTitle = document.getElementById("meta-title");
@@ -1214,6 +1016,8 @@ function initEventHandlers() {
       if (metaKey) metaKey.textContent = "C";
       if (metaTimesig) metaTimesig.textContent = "4/4";
       if (metaStatus) metaStatus.textContent = "Por Aprender";
+      const metaImage = document.getElementById("meta-image");
+      if (metaImage) updateTextElement(metaImage, "");
       
       // Limpiar editor de letras rico
       const richEditor = document.getElementById("editor-rich-lyrics");
@@ -1592,10 +1396,12 @@ function saveSongFromForm() {
     // Editar existente
     const index = state.songs.findIndex(s => String(s.id) === String(songId));
     if (index !== -1) {
+      const coverUrl = document.getElementById("song-image").value.trim() || "./assets/yesterday.png";
       state.songs[index] = {
         ...state.songs[index],
         title, artist, bpm, key, timeSig, status, rhythm, lyrics,
         interpretes: selectedPerformers,
+        image: coverUrl,
         lastEdit: "hace unos instantes"
       };
       songToSave = state.songs[index];
@@ -1611,12 +1417,13 @@ function saveSongFromForm() {
     }));
 
     // Crear nueva
+    const coverUrl = document.getElementById("song-image").value.trim() || "./assets/yesterday.png";
     songToSave = {
       id: "s_" + Date.now(),
       title, artist, bpm, key, timeSig, status, rhythm, lyrics,
       interpretes: selectedPerformers,
       lastEdit: "creado recién",
-      image: "./assets/yesterday.png" // Por defecto
+      image: coverUrl
     };
     state.songs.unshift(songToSave);
   }
@@ -2005,14 +1812,16 @@ function renderRehearsalRoom() {
       indicatorsHtml += `</div>`;
 
       return `
-        <div class="lyric-line-editor ${isActive ? 'active' : ''} ${isSelected ? 'selected' : ''}" id="ensayo-line-${idx}" data-index="${idx}">
-          <span class="line-number">${idx + 1}</span>
-          ${dotsHtml}
-          ${chordRow}
-          <div class="lyric-text-display">${line.texto}</div>
-          ${lineNotes}
+        <div class="lyric-line-editor ${isActive ? 'active' : ''} ${isSelected ? 'selected' : ''}" id="ensayo-line-${idx}" data-index="${idx}" style="display:flex; justify-content:space-between; align-items:center; width:100%; position:relative;">
+          <div style="flex:1; position:relative; min-width:0; padding-right:15px;">
+            <span class="line-number">${idx + 1}</span>
+            ${dotsHtml}
+            ${chordRow}
+            <div class="lyric-text-display" style="white-space:pre-wrap; word-break:break-word;">${line.texto}</div>
+            ${lineNotes}
+          </div>
           
-          <div style="margin-left: auto; display: flex; align-items: center; position: relative;">
+          <div style="display:flex; align-items:center; position:relative; flex-shrink:0;">
             ${indicatorsHtml}
             
             <!-- 3 puntos al final a la derecha -->
@@ -3410,6 +3219,12 @@ function editActiveSong() {
     metaStatus.textContent = statusLabel;
   }
   
+  // Rellenar portada en el formulario
+  const songImageInp = document.getElementById("song-image");
+  if (songImageInp) songImageInp.value = song.image || "";
+  const metaImage = document.getElementById("meta-image");
+  if (metaImage) updateTextElement(metaImage, song.image || "");
+
   // Rellenar editor de letras rico
   const richEditor = document.getElementById("editor-rich-lyrics");
   if (richEditor) {
@@ -5625,7 +5440,8 @@ function initInlineEditFields() {
   const fields = [
     { id: "meta-title", type: "title" },
     { id: "meta-artist", type: "artist" },
-    { id: "meta-bpm", type: "bpm" }
+    { id: "meta-bpm", type: "bpm" },
+    { id: "meta-image", type: "image" }
   ];
   
   fields.forEach(f => {
