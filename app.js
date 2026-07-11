@@ -1220,6 +1220,18 @@ function initEventHandlers() {
         richEditor.innerHTML = "";
       }
       
+      // Cargar integrantes elegibles para el nuevo tema (todos marcados por defecto)
+      const performersContainer = document.getElementById("editor-song-performers-list");
+      if (performersContainer) {
+        performersContainer.innerHTML = (state.members && state.members.length > 0) ? state.members.map(m => {
+          const id = "int-" + m.name.toLowerCase().replace(/\s+/g, "-");
+          return `
+            <label style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft); border-radius: 8px; cursor: pointer; font-size: 11px;">
+              <input type="checkbox" class="song-performer-checkbox" data-id="${id}" data-name="${m.name}" data-instrument="${m.instruments || m.role || 'Músico'}" checked style="accent-color: var(--neon-lime);" />
+              <span>${m.name} (${m.instruments || m.role || 'Músico'})</span>
+            </label>`;
+        }).join("") : `<p style="font-size:11px; color:var(--text-muted);">No hay integrantes en el grupo aún.</p>`;
+      }
       document.getElementById("modal-song-title").textContent = "Agregar Nuevo Tema";
       modal.classList.add("open");
     });
@@ -1567,21 +1579,41 @@ function saveSongFromForm() {
   
   let songToSave;
   if (songId) {
+    // Recopilar checkboxes de integrantes del tema
+    const checkedCheckboxes = document.querySelectorAll(".song-performer-checkbox:checked");
+    const selectedPerformers = Array.from(checkedCheckboxes).map(cb => ({
+      id: cb.getAttribute("data-id"),
+      nombre: cb.getAttribute("data-name"),
+      instrumento: cb.getAttribute("data-instrument"),
+      iniciales: cb.getAttribute("data-name").slice(0, 2).toUpperCase()
+    }));
+
     // Editar existente
     const index = state.songs.findIndex(s => String(s.id) === String(songId));
     if (index !== -1) {
       state.songs[index] = {
         ...state.songs[index],
         title, artist, bpm, key, timeSig, status, rhythm, lyrics,
+        interpretes: selectedPerformers,
         lastEdit: "hace unos instantes"
       };
       songToSave = state.songs[index];
     }
   } else {
+    // Recopilar checkboxes de integrantes del tema
+    const checkedCheckboxes = document.querySelectorAll(".song-performer-checkbox:checked");
+    const selectedPerformers = Array.from(checkedCheckboxes).map(cb => ({
+      id: cb.getAttribute("data-id"),
+      nombre: cb.getAttribute("data-name"),
+      instrumento: cb.getAttribute("data-instrument"),
+      iniciales: cb.getAttribute("data-name").slice(0, 2).toUpperCase()
+    }));
+
     // Crear nueva
     songToSave = {
       id: "s_" + Date.now(),
       title, artist, bpm, key, timeSig, status, rhythm, lyrics,
+      interpretes: selectedPerformers,
       lastEdit: "creado recién",
       image: "./assets/yesterday.png" // Por defecto
     };
@@ -1802,17 +1834,34 @@ function renderChordRow(acordes, transposeOffset, isInstrumental = false) {
 }
 
 // Renderizar el roster de integrantes para una sección
-function renderRosterHtml(activeSec, members) {
-  const type = activeSec ? activeSec.tipo : "verso";
-  return members.map(m => {
-    let activo = true;
-    if (type === "intro" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
-    else if (type === "solo" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
-    else if (type === "verso" && m.id === "int-rodrigo") activo = false;
-
+function renderRosterHtml(activeSec, members, song, lineIdx) {
+  // Si no hay canción, retornar vacío
+  if (!song) return "";
+  
+  // Obtener los asignados a la línea activa
+  const activeLinePerformers = (song.linePerformers && song.linePerformers[lineIdx]) ? song.linePerformers[lineIdx] : [];
+  
+  // Obtener los intérpretes específicos del tema (o por defecto los del grupo)
+  const songPerformers = song.interpretes || (state.members && state.members.length > 0 ? state.members.map(m => ({
+    id: "int-" + m.name.toLowerCase().replace(/\s+/g, "-"),
+    nombre: m.name,
+    instrumento: m.instruments || m.role || "Músico",
+    iniciales: m.name.slice(0, 2).toUpperCase()
+  })) : [
+    { id: "int-camila",  nombre: "Camila",  instrumento: "Voz",    iniciales: "CA" },
+    { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro",   iniciales: "RO" }
+  ]);
+  
+  return songPerformers.map(m => {
+    const activo = activeLinePerformers.includes(m.id);
+    // En el roster de móviles, si hay músicos asignados al verso, ocultar los que no participan para vista limpia
+    if (activeLinePerformers.length > 0 && !activo) return "";
+    
     return `
-      <div class="roster-member ${activo ? 'active' : 'inactive'}">
-        <div class="roster-avatar-circle">${m.iniciales}</div>
+      <div class="roster-member ${activo ? 'active' : 'inactive'}" style="opacity: ${activo ? 1 : 0.5}">
+        <div class="roster-avatar-circle" style="border-color: ${activo ? 'var(--neon-lime)' : 'var(--border-soft)'}; color: ${activo ? '#fff' : 'var(--text-dim)'}">
+          ${m.iniciales}
+        </div>
         <div class="roster-member-name">${m.nombre}</div>
         <div class="roster-member-role">${m.instrumento}</div>
       </div>`;
@@ -1860,13 +1909,19 @@ function renderRehearsalRoom() {
   const selectedCount = state.selectedLineIndices ? state.selectedLineIndices.length : 0;
   const isMultiSelect = selectedCount > 0;
 
-  const members = [
+  // Importar por defecto los integrantes desde la ficha de músicos del grupo
+  const members = song.interpretes || (state.members && state.members.length > 0 ? state.members.map(m => ({
+    id: "int-" + m.name.toLowerCase().replace(/\s+/g, "-"),
+    nombre: m.name,
+    instrumento: m.instruments || m.role || "Músico",
+    iniciales: m.name.slice(0, 2).toUpperCase()
+  })) : [
     { id: "int-camila",  nombre: "Camila",  instrumento: "Voz",    iniciales: "CA" },
     { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro",   iniciales: "RO" },
     { id: "int-julian",  nombre: "Julián",  instrumento: "Bajo",   iniciales: "JU" },
     { id: "int-male",    nombre: "Male",    instrumento: "Batería", iniciales: "MA" },
     { id: "int-franco",  nombre: "Franco",  instrumento: "Teclado", iniciales: "FR" }
-  ];
+  ]);
 
   // — STRUCTURE SIDEBAR —
   const structureHtml = structure.map(sec => {
@@ -1912,15 +1967,14 @@ function renderRehearsalRoom() {
   }).join("");
 
   // — PARTICIPANTS (right sidebar) —
-  const type = activeSec ? activeSec.tipo : "verso";
+  const lineIdx = state.lineaActivaIndex || 0;
+  const activeLinePerformers = (song.linePerformers && song.linePerformers[lineIdx]) ? song.linePerformers[lineIdx] : [];
+  
   const participantsHtml = members.map(m => {
-    let activo = true;
-    if (type === "intro" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
-    else if (type === "solo" && (m.id === "int-camila" || m.id === "int-rodrigo")) activo = false;
-    else if (type === "verso" && m.id === "int-rodrigo") activo = false;
+    const activo = activeLinePerformers.includes(m.id);
 
     return `
-      <div class="participant-card ${activo ? 'active' : ''}" data-id="${m.id}">
+      <div class="participant-card ${activo ? 'active' : ''}" data-id="${m.id}" onclick="toggleLinePerformer('${m.id}')" style="cursor:pointer">
         <div class="participant-avatar">${m.iniciales}</div>
         <div class="participant-info">
           <div class="participant-name">${m.nombre}</div>
@@ -1931,7 +1985,7 @@ function renderRehearsalRoom() {
   }).join("");
 
   // — ROSTER STRIP (mobile) —
-  const rosterStripHtml = renderRosterHtml(activeSec, members);
+  const rosterStripHtml = renderRosterHtml(activeSec, members, song, state.lineaActivaIndex || 0);
 
   room.innerHTML = `
     <div class="layout">
@@ -2010,8 +2064,8 @@ function renderRehearsalRoom() {
           <div class="sidebar-section">
             <div class="sidebar-section-title">Participantes en sección</div>
             <div class="participants-grid">${participantsHtml}</div>
-            <div class="add-participant-btn" onclick="triggerEnsayoToast('Agregar músico — Próximamente')">
-              <i class="ti ti-plus"></i> Agregar músico
+            <div class="add-participant-btn" onclick="editActiveSong()">
+              <i class="ti ti-users"></i> Editar músicos del tema
             </div>
           </div>
           <div class="sidebar-section">
@@ -3228,6 +3282,22 @@ function editActiveSong() {
     bindChordBadgeEvents();
   }
   
+  // Cargar integrantes específicos de este tema en los checkboxes
+  const performersContainer = document.getElementById("editor-song-performers-list");
+  if (performersContainer) {
+    const selectedIds = (song.interpretes || []).map(p => p.id);
+    performersContainer.innerHTML = (state.members && state.members.length > 0) ? state.members.map(m => {
+      const id = "int-" + m.name.toLowerCase().replace(/\s+/g, "-");
+      // Si la canción no tiene intérpretes guardados aún, marcar todos por defecto
+      const isChecked = (!song.interpretes || song.interpretes.length === 0) || selectedIds.includes(id);
+      
+      return `
+        <label style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft); border-radius: 8px; cursor: pointer; font-size: 11px;">
+          <input type="checkbox" class="song-performer-checkbox" data-id="${id}" data-name="${m.name}" data-instrument="${m.instruments || m.role || 'Músico'}" ${isChecked ? 'checked' : ''} style="accent-color: var(--neon-lime);" />
+          <span>${m.name} (${m.instruments || m.role || 'Músico'})</span>
+        </label>`;
+    }).join("") : `<p style="font-size:11px; color:var(--text-muted);">No hay integrantes en el grupo aún.</p>`;
+  }
   document.getElementById("modal-song-title").textContent = "Editar Tema";
   document.getElementById("modal-add-song").classList.add("open");
 }
@@ -6911,3 +6981,34 @@ document.addEventListener("fullscreenchange", () => {
     renderRehearsalRoom();
   }
 });
+
+
+// Alterna la participación de un intérprete en el verso/línea activa
+window.toggleLinePerformer = function(performerId) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song) return;
+  if (!song.linePerformers) song.linePerformers = {};
+  
+  const lineIdx = state.lineaActivaIndex || 0;
+  if (!song.linePerformers[lineIdx]) {
+    song.linePerformers[lineIdx] = [];
+  }
+  
+  const pos = song.linePerformers[lineIdx].indexOf(performerId);
+  if (pos > -1) {
+    song.linePerformers[lineIdx].splice(pos, 1);
+  } else {
+    song.linePerformers[lineIdx].push(performerId);
+  }
+  
+  // Guardar en Supabase y localmente
+  saveLocalStorage();
+  if (window.SongsService) {
+    window.SongsService.saveSong(song).catch(err => {
+      console.error("Error al guardar asignaciones de línea:", err);
+    });
+  }
+  
+  // Re-renderizar la vista para reflejar el estado activo
+  renderRehearsalRoom();
+};

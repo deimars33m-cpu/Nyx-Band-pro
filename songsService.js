@@ -37,6 +37,8 @@ const SongsService = {
           key: metadata.key || "C",
           timeSig: metadata.timeSig || "4/4",
           rhythm: metadata.rhythm || "Pop",
+          interpretes: metadata.interpretes || null,
+          linePerformers: metadata.linePerformers || null,
           // mantenemos la referencia por si se necesita
           chords: song.chords
         };
@@ -66,7 +68,9 @@ const SongsService = {
         chords: JSON.stringify({
           key: song.key || "C",
           timeSig: song.timeSig || "4/4",
-          rhythm: song.rhythm || "Pop"
+          rhythm: song.rhythm || "Pop",
+          interpretes: song.interpretes || null,
+          linePerformers: song.linePerformers || null
         }),
         bpm: song.bpm || 120,
         status: song.status || "pendiente"
@@ -127,7 +131,9 @@ const SongsService = {
         chords: JSON.stringify({
           key: song.key || "C",
           timeSig: song.timeSig || "4/4",
-          rhythm: song.rhythm || "Pop"
+          rhythm: song.rhythm || "Pop",
+          interpretes: song.interpretes || null,
+          linePerformers: song.linePerformers || null
         }),
         bpm: song.bpm || 120,
         status: song.status || "pendiente"
