@@ -315,13 +315,22 @@
   transition: margin 0.25s ease;
 }
 
-/* Texto de Letra */
+/* Texto de Letra — NO romper línea en móvil, respetar estructura 1 verso = 1 línea */
 .line-lyric-text {
   font-size: 14px;
   color: var(--text);
   line-height: 1.5;
   font-weight: 400;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: visible;
+  /* Ocultar barra de scroll horizontal pero permitir scroll */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   transition: all 0.28s ease;
+}
+.line-lyric-text::-webkit-scrollbar {
+  display: none;
 }
 
 /* Notas adicionales de sección */

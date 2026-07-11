@@ -2635,7 +2635,13 @@ function updateSongSection(song, oldSecName, newSecName, newSectionNotes, newSec
   const middle = [header, newSectionLyrics.trim()];
   const newRawLyrics = [...before, ...middle, ...after].join("\n");
   song.lyrics = newRawLyrics;
-  saveLocalStorage();
+  
+  // Guardar la canción modificada directamente en Supabase
+  if (window.SongsService) {
+    window.SongsService.saveSong(song).catch(err => {
+      console.error("Error al guardar letra editada en Supabase:", err);
+    });
+  }
 }
 
 function changeTimeSignature(sig) {
