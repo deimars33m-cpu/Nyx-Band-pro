@@ -2195,6 +2195,7 @@ function bindRehearsalEvents(structure, lines, song) {
         const line = lines[idx];
         if (line) state.seccionActivaId = line.seccionId;
         renderRehearsalRoom();
+        scrollToEnsayoLine(idx);
       }
     });
   });
