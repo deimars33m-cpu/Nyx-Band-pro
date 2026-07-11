@@ -4285,8 +4285,7 @@ textarea {
 
 /* Estilos de barra superior móvil (oculta por defecto en desktop) */
 .mobile-top-bar {
-  display: none;
-}
+    display: none !important;}
 
 .mobile-overlay {
   position: fixed;
@@ -4376,8 +4375,8 @@ textarea {
   
   /* Ajustes de espaciado de contenido principal en pantallas chicas */
   .main-content {
-    padding: 76px 16px 24px 16px !important; /* Espacio para no chocar con la mobile-top-bar */
-    height: calc(100vh - 56px);
+    padding: 16px !important;
+    height: 100vh;
   }
   
   .page-header {

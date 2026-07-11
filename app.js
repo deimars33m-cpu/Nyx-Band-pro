@@ -1948,29 +1948,6 @@ function renderRehearsalRoom() {
           <div class="add-section-btn" id="btn-desktop-add-sec">
             <i class="ti ti-plus" style="font-size:11px;"></i> Nueva sección
           </div>
-          <div style="padding:12px 14px; border-top:1px solid var(--border); margin-top:auto;">
-            <div class="sidebar-title" style="padding:0 0 8px;">${isMultiSelect ? `Propiedades (${selectedCount} versos)` : 'Propiedades'}</div>
-            <div class="property-row">
-              <label class="property-label">Nombre de sección</label>
-              <input class="property-input" id="desktop-sec-name-input" value="${isMultiSelect ? 'Múltiples versos' : (activeSec ? activeSec.nombre : 'Sin sección')}" ${isMultiSelect ? 'disabled style="opacity: 0.6"' : ''} />
-            </div>
-            <div class="property-row">
-              <label class="property-label">Tipo</label>
-              <select class="property-input" id="desktop-sec-type-select">
-                <option value="verso" ${type==='verso'?'selected':''}>Verso</option>
-                <option value="pre-coro" ${type==='pre-coro'?'selected':''}>Pre-Coro</option>
-                <option value="estribillo" ${type==='estribillo'?'selected':''}>Coro / Estribillo</option>
-                <option value="puente" ${type==='puente'?'selected':''}>Puente</option>
-                <option value="intro" ${type==='intro'?'selected':''}>Intro</option>
-                <option value="outro" ${type==='outro'?'selected':''}>Outro</option>
-                <option value="solo" ${type==='solo'?'selected':''}>Solo</option>
-              </select>
-            </div>
-            <div class="property-row">
-              <label class="property-label">Notas de sección</label>
-              <input class="property-input" id="desktop-sec-notes-input" value="${isMultiSelect ? 'Múltiples versos' : activeNotas}" ${isMultiSelect ? 'disabled style="opacity: 0.6"' : ''} placeholder="Ej: entra guitarra líder aquí..." />
-            </div>
-          </div>
         </div>
 
         <!-- CENTER PANE -->

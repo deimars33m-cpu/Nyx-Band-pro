@@ -9,7 +9,7 @@
   <title>NYX Band-Pro - Repertorio Colaborativo</title>
   
   <!-- CSS Global -->
-  <link rel="stylesheet" href="index.css?v=5.0">
+  <link rel="stylesheet" href="index.css?v=5.5">
   <!-- Tabler Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.36.0/tabler-icons.min.css">
   
@@ -588,49 +588,6 @@
 
   <!-- BOTÓN FLOTANTE SUPERIOR DERECHA: EDICIÓN EN PANTALLA COMPLETA -->
   <button id="rehearsal-fullscreen-edit-btn" class="fullscreen-floating-edit-btn" onclick="editActiveSong()" title="Editar Letra y Acordes">✏️</button>
-
-  <!-- BOTÓN FLOTANTE INFERIOR IZQUIERDA: GRABACIÓN DE SONIDOS -->
-  <div id="rehearsal-record-fab-container" class="rehearsal-fab-container bottom-left" style="display: none;">
-    <div class="fab-menu glass">
-      <div class="fab-menu-title">Grabación de Audio</div>
-      <div class="fab-control-row">
-        <span>Grabación</span>
-        <button id="fab-btn-record" class="btn btn-secondary btn-pill" onclick="toggleHeaderRecording()" style="padding: 4px 10px; font-size: 10px;">🎙️ Grabar</button>
-      </div>
-      <div class="fab-control-row" style="justify-content: center; margin-top: 8px;">
-        <span id="fab-record-timer" style="font-family: var(--font-mono); font-size: 14px; font-weight: 800; color: #ffffff;">00:00</span>
-      </div>
-      <div class="fab-control-row" style="margin-top: 8px;">
-        <canvas id="fab-record-canvas" width="180" height="40" style="width: 100%; height: 40px; background: rgba(0,0,0,0.25); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);"></canvas>
-      </div>
-    </div>
-    <button class="fab-main-btn" onclick="toggleRecordFabMenu()" title="Grabación de Sonidos">🎙️</button>
-  </div>
-
-  <!-- BOTÓN FLOTANTE INFERIOR DERECHA: CONTROLES DE METRÓNOMO -->
-  <div id="rehearsal-fab-container" class="rehearsal-fab-container" style="display: none;">
-    <div class="fab-menu glass">
-      <div class="fab-menu-title">Metrónomo</div>
-      
-      <!-- Fila de Metrónomo -->
-      <div class="fab-control-row">
-        <span>Metrónomo</span>
-        <button id="fab-btn-metronome" class="btn btn-secondary btn-pill" onclick="toggleMetronome()" style="padding: 4px 10px; font-size: 10px;">▶ Metrónomo</button>
-      </div>
-
-      <!-- Fila de Tempo -->
-      <div class="fab-control-row" style="margin-top: 4px;">
-        <span>BPM</span>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <button class="btn btn-secondary" onclick="updateBpm(state.metronome.bpm - 1)" style="width:20px; height:20px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:11px;">-</button>
-          <span id="fab-bpm-display" style="font-family:var(--font-mono); font-size:12px; font-weight:800; color:var(--neon-orange); min-width:24px; text-align:center;">120</span>
-          <button class="btn btn-secondary" onclick="updateBpm(state.metronome.bpm + 1)" style="width:20px; height:20px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:11px;">+</button>
-          <button class="btn btn-outline-cyan" onclick="handleTapTempo()" style="padding:2px 6px; font-size:9px; border-radius:4px;">TAP</button>
-        </div>
-      </div>
-    </div>
-    <button class="fab-main-btn" onclick="toggleFabMenu()" title="Controles de Metrónomo">🎵</button>
-  </div>
 
   <!-- MODAL DE CONFIGURACIÓN DE LA BANDA -->
   <div id="modal-band-settings" class="modal-backdrop" onclick="if(event.target===this) document.getElementById('modal-band-settings').classList.remove('open')">
