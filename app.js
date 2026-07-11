@@ -977,6 +977,7 @@ function initEventHandlers() {
   // Listener de Auth
   if (window.supabaseClient) {
     window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      if (window.logDebug) window.logDebug(`onAuthStateChange disparado en index.html (Evento: ${event})`);
       // Cancelar el timeout de seguridad
       if (window._authTimeout) clearTimeout(window._authTimeout);
 
@@ -984,13 +985,14 @@ function initEventHandlers() {
       state.currentUser = user;
       
       if (!user) {
-        // No hay sesión activa — redirigir inmediatamente a auth.html
+        if (window.logDebug) window.logDebug("onAuthStateChange en index.html: No hay sesión activa. Redirigiendo a auth.html...");
         window.location.href = "auth.html";
         return;
       }
 
       if (user) {
         try {
+          if (window.logDebug) window.logDebug(`onAuthStateChange en index.html: Sesión activa de: ${user.email}`);
           // Desuscribirse del anterior si existe
           if (window._supabaseUserChannel) {
             window._supabaseUserChannel.unsubscribe();
@@ -999,16 +1001,22 @@ function initEventHandlers() {
           // Función para cargar/recargar datos de perfil desde Supabase
           const loadUserProfile = async () => {
             try {
+              if (window.logDebug) window.logDebug(`loadUserProfile: Consultando 'users' para ID: ${user.id}`);
               const { data: userData, error: userError } = await window.supabaseClient
                 .from('users')
                 .select('*')
                 .eq('id', user.id)
                 .maybeSingle();
 
-              if (userError) throw userError;
+              if (userError) {
+                if (window.logDebug) window.logDebug(`❌ loadUserProfile error consultando 'users': ${userError.message}`);
+                throw userError;
+              }
+
+              if (window.logDebug) window.logDebug(`loadUserProfile: Resultado de 'users' = ${userData ? JSON.stringify(userData) : "Nulo"}`);
 
               if (!userData) {
-                // Usuario nuevo — crear perfil limpio en la tabla users
+                if (window.logDebug) window.logDebug("loadUserProfile: Perfil inexistente en 'users'. Insertando nuevo perfil y redirigiendo a auth.html...");
                 const name = user.user_metadata.nombre || user.email.split("@")[0];
                 const { error: insertError } = await window.supabaseClient.from('users').insert({
                   id: user.id,
@@ -1016,7 +1024,10 @@ function initEventHandlers() {
                   nombre: name,
                   current_band_id: null
                 });
-                if (insertError) throw insertError;
+                if (insertError) {
+                  if (window.logDebug) window.logDebug(`❌ Error insertando perfil nuevo: ${insertError.message}`);
+                  throw insertError;
+                }
                 
                 window.location.href = "auth.html";
                 return;
@@ -1026,6 +1037,7 @@ function initEventHandlers() {
               const oldRequest = state.requestedBandId;
 
               if (userData.current_band_id && userData.current_band_id !== "KAWSAY") {
+                if (window.logDebug) window.logDebug(`loadUserProfile: Perfil válido con banda = ${userData.current_band_id}. Cargando integrantes y canciones...`);
                 state.currentBandId = userData.current_band_id;
                 state.requestedBandId = null;
 
@@ -1042,7 +1054,7 @@ function initEventHandlers() {
                 const onboardingModal = document.getElementById("modal-onboarding");
                 if (onboardingModal) onboardingModal.style.display = "none";
               } else {
-                // Forzar Onboarding
+                if (window.logDebug) window.logDebug(`loadUserProfile: Banda es nula o KAWSAY (${userData.current_band_id}). Redirigiendo a auth.html para onboarding...`);
                 window.location.href = "auth.html";
                 return;
               }

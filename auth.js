@@ -7,16 +7,20 @@
   let isAuthFlowActive = false; // Bandera para evitar race conditions
 
   // --- LOG DE DIAGNÓSTICO EN PANTALLA ---
-  window.logDebug = function(msg) {
-    console.log("[DEBUG]", msg);
+  // Inicializar cargando logs acumulados en LocalStorage
+  setTimeout(() => {
     const linesEl = document.getElementById("auth-debug-lines");
     if (linesEl) {
-      if (linesEl.textContent === "Esperando inicialización...") {
-        linesEl.innerHTML = "";
+      let logs = [];
+      try {
+        logs = JSON.parse(localStorage.getItem("coop_debug_logs") || "[]");
+      } catch(e) {
+        logs = [];
       }
-      linesEl.innerHTML += `<div>&gt; ${msg}</div>`;
+      linesEl.innerHTML = logs.map(line => `<div>${line}</div>`).join("");
+      linesEl.scrollTop = linesEl.scrollHeight;
     }
-  };
+  }, 100);
 
   // --- OBTENER CLIENTE ---
   function getSupabase() {

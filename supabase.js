@@ -26,3 +26,24 @@ if (isSupabaseConfigured) {
 
 // Exportar globalmente para que lo usen auth.js, app.js y songsService.js
 window.supabaseClient = supabase;
+
+// Sistema de logs de diagnóstico persistentes (se mantienen al redirigir páginas)
+window.logDebug = function(msg) {
+  console.log("[DEBUG]", msg);
+  let logs = [];
+  try {
+    logs = JSON.parse(localStorage.getItem("coop_debug_logs") || "[]");
+  } catch(e) {
+    logs = [];
+  }
+  logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+  if (logs.length > 40) logs.shift();
+  localStorage.setItem("coop_debug_logs", JSON.stringify(logs));
+  
+  const linesEl = document.getElementById("auth-debug-lines");
+  if (linesEl) {
+    linesEl.innerHTML = logs.map(line => `<div>${line}</div>`).join("");
+    linesEl.scrollTop = linesEl.scrollHeight;
+  }
+};
+logDebug("supabase.js cargado e inicializado.");
