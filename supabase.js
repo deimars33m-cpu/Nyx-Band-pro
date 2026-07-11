@@ -5,27 +5,37 @@
 const supabaseUrl = "https://ozzxvackrzbwheizczmi.supabase.co"; // Tu URL del proyecto (Ej: https://xxxx.supabase.co)
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96enh2YWNrcnpid2hlaXpjem1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTUwMjUsImV4cCI6MjA5OTI5MTAyNX0.UaEzglE6XZEgGTqAN8lbZx07vLoiCC8OJP0e9xYvkcU"; // Tu clave pública anónima (Anon Key)
 
-let supabase = null;
+let supabaseInstance = null;
 
 const isSupabaseConfigured = supabaseUrl && supabaseAnonKey && supabaseUrl !== "TU_SUPABASE_URL";
 
 if (isSupabaseConfigured) {
   try {
-    if (!window.supabase) {
-      throw new Error("El SDK global de Supabase no se cargó correctamente desde el CDN (window.supabase es undefined).");
+    if (typeof window.supabase === "undefined" || !window.supabase) {
+      throw new Error("El SDK global de Supabase no se cargó correctamente desde el CDN (window.supabase es undefined). Revisa tu conexión o desactiva tu bloqueador de anuncios.");
     }
-    supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    supabaseInstance = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
     console.log("Supabase inicializado con éxito.");
   } catch (error) {
     console.error("Error al inicializar Supabase:", error);
-    alert("Error de Conexión / Inicialización:\n" + error.message);
+    
+    // Si estamos en la pantalla de auth, mostrar el error visualmente
+    setTimeout(() => {
+      const errorAuth = document.getElementById("errorAuth");
+      if (errorAuth) {
+        errorAuth.textContent = error.message;
+        errorAuth.style.display = "block";
+      } else {
+        alert("Error crítico de Conexión:\n" + error.message);
+      }
+    }, 500);
   }
 } else {
   console.warn("Supabase no configurado. Configura supabaseUrl y supabaseAnonKey en supabase.js.");
 }
 
 // Exportar globalmente para que lo usen auth.js, app.js y songsService.js
-window.supabaseClient = supabase;
+window.supabaseClient = supabaseInstance;
 
 // Sistema de logs de diagnóstico persistentes (se mantienen al redirigir páginas)
 window.logDebug = function(msg) {
