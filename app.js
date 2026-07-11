@@ -381,12 +381,12 @@ function saveRecordingsState() {
 // Ayudas
 function getMemberColor(name) {
   if (!name) return "#ffeb3b";
-  const m = state.members.find(m => m.name.toLowerCase() === name.toLowerCase());
+  const m = state.members.find(m => m.name && m.name.toLowerCase() === name.toLowerCase());
   return m ? m.color : "#ffeb3b";
 }
 
 function getMemberByName(name) {
-  return state.members.find(m => m.name.toLowerCase() === name.toLowerCase()) || null;
+  return state.members.find(m => m.name && m.name.toLowerCase() === name.toLowerCase()) || null;
 }
 
 // Abrir el modal de integrantes
@@ -434,7 +434,7 @@ function renderMembersList() {
   
   const isAdmin = state.currentUser && (
     state.members.some(m => m.linkedUid === state.currentUser.uid && m.role === "Administrador") ||
-    state.members.some(m => m.name.toLowerCase() === state.currentUser.email.split("@")[0].toLowerCase() && m.role === "Administrador")
+    state.members.some(m => m.name && m.name.toLowerCase() === (state.currentUser.email || "").split("@")[0].toLowerCase() && m.role === "Administrador")
   );
 
   list.innerHTML = state.members.map((m, i) => {
@@ -484,7 +484,7 @@ function addBandMember() {
   
   const name = nameInput ? nameInput.value.trim() : "";
   if (!name) { alert("Ingresa el nombre del integrante."); return; }
-  if (state.members.find(m => m.name.toLowerCase() === name.toLowerCase())) {
+  if (state.members.find(m => m.name && m.name.toLowerCase() === name.toLowerCase())) {
     alert("Ya existe un integrante con ese nombre.");
     return;
   }
@@ -890,7 +890,7 @@ function checkSharedSong() {
         if (!sharedSong.image) sharedSong.image = "./assets/yesterday.png";
         
         // Validar si ya existe una con el mismo título/artista
-        const exists = state.songs.some(s => s.title.toLowerCase() === sharedSong.title.toLowerCase() && s.artist.toLowerCase() === sharedSong.artist.toLowerCase());
+        const exists = state.songs.some(s => (s.title||"").toLowerCase() === (sharedSong.title||"").toLowerCase() && (s.artist||"").toLowerCase() === (sharedSong.artist||"").toLowerCase());
         
         setTimeout(() => {
           const confirmAdd = confirm(`¿Quieres agregar el tema compartido "${sharedSong.title}" de "${sharedSong.artist}" a tu repertorio?`);
@@ -1374,8 +1374,8 @@ function renderSetlist() {
     const matchesStatus = state.filters.status === "all" || song.status === state.filters.status;
     
     // Filtro por Búsqueda (Título o Artista)
-    const matchesSearch = song.title.toLowerCase().includes(state.filters.search.toLowerCase()) || 
-                          song.artist.toLowerCase().includes(state.filters.search.toLowerCase());
+    const matchesSearch = (song.title||'').toLowerCase().includes((state.filters.search||'').toLowerCase()) || 
+                          (song.artist||'').toLowerCase().includes((state.filters.search||'').toLowerCase());
                           
     return matchesStatus && matchesSearch;
   });
@@ -1414,7 +1414,7 @@ function renderSetlist() {
         
         <div class="song-card-content">
           <div class="card-top">
-            <span class="last-edit" style="margin-left: 28px;">LAST EDIT: ${song.lastEdit.toUpperCase()}</span>
+            <span class="last-edit" style="margin-left: 28px;">LAST EDIT: ${(song.lastEdit||"").toUpperCase()}</span>
           </div>
           
           <div class="song-title-group">
@@ -2263,7 +2263,7 @@ function bindRehearsalEvents(structure, lines, song) {
     secNameInp.addEventListener("change", e => {
       const sec = structure.find(s => s.id === state.seccionActivaId);
       if (sec) {
-        const oldName = sec.nombre.toUpperCase();
+        const oldName = (sec.nombre||"").toUpperCase();
         const newName = e.target.value.trim().toUpperCase();
         if (newName && newName !== oldName) {
           song.lyrics = song.lyrics.replace(`[${oldName}]`, `[${newName}]`);
@@ -2303,8 +2303,8 @@ function bindRehearsalEvents(structure, lines, song) {
       
       let updatedLyrics = song.lyrics || "";
       sectionsToUpdate.forEach(sec => {
-        const oldName = sec.nombre.toUpperCase();
-        const suffix = sec.nombre.replace(/^(verso|coro|estribillo|chorus|puente|bridge|intro|outro|final|solo)/i, "").trim();
+        const oldName = (sec.nombre||'').toUpperCase();
+        const suffix = (sec.nombre||'').replace(/^(verso|coro|estribillo|chorus|puente|bridge|intro|outro|final|solo)/i, "").trim();
         const newName = (keyword + " " + suffix).trim().toUpperCase();
         
         if (oldName !== newName) {
@@ -2436,7 +2436,7 @@ function saveDesktopLyrics(song, lines, structure) {
     if (line.seccionId !== currentSecId) {
       currentSecId = line.seccionId;
       const sec = structure.find(s => s.id === currentSecId);
-      if (sec) newLyrics += "[" + sec.nombre.toUpperCase() + "]\n";
+      if (sec) newLyrics += "[" + (sec.nombre||"").toUpperCase() + "]\n";
     }
     newLyrics += line.texto + "\n";
   });
@@ -5855,7 +5855,7 @@ function isCurrentUserAdmin() {
   // 2. Si está en la lista de miembros como Administrador
   if (state.members && state.members.length > 0) {
     const isMemberAdmin = state.members.some(m => m.linkedUid === state.currentUser.uid && m.role === "Administrador") ||
-                          state.members.some(m => m.name.toLowerCase() === state.currentUser.email.split("@")[0].toLowerCase() && m.role === "Administrador");
+                          state.members.some(m => m.name && m.name.toLowerCase() === (state.currentUser.email || "").split("@")[0].toLowerCase() && m.role === "Administrador");
     if (isMemberAdmin) return true;
   }
   
@@ -5864,7 +5864,7 @@ function isCurrentUserAdmin() {
     const singleMember = state.members[0];
     if (singleMember.linkedUid === state.currentUser.uid || 
         singleMember.email === state.currentUser.email || 
-        singleMember.name.toLowerCase() === state.currentUser.email.split("@")[0].toLowerCase()) {
+        singleMember.name && singleMember.name.toLowerCase() === (state.currentUser.email||"").split("@")[0].toLowerCase()) {
       return true;
     }
   }
@@ -6323,7 +6323,7 @@ async function regenerateBandInviteCode() {
 
   if (confirm("¿Estás seguro de que deseas regenerar el código de invitación? El código anterior dejará de ser válido.")) {
     try {
-      const cleanName = state.bandMetadata.name.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      const cleanName = (state.bandMetadata.name||"").trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
       const randNum = Math.floor(1000 + Math.random() * 9000);
       const nuevoCodigo = `${cleanName}-${randNum}`;
 
