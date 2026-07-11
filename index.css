@@ -4590,3 +4590,66 @@ textarea {
     gap: 12px !important;
   }
 }
+
+
+/* ============================================================
+   BOTONES Y ESTILOS PARA COLAPSAR EL SIDEBAR EN PC
+   ============================================================ */
+
+/* Boton para ocultar el sidebar (dentro de .brand) */
+.sidebar-collapse-btn {
+  background: none !important;
+  border: 1.5px solid transparent !important;
+  outline: none !important;
+  color: var(--text-dim) !important;
+  cursor: pointer !important;
+  padding: 6px !important;
+  font-size: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+  margin-left: auto !important; /* Empuja el boton al extremo derecho */
+  border-radius: 6px !important;
+}
+
+.sidebar-collapse-btn:hover {
+  color: var(--neon-cyan) !important;
+  border-color: rgba(0, 229, 255, 0.25) !important;
+  background: rgba(0, 229, 255, 0.05) !important;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.15) !important;
+}
+
+/* Boton flotante para volver a expandir el sidebar */
+.sidebar-toggle-floating-btn {
+  position: fixed !important;
+  left: 16px !important;
+  top: 16px !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 8px !important;
+  background: rgba(16, 15, 30, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1.5px solid var(--border-soft) !important;
+  color: var(--text-primary) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  z-index: 99999 !important;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+.sidebar-toggle-floating-btn:hover {
+  color: var(--neon-lime) !important;
+  border-color: var(--neon-lime) !important;
+  box-shadow: 0 0 14px rgba(0, 255, 102, 0.35) !important;
+  transform: scale(1.05) !important;
+}
+
+/* Estado colapsado: oculta el sidebar y expande el resto a pantalla completa */
+.sidebar.collapsed {
+  display: none !important;
+}

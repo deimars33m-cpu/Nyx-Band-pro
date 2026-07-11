@@ -9,7 +9,7 @@
   <title>NYX Band-Pro - Repertorio Colaborativo</title>
   
   <!-- CSS Global -->
-  <link rel="stylesheet" href="index.css?v=6.0">
+  <link rel="stylesheet" href="index.css?v=6.5">
   <!-- Tabler Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.36.0/tabler-icons.min.css">
   
@@ -59,6 +59,11 @@
   <div id="mobile-metronome-overlay" class="mobile-overlay" onclick="toggleMobileMetronome()"></div>
 
   <div class="app-container">
+    <!-- Botón flotante para restaurar/expandir barra lateral en PC -->
+    <button id="btn-expand-sidebar" class="sidebar-toggle-floating-btn" onclick="toggleSidebarPC()" style="display: none;" title="Mostrar barra lateral">
+      <i class="ti ti-chevron-right"></i>
+    </button>
+
     <!-- BARRA LATERAL IZQUIERDA (SIDEBAR) -->
     <aside class="sidebar glass">
       <div class="brand">
@@ -67,6 +72,10 @@
           <span class="brand-name">NYX Band-Pro</span>
           <span class="brand-subtitle">Sesión Activa</span>
         </div>
+        <!-- Botón para ocultar/colapsar barra lateral -->
+        <button id="btn-collapse-sidebar" class="sidebar-collapse-btn" onclick="toggleSidebarPC()" title="Ocultar barra lateral">
+          <i class="ti ti-chevron-left"></i>
+        </button>
       </div>
       
       <nav class="sidebar-nav">

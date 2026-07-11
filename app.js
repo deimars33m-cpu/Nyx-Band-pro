@@ -6766,3 +6766,17 @@ async function approveRequest(reqUid, email, name) {
 
 }
 
+
+
+// Función global para colapsar/expandir el sidebar en PC
+window.toggleSidebarPC = function() {
+  const sidebar = document.querySelector(".sidebar");
+  const expandBtn = document.getElementById("btn-expand-sidebar");
+  if (sidebar && expandBtn) {
+    const isCollapsed = sidebar.classList.toggle("collapsed");
+    expandBtn.style.display = isCollapsed ? "flex" : "none";
+    try {
+      localStorage.setItem("sidebarCollapsedPC", isCollapsed ? "true" : "false");
+    } catch (e) {}
+  }
+};
