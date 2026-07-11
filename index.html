@@ -9,7 +9,7 @@
   <title>NYX Band-Pro - Repertorio Colaborativo</title>
   
   <!-- CSS Global -->
-  <link rel="stylesheet" href="index.css?v=5.5">
+  <link rel="stylesheet" href="index.css?v=6.0">
   <!-- Tabler Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.36.0/tabler-icons.min.css">
   
@@ -71,13 +71,19 @@
       
       <nav class="sidebar-nav">
         <button class="nav-pill active" data-tab="repertorio">
-          <span class="nav-icon">🏠</span> REPERTORIO
+          <i class="ti ti-music nav-icon-neon" style="color: var(--neon-lime);"></i> REPERTORIO
         </button>
         <button class="nav-pill" data-tab="rehearsal">
-          <span class="nav-icon">🎤</span> Ensayo
+          <i class="ti ti-microphone nav-icon-neon" style="color: var(--magenta);"></i> ENSAYO
         </button>
         <button class="nav-pill" data-tab="dictionary">
-          <span class="nav-icon">📖</span> Diccionario
+          <i class="ti ti-book nav-icon-neon" style="color: var(--amber);"></i> DICCIONARIO
+        </button>
+        <button class="nav-pill disabled-nav" onclick="alert('Set List — Próximamente')" style="opacity: 0.45; cursor: not-allowed;">
+          <i class="ti ti-playlist nav-icon-neon" style="color: var(--text-muted);"></i> SET LIST
+        </button>
+        <button class="nav-pill disabled-nav" onclick="alert('Grupo — Próximamente')" style="opacity: 0.45; cursor: not-allowed;">
+          <i class="ti ti-users nav-icon-neon" style="color: var(--text-muted);"></i> GRUPO
         </button>
       </nav>
       
@@ -691,6 +697,30 @@
   </div>
 
   <!-- Modal de auth removido en favor de auth.html -->
+
+  <!-- NAVEGACIÓN INFERIOR PARA MÓVILES (Fija y minimalista con neón) -->
+  <nav class="mobile-bottom-nav">
+    <button class="mobile-nav-pill active" data-tab="repertorio">
+      <i class="ti ti-music nav-icon-neon" style="color: var(--neon-lime);"></i>
+      <span>Repertorio</span>
+    </button>
+    <button class="mobile-nav-pill" data-tab="rehearsal">
+      <i class="ti ti-microphone nav-icon-neon" style="color: var(--magenta);"></i>
+      <span>Ensayo</span>
+    </button>
+    <button class="mobile-nav-pill" data-tab="dictionary">
+      <i class="ti ti-book nav-icon-neon" style="color: var(--amber);"></i>
+      <span>Diccionario</span>
+    </button>
+    <button class="mobile-nav-pill disabled-nav" onclick="alert('Set List — Próximamente')">
+      <i class="ti ti-playlist nav-icon-neon" style="color: var(--text-muted); opacity: 0.5;"></i>
+      <span style="color: var(--text-muted); opacity: 0.5;">Set List</span>
+    </button>
+    <button class="mobile-nav-pill disabled-nav" onclick="alert('Grupo — Próximamente')">
+      <i class="ti ti-users nav-icon-neon" style="color: var(--text-muted); opacity: 0.5;"></i>
+      <span style="color: var(--text-muted); opacity: 0.5;">Grupo</span>
+    </button>
+  </nav>
 
   <script src="chords.js?v=2.0"></script>
   <!-- SDK de Supabase desde CDN -->

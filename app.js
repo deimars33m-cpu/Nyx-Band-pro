@@ -922,8 +922,18 @@ function renderApp() {
 }
 
 function renderNav() {
-  // Pill tabs active status
+  // Pill tabs active status (sidebar)
   document.querySelectorAll(".nav-pill").forEach(pill => {
+    const tabName = pill.getAttribute("data-tab");
+    if (tabName === state.currentTab) {
+      pill.classList.add("active");
+    } else {
+      pill.classList.remove("active");
+    }
+  });
+
+  // Pill tabs active status (mobile bottom bar)
+  document.querySelectorAll(".mobile-nav-pill").forEach(pill => {
     const tabName = pill.getAttribute("data-tab");
     if (tabName === state.currentTab) {
       pill.classList.add("active");
@@ -1096,11 +1106,19 @@ async function initAuthAndApp() {
 
 
 function initEventHandlers() {
-  // Navegación
+  // Navegación (sidebar)
   document.querySelectorAll(".nav-pill").forEach(pill => {
     pill.addEventListener("click", () => {
       const targetTab = pill.getAttribute("data-tab");
-      switchTab(targetTab);
+      if (targetTab) switchTab(targetTab);
+    });
+  });
+  
+  // Navegación (mobile bottom bar)
+  document.querySelectorAll(".mobile-nav-pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+      const targetTab = pill.getAttribute("data-tab");
+      if (targetTab) switchTab(targetTab);
     });
   });
   
