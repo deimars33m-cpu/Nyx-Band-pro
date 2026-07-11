@@ -1635,9 +1635,12 @@ function parseLyricsToEnsayoModel(lyricsText) {
     const cleanText = cleanLineText.trim();
     
     // Ajustar posiciones de acordes según los espacios eliminados al inicio por trim()
-    lineChords.forEach(c => {
-      c.posicionCaracter = Math.max(0, c.posicionCaracter - trimmedLeadingSpaces);
-    });
+    // SOLO si la línea contiene letra (no es puramente instrumental)
+    if (cleanText !== "") {
+      lineChords.forEach(c => {
+        c.posicionCaracter = Math.max(0, c.posicionCaracter - trimmedLeadingSpaces);
+      });
+    }
     
     result.push({
       id: `line-${index}`,
