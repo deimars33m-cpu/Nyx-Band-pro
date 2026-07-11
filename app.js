@@ -4467,6 +4467,12 @@ function convertTraditionalToBracket(text) {
     const currentLine = lines[i];
     const nextLine = lines[i + 1];
     
+    // SI LA LÍNEA YA CONTIENE CORCHETES, YA ESTÁ EN FORMATO BRACKET. PRESERVARLA SIN CAMBIOS.
+    if (currentLine.includes("[") && currentLine.includes("]")) {
+      result.push(currentLine);
+      continue;
+    }
+    
     if (isChordLine(currentLine) && nextLine !== undefined && !isChordLine(nextLine) && nextLine.trim() !== "") {
       const tokenRegex = /\S+/g;
       let match;
