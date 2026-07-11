@@ -985,6 +985,11 @@ function initEventHandlers() {
       state.currentUser = user;
       
       if (!user) {
+        const hasLocalStorageSession = Object.keys(localStorage).some(key => key.includes("auth-token"));
+        if (hasLocalStorageSession && event === "INITIAL_SESSION") {
+          if (window.logDebug) window.logDebug("onAuthStateChange en index.html: Sesión inicial nula pero detectado token en localStorage. Esperando...");
+          return;
+        }
         if (window.logDebug) window.logDebug("onAuthStateChange en index.html: No hay sesión activa. Redirigiendo a auth.html...");
         window.location.href = "auth.html";
         return;
