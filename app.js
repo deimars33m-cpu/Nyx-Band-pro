@@ -1970,7 +1970,6 @@ function renderRehearsalRoom() {
   }).join("");
 
   // — PARTICIPANTS (right sidebar) —
-  const lineIdx = state.lineaActivaIndex || 0;
   const activeLinePerformers = (song.linePerformers && song.linePerformers[lineIdx]) ? song.linePerformers[lineIdx] : [];
   
   const participantsHtml = members.map(m => {
