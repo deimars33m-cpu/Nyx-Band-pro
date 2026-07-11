@@ -276,9 +276,9 @@ async function loadMembersFromDB() {
       if (error) throw error;
       
       // Adaptar el formato de la base de datos relacional al estado local de la app
-      state.members = (data || []).map(m => ({
-        name: m.name,
-        role: m.role,
+      state.members = (data || []).filter(m => m && m.name).map(m => ({
+        name: m.name || "Sin nombre",
+        role: m.role || "Integrante",
         instruments: m.instruments || "",
         vocals: m.vocals || "Ninguna",
         color: m.color || "#00e5ff",
@@ -853,7 +853,7 @@ function buildInitialsBadgesHtml(names) {
     return "";
   }
   
-  return names.map(name => {
+  return names.filter(name => typeof name === 'string' && name.length > 0).map(name => {
     const isCoro = name.toLowerCase() === "coro";
     const color = isCoro ? "#ffeb3b" : getMemberColor(name);
     const initial = isCoro ? "TODOS" : name.charAt(0).toUpperCase();
@@ -5807,12 +5807,11 @@ function updateProfileBadge() {
   if (!name || !role) return;
 
   if (state.currentUser) {
-    name.textContent = state.currentUser.email.split("@")[0];
+    const emailPart = (state.currentUser.email || "").split("@")[0] || "Usuario";
+    name.textContent = emailPart;
     role.textContent = "Conectado";
     avatar.textContent = "🎙️";
-    // Podríamos verificar el rol desde state.members cruzando el email,
-    // pero por ahora lo dejamos como "Conectado".
-    const memberObj = state.members.find(m => m.name.toLowerCase() === name.textContent.toLowerCase());
+    const memberObj = state.members.find(m => m.name && m.name.toLowerCase() === name.textContent.toLowerCase());
     if (memberObj && memberObj.role) {
       role.textContent = memberObj.role;
     }
