@@ -4876,3 +4876,19 @@ textarea {
     display: none !important;
   }
 }
+
+/* Menú de 3 puntos en líneas de ensayo */
+.btn-line-menu {
+  opacity: 0.3;
+  transition: opacity 0.2s, color 0.2s;
+}
+.lyric-line-editor:hover .btn-line-menu,
+.lyric-line-editor.active .btn-line-menu {
+  opacity: 1;
+}
+.btn-line-menu:hover {
+  color: var(--neon-cyan) !important;
+}
+.line-dropdown-menu button:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}

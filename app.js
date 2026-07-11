@@ -1943,28 +1943,103 @@ function renderRehearsalRoom() {
     return `<button class="section-tab-chip ${isActive ? 'active' : ''}" data-id="${sec.id}">${sec.nombre}</button>`;
   }).join("");
 
-  // — LYRIC LINES —
-  const linesHtml = lines.map((line, idx) => {
-    const isActive = state.lineaActivaIndex === idx;
-    const isSelected = state.selectedLineIndices && state.selectedLineIndices.includes(idx);
-    const lineSec = structure.find(s => s.id === line.seccionId);
-    const dotColor = getLineColor(lineSec);
-    const isInst = line.texto === "(Instrumental)";
-    const chordRow = renderChordRow(line.acordes, state.transposeOffset || 0, isInst);
-    const lineNotes = isActive && activeNotas ? `<div class="lyric-notes">💡 ${activeNotas}</div>` : "";
+  // — LYRIC LINES GROUPED BY STANZA/SECTION —
+  let currentSecId = null;
+  let stanzaBlocks = [];
+  let currentBlock = null;
 
-    const marginStyle = line.isNewParagraph && idx > 0 ? "margin-top: 32px;" : "";
+  lines.forEach((line, idx) => {
+    if (line.seccionId !== currentSecId) {
+      currentSecId = line.seccionId;
+      const sec = structure.find(s => s.id === currentSecId);
+      currentBlock = {
+        seccionId: currentSecId,
+        nombre: sec ? sec.nombre : "Sin Sección",
+        tipo: sec ? sec.tipo : "verso",
+        notes: sec ? (sec.notes || sec.notas || "") : "",
+        lines: []
+      };
+      stanzaBlocks.push(currentBlock);
+    }
+    currentBlock.lines.push({ line, idx });
+  });
+
+  const linesHtml = stanzaBlocks.map(block => {
+    const secColor = getLineColor(block);
+    
+    const blockLinesHtml = block.lines.map(({ line, idx }) => {
+      const isActive = state.lineaActivaIndex === idx;
+      const isSelected = state.selectedLineIndices && state.selectedLineIndices.includes(idx);
+      const isInst = line.texto === "(Instrumental)";
+      const chordRow = renderChordRow(line.acordes, state.transposeOffset || 0, isInst);
+      const lineNotes = isActive && activeNotas ? `<div class="lyric-notes">💡 ${activeNotas}</div>` : "";
+
+      // Obtener los intérpretes específicos de esta línea
+      const activeLinePerformers = (song.linePerformers && song.linePerformers[idx]) ? song.linePerformers[idx] : [];
+      
+      // Renderizar entre 1 y 5 puntos de colores indicando los intérpretes
+      let dotsHtml = "";
+      if (activeLinePerformers.length > 0) {
+        dotsHtml = `<div class="line-performers-dots" style="position:absolute; left:-22px; width:16px; top:9px; display:flex; gap:1.5px; justify-content:center; align-items:center; z-index:10;">`;
+        activeLinePerformers.slice(0, 5).forEach(perfId => {
+          const member = state.members.find(m => ("int-" + m.name.toLowerCase().replace(/\s+/g, "-")) === perfId);
+          const color = member ? member.color : "#FF3EA5";
+          dotsHtml += `<div class="line-dot-mini" style="width:6px; height:6px; border-radius:50%; background:${color}; box-shadow:0 0 4px ${color};"></div>`;
+        });
+        dotsHtml += `</div>`;
+      } else {
+        dotsHtml = `<div class="line-dot" style="background:${secColor}; box-shadow:0 0 7px ${secColor};"></div>`;
+      }
+
+      // Verificar si la línea tiene notas de texto o de audio
+      const hasTextNotes = song.lineNotes && song.lineNotes[idx] && song.lineNotes[idx].trim() !== "";
+      const hasAudioNotes = song.lineAudios && song.lineAudios[idx] && song.lineAudios[idx].length > 0;
+      
+      let indicatorsHtml = `<div class="line-indicators" style="display:flex; gap:6px; align-items:center; margin-right: 8px;">`;
+      if (hasTextNotes) {
+        indicatorsHtml += `<i class="ti ti-file-text" style="color: var(--neon-cyan); font-size:12px; text-shadow: 0 0 4px var(--neon-cyan);" title="Tiene notas de texto"></i>`;
+      }
+      if (hasAudioNotes) {
+        indicatorsHtml += `<i class="ti ti-microphone" style="color: var(--neon-magenta); font-size:12px; text-shadow: 0 0 4px var(--neon-magenta);" title="Tiene ideas de arreglo grabadas"></i>`;
+      }
+      indicatorsHtml += `</div>`;
+
+      return `
+        <div class="lyric-line-editor ${isActive ? 'active' : ''} ${isSelected ? 'selected' : ''}" id="ensayo-line-${idx}" data-index="${idx}">
+          <span class="line-number">${idx + 1}</span>
+          ${dotsHtml}
+          ${chordRow}
+          <div class="lyric-text-display">${line.texto}</div>
+          ${lineNotes}
+          
+          <div style="margin-left: auto; display: flex; align-items: center; position: relative;">
+            ${indicatorsHtml}
+            
+            <!-- 3 puntos al final a la derecha -->
+            <div class="line-menu-container" style="position: relative;">
+              <button class="btn-line-menu" onclick="toggleLineMenu(event, ${idx})" style="background:none; border:none; color:var(--text-dim); padding:4px 8px; cursor:pointer; font-size:14px; outline:none;"><i class="ti ti-dots-vertical"></i></button>
+              <div class="line-dropdown-menu" id="line-dropdown-${idx}" style="display:none; position:absolute; right:0; top:24px; background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:8px; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,0.5); width:100px;">
+                <button onclick="event.stopPropagation(); duplicateDesktopLine(state.songs.find(s => String(s.id) === String(state.activeSongId)), ${idx}); closeAllLineMenus();" style="width:100%; text-align:left; background:none; border:none; color:var(--text-main); padding:8px 12px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;"><i class="ti ti-copy"></i> Duplicar</button>
+                <button onclick="event.stopPropagation(); deleteDesktopLine(state.songs.find(s => String(s.id) === String(state.activeSongId)), ${idx}); closeAllLineMenus();" style="width:100%; text-align:left; background:none; border:none; color:#E24B4A; padding:8px 12px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;"><i class="ti ti-trash"></i> Eliminar</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+
+    // Cabecera de la estrofa
+    const blockHeader = `
+      <div class="stanza-header" style="font-size:10px; font-weight:700; color:${secColor}; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px; opacity:0.8; padding-left: 6px;">
+        ${block.nombre} ${block.notes ? `// <span style="font-style:italic; font-weight:normal; text-transform:none; color:var(--text-dim); font-size:10px;">${block.notes}</span>` : ""}
+      </div>`;
 
     return `
-      <div class="lyric-line-editor ${isActive ? 'active' : ''} ${isSelected ? 'selected' : ''}" id="ensayo-line-${idx}" data-index="${idx}" style="${marginStyle}">
-        <span class="line-number">${idx + 1}</span>
-        <div class="line-dot" style="background:${dotColor}; box-shadow:0 0 7px ${dotColor};"></div>
-        ${chordRow}
-        <div class="lyric-text-display">${line.texto}</div>
-        ${lineNotes}
-        <div class="lyric-controls">
-          <button class="btn-small btn-desktop-duplicate" data-index="${idx}"><i class="ti ti-copy"></i> Duplicar</button>
-          <button class="btn-small btn-desktop-delete" data-index="${idx}" style="color:#E24B4A;"><i class="ti ti-trash"></i> Eliminar</button>
+      <div class="stanza-block" style="position:relative; padding-left:14px; margin-bottom:24px;">
+        <!-- Línea vertical neon que delimita la estrofa -->
+        <div class="stanza-cable" style="position:absolute; left:0; top:0; bottom:0; width:2px; background:${secColor}; box-shadow:0 0 6px ${secColor}; opacity:0.4; border-radius:2px;"></div>
+        ${blockHeader}
+        <div class="stanza-lines" style="display:flex; flex-direction:column;">
+          ${blockLinesHtml}
         </div>
       </div>`;
   }).join("");
@@ -2055,7 +2130,7 @@ function renderRehearsalRoom() {
           </div>
           ${state.ensayoActiveTab === 'chords' ? `
             <div class="lyrics-editor" id="lyrics-editor-scroll">
-              <div class="lyric-cable"></div>
+              <div class="lyric-cable" style="display:none;"></div>
               <div class="lyrics-lines-container">
                 ${linesHtml}
               </div>
@@ -7428,3 +7503,28 @@ window.selectAndGoToLine = function(idx) {
   renderRehearsalRoom();
   scrollToEnsayoLine(idx);
 };
+
+
+// --- MENÚ DE 3 PUNTOS EN LÍNEAS DE ENSAYO ---
+
+window.toggleLineMenu = function(event, idx) {
+  event.stopPropagation();
+  const dropdown = document.getElementById(`line-dropdown-${idx}`);
+  const isCurrentlyOpen = dropdown && dropdown.style.display === "block";
+  
+  closeAllLineMenus();
+  
+  if (dropdown && !isCurrentlyOpen) {
+    dropdown.style.display = "block";
+  }
+};
+
+window.closeAllLineMenus = function() {
+  document.querySelectorAll(".line-dropdown-menu").forEach(menu => {
+    menu.style.display = "none";
+  });
+};
+
+document.addEventListener("click", () => {
+  closeAllLineMenus();
+});
