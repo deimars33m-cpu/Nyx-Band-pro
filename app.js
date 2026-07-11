@@ -2458,11 +2458,49 @@ function saveDesktopLyrics(song, lines, structure) {
       const sec = structure.find(s => s.id === currentSecId);
       if (sec) newLyrics += "[" + (sec.nombre||"").toUpperCase() + "]\n";
     }
-    newLyrics += line.texto + "\n";
+    
+    // Reconstruir la línea con sus acordes para evitar eliminarlos al guardar
+    let lineTextWithChords = "";
+    if (line.texto === "(Instrumental)") {
+      lineTextWithChords = line.acordes.map(a => `[${a.acorde}]`).join(" ");
+    } else if (!line.acordes || line.acordes.length === 0) {
+      lineTextWithChords = line.texto;
+    } else {
+      const chordsMap = {};
+      line.acordes.forEach(a => {
+        const pos = a.posicionCaracter || 0;
+        if (!chordsMap[pos]) chordsMap[pos] = [];
+        chordsMap[pos].push(a.acorde);
+      });
+      const maxLen = Math.max(line.texto.length, ...line.acordes.map(a => a.posicionCaracter || 0));
+      for (let i = 0; i <= maxLen; i++) {
+        if (chordsMap[i]) {
+          chordsMap[i].forEach(chord => {
+            lineTextWithChords += `[${chord}]`;
+          });
+        }
+        if (i < line.texto.length) {
+          lineTextWithChords += line.texto[i];
+        } else if (i < maxLen) {
+          lineTextWithChords += " ";
+        }
+      }
+    }
+    
+    newLyrics += lineTextWithChords + "\n";
   });
+  
   song.lyrics = newLyrics.trim();
   saveLocalStorage();
-  triggerEnsayoToast("Letra guardada correctamente");
+  
+  // Guardar también en Firebase si está activo
+  if (window.SongsService) {
+    window.SongsService.saveSong(song).catch(err => {
+      console.error("Error al guardar canción desde ensayo en Firebase:", err);
+    });
+  }
+  
+  triggerEnsayoToast("Letra y acordes guardados correctamente");
 }
 
 function duplicateDesktopLine(song, idx) {
@@ -4488,6 +4526,14 @@ function convertTraditionalToBracket(text) {
     // SI LA LÍNEA YA CONTIENE CORCHETES, YA ESTÁ EN FORMATO BRACKET. PRESERVARLA SIN CAMBIOS.
     if (currentLine.includes("[") && currentLine.includes("]")) {
       result.push(currentLine);
+      continue;
+    }
+    
+    // Si la línea es una cabecera de sección sin corchetes (ej: CORO o VERSO 1), envolverla en corchetes automáticamente
+    const sectionKeywords = /^(INTRO|VERSE|CHORUS|SOLO|BRIDGE|OUTRO|INTRODUCCIÓN|CORO|ESTROFA|VERSO|PUENTE|ESTRIBILLO|FINAL|PRE-CORO|PRE-CHORUS|INTERLUDE|INSTRUMENTAL)(\s+[\w\d]+)?$/i;
+    const trimmedLine = currentLine.trim();
+    if (sectionKeywords.test(trimmedLine)) {
+      result.push("[" + trimmedLine.toUpperCase() + "]");
       continue;
     }
     
