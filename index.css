@@ -3476,7 +3476,7 @@ textarea {
 /* === LYRICS AREA === */
 .lyrics-editor {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
   padding: 20px 20px 20px 44px; /* left padding for line-numbers + cable */
   position: relative;
 }
@@ -3507,13 +3507,11 @@ textarea {
   border-left: 2px solid transparent;
   transition: background .2s, border-color .2s;
   cursor: pointer;
-  overflow-x: auto;
-  max-width: 100%;
-  scrollbar-width: none;
+  
+  
+  
 }
-.lyric-line-editor::-webkit-scrollbar {
-  display: none;
-}
+
 .lyric-line-editor:hover {
   background: rgba(255,62,165,0.05);
   border-left-color: rgba(255,62,165,0.35);
@@ -4435,4 +4433,12 @@ textarea {
 }
 .song-line-right-col::-webkit-scrollbar {
   display: none;
+}
+
+
+/* Bloque unificado de letra para deslizar horizontalmente toda la cancion como un todo */
+.lyrics-lines-container {
+  display: inline-block;
+  min-width: 100%;
+  width: max-content;
 }

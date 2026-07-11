@@ -1974,7 +1974,9 @@ function renderRehearsalRoom() {
           </div>
           <div class="lyrics-editor" id="lyrics-editor-scroll">
             <div class="lyric-cable"></div>
-            ${linesHtml}
+            <div class="lyrics-lines-container">
+              ${linesHtml}
+            </div>
           </div>
         </div>
 
@@ -4456,12 +4458,11 @@ function autoTagStanzas(rawText) {
   return labeledBlocks.join("\n\n");
 }
 
-// Convierte acordes arriba de la letra en formato de corchetes
+// Convierte acordes arriba de la letra en formato de corchetes de manera coordinada libre de desalineamientos
 function convertTraditionalToBracket(text) {
   const lines = text.split("\n");
   const result = [];
 
-  
   for (let i = 0; i < lines.length; i++) {
     const currentLine = lines[i];
     const nextLine = lines[i + 1];
@@ -4478,19 +4479,36 @@ function convertTraditionalToBracket(text) {
         });
       }
       
-      let lyricLine = nextLine;
-      chords.sort((a, b) => b.pos - a.pos);
+      const lyricLine = nextLine;
       
+      // Mapear cada posición a sus acordes
+      const positions = {};
       chords.forEach(c => {
-        const bracketed = `[${c.name}]`;
-        if (c.pos < lyricLine.length) {
-          lyricLine = lyricLine.slice(0, c.pos) + bracketed + lyricLine.slice(c.pos);
-        } else {
-          lyricLine = lyricLine + " ".repeat(c.pos - lyricLine.length) + bracketed;
-        }
+        if (!positions[c.pos]) positions[c.pos] = [];
+        positions[c.pos].push(c.name);
       });
       
-      result.push(lyricLine);
+      // Construir la línea combinada
+      let combined = "";
+      const maxLen = Math.max(lyricLine.length, ...chords.map(c => c.pos));
+      
+      for (let j = 0; j <= maxLen; j++) {
+        // Si hay acordes en esta posición, los insertamos
+        if (positions[j]) {
+          positions[j].forEach(name => {
+            combined += `[${name}]`;
+          });
+        }
+        // Si hay un carácter de la letra en esta posición, lo agregamos
+        if (j < lyricLine.length) {
+          combined += lyricLine[j];
+        } else if (j < maxLen) {
+          // Si estamos más allá de la letra, pero aún faltan acordes por alcanzar, agregamos espacio de relleno
+          combined += " ";
+        }
+      }
+      
+      result.push(combined);
       i++;
     } else if (isChordLine(currentLine)) {
       const tokenRegex = /\S+/g;
