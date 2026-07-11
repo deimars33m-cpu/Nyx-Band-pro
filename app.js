@@ -1753,9 +1753,18 @@ function getLineColor(lineSec) {
   return "#29F0D6";
 }
 
-// Renderizar fila de acordes con posicionamiento real por carácter
-function renderChordRow(acordes, transposeOffset) {
+// Renderizar fila de acordes con posicionamiento real por carácter o flujo normal para instrumentales
+function renderChordRow(acordes, transposeOffset, isInstrumental = false) {
   if (!acordes || acordes.length === 0) return "";
+  
+  if (isInstrumental) {
+    const pills = acordes.map(ac => {
+      const chord = transposeChord(ac.acorde, transposeOffset);
+      return `<span class="chord-pill instrumental-chord">${chord}</span>`;
+    }).join("");
+    return `<div class="lyric-chord-row instrumental-chord-row">${pills}</div>`;
+  }
+
   // ~7.6px por carácter en 14px Inter (calibrado)
   const charPx = 7.6;
   const pills = acordes.map(ac => {
@@ -1856,7 +1865,8 @@ function renderRehearsalRoom() {
     const isSelected = state.selectedLineIndices && state.selectedLineIndices.includes(idx);
     const lineSec = structure.find(s => s.id === line.seccionId);
     const dotColor = getLineColor(lineSec);
-    const chordRow = renderChordRow(line.acordes, state.transposeOffset || 0);
+    const isInst = line.texto === "(Instrumental)";
+    const chordRow = renderChordRow(line.acordes, state.transposeOffset || 0, isInst);
     const lineNotes = isActive && activeNotas ? `<div class="lyric-notes">💡 ${activeNotas}</div>` : "";
 
     const marginStyle = line.isNewParagraph && idx > 0 ? "margin-top: 32px;" : "";

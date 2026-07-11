@@ -4442,3 +4442,27 @@ textarea {
   min-width: 100%;
   width: max-content;
 }
+
+
+/* Estilos especificos para filas de acordes instrumentales (sin letra) */
+.lyric-chord-row.instrumental-chord-row {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  gap: 28px !important; /* Separacion por defecto comoda para musicos */
+  height: auto !important;
+  margin-bottom: 6px !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+}
+
+.chord-pill.instrumental-chord {
+  position: relative !important; /* Desactiva el posicionamiento absoluto */
+  left: auto !important;
+  top: auto !important;
+  display: inline-block !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 13px !important; /* Ligeramente mas grande para legibilidad */
+  font-weight: 700 !important;
+  text-shadow: 0 0 8px rgba(76, 215, 246, 0.6) !important;
+}
