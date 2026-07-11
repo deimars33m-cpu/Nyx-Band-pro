@@ -1948,8 +1948,12 @@ function renderRehearsalRoom() {
           </div>
         </div>
         <div class="topbar-right">
-          <button class="btn" onclick="alert('Exportar como PDF — Próximamente')">📥 PDF</button>
-          <button class="btn-primary btn" id="btn-desktop-save">✓ Guardar</button>
+          ${state.isFullscreenRehearsal ? `
+            <button class="btn btn-secondary" onclick="toggleFullscreenRehearsal()" style="border: 1.5px solid var(--magenta); color: var(--magenta); font-weight: 700; background: rgba(255, 62, 165, 0.15); border-radius: 8px;">✕ Salir</button>
+          ` : `
+            <button class="btn" onclick="alert('Exportar como PDF — Próximamente')">📥 PDF</button>
+            <button class="btn-primary btn" id="btn-desktop-save">✓ Guardar</button>
+          `}
         </div>
       </div>
 
@@ -1976,9 +1980,14 @@ function renderRehearsalRoom() {
               <button class="editor-tab" onclick="triggerEnsayoToast('Notas de referencia — Próximamente')"><i class="ti ti-file-text" style="font-size:11px;"></i> Notas</button>
               <button class="editor-tab" onclick="triggerEnsayoToast('Audio — Próximamente')"><i class="ti ti-volume-2" style="font-size:11px;"></i> Audio</button>
             </div>
-            <button class="btn btn-secondary" onclick="editActiveSong()" style="padding: 4px 10px; font-size: 11px; border: 1px solid rgba(0, 229, 255, 0.2); background: rgba(0, 229, 255, 0.05); display: flex; align-items: center; gap: 4px; border-radius: 6px; cursor: pointer; color: var(--neon-cyan); outline: none; margin-right: 4px;">
-              ✏️ Editar Letra
-            </button>
+            <div style="display:flex; gap: 4px;">
+              <button class="btn btn-secondary" onclick="toggleFullscreenRehearsal()" style="padding: 4px 10px; font-size: 11px; border: 1px solid rgba(41, 240, 214, 0.3); background: rgba(41, 240, 214, 0.08); display: flex; align-items: center; gap: 4px; border-radius: 6px; cursor: pointer; color: var(--neon-cyan); outline: none;">
+                📺 Pantalla Completa
+              </button>
+              <button class="btn btn-secondary" onclick="editActiveSong()" style="padding: 4px 10px; font-size: 11px; border: 1px solid rgba(0, 229, 255, 0.2); background: rgba(0, 229, 255, 0.05); display: flex; align-items: center; gap: 4px; border-radius: 6px; cursor: pointer; color: var(--neon-cyan); outline: none; margin-right: 4px;">
+                ✏️ Editar Letra
+              </button>
+            </div>
           </div>
           <div class="lyrics-editor" id="lyrics-editor-scroll">
             <div class="lyric-cable"></div>
@@ -6780,3 +6789,67 @@ window.toggleSidebarPC = function() {
     } catch (e) {}
   }
 };
+
+
+// Lógica de Pantalla Completa para la sala de ensayo (mobile y PC)
+window.toggleFullscreenRehearsal = async function() {
+  state.isFullscreenRehearsal = !state.isFullscreenRehearsal;
+  
+  const roomContent = document.getElementById("rehearsal-room-content");
+  if (roomContent) {
+    if (state.isFullscreenRehearsal) {
+      roomContent.classList.add("fullscreen-rehearsal");
+      
+      // Forzar pantalla completa del navegador si es movil
+      try {
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) {
+          await docEl.requestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) {
+          await docEl.webkitRequestFullscreen();
+        }
+        
+        // Intentar forzar orientacion horizontal (landscape)
+        if (screen.orientation && screen.orientation.lock) {
+          await screen.orientation.lock("landscape").catch(err => {
+            console.log("No se pudo bloquear la orientacion (normal en PCs o navegadores no moviles):", err);
+          });
+        }
+      } catch (e) {
+        console.warn("Fullscreen API no soportada o bloqueada:", e);
+      }
+    } else {
+      roomContent.classList.remove("fullscreen-rehearsal");
+      
+      // Salir de pantalla completa
+      try {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          await document.webkitExitFullscreen();
+        }
+        
+        // Desbloquear orientacion
+        if (screen.orientation && screen.orientation.unlock) {
+          screen.orientation.unlock();
+        }
+      } catch (e) {
+        console.warn("Error al salir de pantalla completa:", e);
+      }
+    }
+  }
+  
+  // Re-renderizar la sala de ensayo para aplicar los cambios de botones y layouts
+  renderRehearsalRoom();
+};
+
+// Sincronizar el estado si el usuario sale de pantalla completa mediante metodos nativos (como la tecla Esc)
+document.addEventListener("fullscreenchange", () => {
+  const isCurrentlyFullscreen = !!document.fullscreenElement;
+  if (!isCurrentlyFullscreen && state.isFullscreenRehearsal) {
+    state.isFullscreenRehearsal = false;
+    const roomContent = document.getElementById("rehearsal-room-content");
+    if (roomContent) roomContent.classList.remove("fullscreen-rehearsal");
+    renderRehearsalRoom();
+  }
+});
