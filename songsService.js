@@ -39,6 +39,12 @@ const SongsService = {
           rhythm: metadata.rhythm || "Pop",
           interpretes: metadata.interpretes || null,
           linePerformers: metadata.linePerformers || null,
+          grabaciones_ensayo: metadata.grabaciones_ensayo || null,
+          lineNotes: metadata.lineNotes || null,
+          lineAudios: metadata.lineAudios || null,
+          notas_globales: metadata.notas_globales || null,
+          tareas_ensayo: metadata.tareas_ensayo || null,
+          audios: metadata.audios || null,
           // mantenemos la referencia por si se necesita
           chords: song.chords
         };
@@ -70,7 +76,13 @@ const SongsService = {
           timeSig: song.timeSig || "4/4",
           rhythm: song.rhythm || "Pop",
           interpretes: song.interpretes || null,
-          linePerformers: song.linePerformers || null
+          linePerformers: song.linePerformers || null,
+          grabaciones_ensayo: song.grabaciones_ensayo || null,
+          lineNotes: song.lineNotes || null,
+          lineAudios: song.lineAudios || null,
+          notas_globales: song.notas_globales || null,
+          tareas_ensayo: song.tareas_ensayo || null,
+          audios: song.audios || null
         }),
         bpm: song.bpm || 120,
         status: song.status || "pendiente"
@@ -133,7 +145,13 @@ const SongsService = {
           timeSig: song.timeSig || "4/4",
           rhythm: song.rhythm || "Pop",
           interpretes: song.interpretes || null,
-          linePerformers: song.linePerformers || null
+          linePerformers: song.linePerformers || null,
+          grabaciones_ensayo: song.grabaciones_ensayo || null,
+          lineNotes: song.lineNotes || null,
+          lineAudios: song.lineAudios || null,
+          notas_globales: song.notas_globales || null,
+          tareas_ensayo: song.tareas_ensayo || null,
+          audios: song.audios || null
         }),
         bpm: song.bpm || 120,
         status: song.status || "pendiente"

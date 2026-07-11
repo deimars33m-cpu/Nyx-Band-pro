@@ -140,6 +140,7 @@ let state = {
   songs: [],
   currentTab: "repertorio",
   activeSongId: null,
+  ensayoActiveTab: "chords",
   filters: {
     status: "all",
     search: ""
@@ -1904,6 +1905,8 @@ function renderRehearsalRoom() {
   const tonalidadTranspuesta = transposeChord(song.key || "C", state.transposeOffset || 0);
   const activeSec = structure.find(s => s.id === state.seccionActivaId) || structure[0];
   const activeNotas = activeSec ? (activeSec.notes || activeSec.notas || "") : "";
+  const lineIdx = state.lineaActivaIndex || 0;
+  const activeLineNotes = (song.lineNotes && song.lineNotes[lineIdx] !== undefined) ? song.lineNotes[lineIdx] : "";
   const duration = song.duracionSegundos || 220;
   const progressPercent = Math.min(100, ((state.tiempoActual || 0) / duration) * 100);
   const selectedCount = state.selectedLineIndices ? state.selectedLineIndices.length : 0;
@@ -2038,9 +2041,9 @@ function renderRehearsalRoom() {
         <div class="center-pane-ensayo">
           <div class="editor-tabs" style="display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; gap: 4px;">
-              <button class="editor-tab active"><i class="ti ti-music" style="font-size:11px;"></i> Acordes &amp; Letra</button>
-              <button class="editor-tab" onclick="triggerEnsayoToast('Notas de referencia — Próximamente')"><i class="ti ti-file-text" style="font-size:11px;"></i> Notas</button>
-              <button class="editor-tab" onclick="triggerEnsayoToast('Audio — Próximamente')"><i class="ti ti-volume-2" style="font-size:11px;"></i> Audio</button>
+              <button class="editor-tab ${state.ensayoActiveTab === 'chords' ? 'active' : ''}" onclick="setEnsayoTab('chords')"><i class="ti ti-music" style="font-size:11px;"></i> Acordes &amp; Letra</button>
+              <button class="editor-tab ${state.ensayoActiveTab === 'notes' ? 'active' : ''}" onclick="setEnsayoTab('notes')"><i class="ti ti-file-text" style="font-size:11px;"></i> Notas</button>
+              <button class="editor-tab ${state.ensayoActiveTab === 'audio' ? 'active' : ''}" onclick="setEnsayoTab('audio')"><i class="ti ti-volume-2" style="font-size:11px;"></i> Audio</button>
             </div>
             <div style="display:flex; gap: 4px;">
               <button class="btn btn-secondary" onclick="toggleFullscreenRehearsal()" style="padding: 4px 10px; font-size: 11px; border: 1px solid rgba(41, 240, 214, 0.3); background: rgba(41, 240, 214, 0.08); display: flex; align-items: center; gap: 4px; border-radius: 6px; cursor: pointer; color: var(--neon-cyan); outline: none;">
@@ -2051,12 +2054,14 @@ function renderRehearsalRoom() {
               </button>
             </div>
           </div>
-          <div class="lyrics-editor" id="lyrics-editor-scroll">
-            <div class="lyric-cable"></div>
-            <div class="lyrics-lines-container">
-              ${linesHtml}
+          ${state.ensayoActiveTab === 'chords' ? `
+            <div class="lyrics-editor" id="lyrics-editor-scroll">
+              <div class="lyric-cable"></div>
+              <div class="lyrics-lines-container">
+                ${linesHtml}
+              </div>
             </div>
-          </div>
+          ` : state.ensayoActiveTab === 'notes' ? renderNotesPane(song, lines) : renderAudioPane(song, lines)}
         </div>
 
         <!-- RIGHT SIDEBAR (desktop) -->
@@ -2069,8 +2074,25 @@ function renderRehearsalRoom() {
             </div>
           </div>
           <div class="sidebar-section">
-            <div class="sidebar-section-title">Notas de línea activa</div>
-            <textarea class="property-input" id="desktop-line-notes-textarea" rows="4" placeholder="Notas de ensayo para esta línea...">${activeNotas}</textarea>
+            <div class="sidebar-section-title">Notas de línea activa (Línea ${lineIdx + 1})</div>
+            <textarea class="property-input" id="desktop-line-notes-textarea" rows="3" placeholder="Notas de ensayo para esta línea...">${activeLineNotes}</textarea>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">Notas de audio de la línea</div>
+            <div id="desktop-line-audios-container" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
+              ${(song.lineAudios && song.lineAudios[lineIdx] ? song.lineAudios[lineIdx] : []).map((aud, audIdx) => `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; background: rgba(255, 62, 165, 0.05); border: 1px solid rgba(255, 62, 165, 0.15); border-radius: 6px;">
+                  <span style="font-size: 11px; font-weight: bold; color: var(--text-main); max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${aud.name}</span>
+                  <div style="display: flex; gap: 4px;">
+                    <button class="btn-small" onclick="playAudioUrl('${aud.url}', '${aud.name}')" style="padding: 2px 4px; font-size: 8px;"><i class="ti ti-player-play"></i></button>
+                    <button class="btn-small btn-danger" onclick="deleteLineAudio(${lineIdx}, ${audIdx})" style="padding: 2px 4px; font-size: 8px; background: rgba(255,0,0,0.2);"><i class="ti ti-trash"></i></button>
+                  </div>
+                </div>
+              `).join("") || `<p style="font-size: 10px; color: var(--text-muted); text-align: center;">No hay ideas de arreglo para esta línea.</p>`}
+            </div>
+            <button id="btn-record-line-audio" class="btn-small" onclick="toggleLineAudioRecording(${lineIdx})" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; padding: 6px; background: rgba(255, 62, 165, 0.15); border: 1px solid var(--neon-magenta); color: var(--neon-magenta); border-radius: 8px; cursor: pointer;">
+              <i class="ti ti-microphone"></i> Grabar idea de arreglo
+            </button>
           </div>
         </div>
       </div>
@@ -2273,6 +2295,45 @@ function bindRehearsalEvents(structure, lines, song) {
   // Save button
   const btnSave = document.getElementById("btn-desktop-save");
   if (btnSave) btnSave.addEventListener("click", () => saveDesktopLyrics(song, lines, structure));
+
+  // Escuchar cambios en la nota de línea activa
+  const lineNotesTextarea = document.getElementById("desktop-line-notes-textarea");
+  if (lineNotesTextarea) {
+    lineNotesTextarea.addEventListener("input", e => {
+      const idx = state.lineaActivaIndex || 0;
+      if (!song.lineNotes) song.lineNotes = {};
+      song.lineNotes[idx] = e.target.value;
+      saveLocalStorage();
+      if (window.SongsService) {
+        window.SongsService.saveSong(song).catch(err => console.error("Error al guardar notas de línea:", err));
+      }
+    });
+  }
+
+  // Escuchar cambios en notas globales de la pestaña Notas
+  const globalNotesInp = document.getElementById("desktop-global-notes-textarea");
+  if (globalNotesInp) {
+    globalNotesInp.addEventListener("input", e => {
+      song.notas_globales = e.target.value;
+      saveLocalStorage();
+      if (window.SongsService) {
+        window.SongsService.saveSong(song).catch(err => console.error("Error al guardar notas globales:", err));
+      }
+    });
+  }
+
+  // Escuchar cambios en tareas del ensayo de la pestaña Notas
+  const tasksInp = document.getElementById("desktop-rehearsal-tasks-textarea");
+  if (tasksInp) {
+    tasksInp.addEventListener("input", e => {
+      song.tareas_ensayo = e.target.value;
+      saveLocalStorage();
+      if (window.SongsService) {
+        window.SongsService.saveSong(song).catch(err => console.error("Error al guardar tareas de ensayo:", err));
+      }
+    });
+  }
+
 
   // Transport: Play/Pause
   const btnPlay = document.getElementById("btn-desktop-play");
@@ -7011,4 +7072,360 @@ window.toggleLinePerformer = function(performerId) {
   
   // Re-renderizar la vista para reflejar el estado activo
   renderRehearsalRoom();
+};
+
+
+// --- VISTAS Y HELPERS PARA PESTAÑAS DE NOTAS Y AUDIO ---
+
+window.setEnsayoTab = function(tabName) {
+  state.ensayoActiveTab = tabName;
+  renderRehearsalRoom();
+};
+
+function renderNotesPane(song, lines) {
+  return `
+    <div class="notes-editor-pane" style="padding: 20px; display: flex; flex-direction: column; gap: 20px; height: calc(100% - 40px); overflow-y: auto; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border-soft);">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Avances y Notas Generales -->
+        <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.15);">
+          <div style="font-size: 14px; font-weight: 700; color: var(--neon-cyan); display: flex; align-items: center; gap: 8px;">
+            <i class="ti ti-notes"></i> Avances &amp; Notas Generales
+          </div>
+          <textarea id="desktop-global-notes-textarea" class="property-input" style="flex: 1; min-height: 150px; background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.08); color: white; padding: 10px; border-radius: 8px;" placeholder="Escribe aquí los avances musicales, arreglos globales y comentarios generales del tema...">${song.notas_globales || ""}</textarea>
+        </div>
+        
+        <!-- Tareas para el Próximo Ensayo -->
+        <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.15);">
+          <div style="font-size: 14px; font-weight: 700; color: var(--neon-lime); display: flex; align-items: center; gap: 8px;">
+            <i class="ti ti-list-check"></i> Tareas para Próximo Ensayo
+          </div>
+          <textarea id="desktop-rehearsal-tasks-textarea" class="property-input" style="flex: 1; min-height: 150px; background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.08); color: white; padding: 10px; border-radius: 8px;" placeholder="Escribe aquí las tareas para los integrantes de cara al próximo ensayo...">${song.tareas_ensayo || ""}</textarea>
+        </div>
+      </div>
+      
+      <!-- Notas por Verso del Tema -->
+      <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.15);">
+        <div style="font-size: 14px; font-weight: 700; color: var(--neon-magenta); display: flex; align-items: center; gap: 8px;">
+          <i class="ti ti-git-commit"></i> Notas detalladas por Verso
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 8px;">
+          ${lines.map((line, idx) => {
+            const note = song.lineNotes && song.lineNotes[idx] ? song.lineNotes[idx] : "";
+            if (!note.trim()) return "";
+            return `
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-soft); border-radius: 8px; gap: 15px;">
+                <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+                  <span style="font-size: 10px; font-weight: 700; color: var(--neon-cyan); text-transform: uppercase;">Línea ${idx + 1} (${line.texto.slice(0, 40)}${line.texto.length > 40 ? '...' : ''})</span>
+                  <span style="font-size: 12px; color: var(--text-main); white-space: pre-wrap;">${note}</span>
+                </div>
+                <button class="btn-small" onclick="selectAndGoToLine(${idx})" style="padding: 4px 8px; font-size: 10px; cursor: pointer;">Ver en Letra</button>
+              </div>
+            `;
+          }).filter(Boolean).join("") || `<p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">No hay notas asignadas a ninguna línea de verso aún. Selecciona un verso en la pestaña de Acordes &amp; Letra para agregar notas específicas.</p>`}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAudioPane(song, lines) {
+  return `
+    <div class="audio-editor-pane" style="padding: 20px; display: flex; flex-direction: column; gap: 20px; height: calc(100% - 40px); overflow-y: auto; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border-soft);">
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- 1. Audio Importado / Referencias -->
+        <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.15);">
+          <div style="font-size: 14px; font-weight: 700; color: var(--neon-cyan); display: flex; align-items: center; justify-content: space-between;">
+            <span><i class="ti ti-music"></i> 1. Temas de Referencia</span>
+            <button class="btn-small" onclick="addReferenceAudioPrompt()" style="font-size: 10px; padding: 4px 8px; cursor: pointer;">+ Agregar</button>
+          </div>
+          <div id="reference-audios-list" style="display: flex; flex-direction: column; gap: 8px; flex: 1; max-height: 180px; overflow-y: auto;">
+            ${(song.audios || []).map((aud, i) => `
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.15); border-radius: 8px;">
+                <div style="display: flex; flex-direction: column; gap: 2px; max-width: 75%;">
+                  <span style="font-size: 12px; font-weight: bold; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${aud.name}</span>
+                  <a href="${aud.url}" target="_blank" style="font-size: 10px; color: var(--neon-cyan); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: underline;">${aud.url}</a>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn-small" onclick="playAudioUrl('${aud.url}', '${aud.name}')" style="padding: 3px 6px; font-size: 9px; cursor: pointer;"><i class="ti ti-player-play"></i></button>
+                  <button class="btn-small btn-danger" onclick="deleteReferenceAudio(${i})" style="padding: 3px 6px; font-size: 9px; background: rgba(255,0,0,0.2); cursor: pointer;"><i class="ti ti-trash"></i></button>
+                </div>
+              </div>
+            `).join("") || `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">No hay pistas de referencia. Añade enlaces de YouTube, Spotify o archivos de audio.</p>`}
+          </div>
+        </div>
+        
+        <!-- 2. Grabaciones de Ensayos -->
+        <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.15);">
+          <div style="font-size: 14px; font-weight: 700; color: var(--neon-lime); display: flex; align-items: center; justify-content: space-between;">
+            <span><i class="ti ti-microphone"></i> 2. Grabaciones de Ensayos</span>
+            <button id="btn-record-rehearsal" class="btn-small" onclick="toggleRehearsalRecording()" style="font-size: 10px; padding: 4px 8px; color: white; background: var(--magenta); border: none; cursor: pointer;">🔴 Grabar</button>
+          </div>
+          <div id="rehearsal-recordings-list" style="display: flex; flex-direction: column; gap: 8px; flex: 1; max-height: 180px; overflow-y: auto;">
+            ${(song.grabaciones_ensayo || []).map((rec, i) => `
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: rgba(255, 62, 165, 0.05); border: 1px solid rgba(255, 62, 165, 0.15); border-radius: 8px;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-size: 12px; font-weight: bold; color: var(--text-main);">${rec.name}</span>
+                  <span style="font-size: 10px; color: var(--text-dim);">${rec.date}</span>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn-small" onclick="playAudioUrl('${rec.url}', '${rec.name}')" style="padding: 3px 6px; font-size: 9px; cursor: pointer;"><i class="ti ti-player-play"></i></button>
+                  <button class="btn-small btn-danger" onclick="deleteRehearsalRecording(${i})" style="padding: 3px 6px; font-size: 9px; background: rgba(255,0,0,0.2); cursor: pointer;"><i class="ti ti-trash"></i></button>
+                </div>
+              </div>
+            `).join("") || `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">No hay grabaciones de ensayo registradas. ¡Haz clic en Grabar para comenzar!</p>`}
+          </div>
+        </div>
+      </div>
+      
+      <!-- 3. Notas de Audio / Ideas por Verso -->
+      <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.15);">
+        <div style="font-size: 14px; font-weight: 700; color: var(--neon-magenta); display: flex; align-items: center; gap: 8px;">
+          <i class="ti ti-playlist"></i> 3. Ideas de Arreglos anexadas a Versos
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto;">
+          ${Object.keys(song.lineAudios || {}).map(lineKey => {
+            const idx = parseInt(lineKey);
+            const line = lines[idx];
+            const auds = song.lineAudios[idx] || [];
+            if (auds.length === 0 || !line) return "";
+            return auds.map((aud, audIdx) => `
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-soft); border-radius: 8px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-size: 10px; font-weight: 700; color: var(--neon-magenta); text-transform: uppercase;">Línea ${idx + 1} (${line.texto.slice(0, 30)}...)</span>
+                  <span style="font-size: 12px; font-weight: bold; color: var(--text-main);">${aud.name}</span>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn-small" onclick="playAudioUrl('${aud.url}', '${aud.name}')" style="padding: 3px 6px; font-size: 9px; cursor: pointer;"><i class="ti ti-player-play"></i></button>
+                  <button class="btn-small btn-danger" onclick="deleteLineAudio(${idx}, ${audIdx})" style="padding: 3px 6px; font-size: 9px; background: rgba(255,0,0,0.2); cursor: pointer;"><i class="ti ti-trash"></i></button>
+                  <button class="btn-small" onclick="selectAndGoToLine(dots)" style="padding: 3px 6px; font-size: 9px; cursor: pointer;">Ir al Verso</button>
+                </div>
+              </div>
+            `).join("");
+          }).filter(Boolean).join("") || `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">No hay notas de audio asociadas a ningún verso aún. Graba ideas de arreglo en la barra lateral derecha mientras ensayas.</p>`}
+        </div>
+      </div>
+      
+      <!-- REPRODUCTOR DE AUDIO INTEGRADO -->
+      <div id="ensayo-audio-player-container" style="display:none; align-items:center; justify-content:space-between; padding:12px 20px; background:rgba(0,0,0,0.4); border:1px solid var(--neon-cyan); border-radius:10px; gap:15px; margin-top: 10px;">
+        <div style="display:flex; flex-direction:column; gap:2px; flex:1;">
+          <span style="font-size:10px; text-transform:uppercase; color:var(--neon-cyan); font-weight:700;">Reproduciendo ahora</span>
+          <span id="audio-player-title" style="font-size:13px; font-weight:bold; color:white;">Nombre del audio</span>
+        </div>
+        <audio id="ensayo-global-audio-element" controls style="height:32px; flex:2;"></audio>
+        <button class="btn-small btn-danger" onclick="closeEnsayoAudioPlayer()" style="padding: 6px 12px; font-size: 11px; cursor: pointer;">Cerrar</button>
+      </div>
+    </div>
+  `;
+}
+
+// Variables globales para la grabación
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecordingRehearsal = false;
+let isRecordingLineAudio = false;
+let recordingLineIndex = null;
+
+window.toggleRehearsalRecording = async function() {
+  const btn = document.getElementById("btn-record-rehearsal");
+  if (!btn) return;
+  
+  if (isRecordingRehearsal) {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+  } else {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = event => {
+        audioChunks.push(event.data);
+      };
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+        if (song) {
+          if (!song.grabaciones_ensayo) song.grabaciones_ensayo = [];
+          const now = new Date();
+          const count = song.grabaciones_ensayo.length + 1;
+          song.grabaciones_ensayo.push({
+            name: `Ensayo ${now.toLocaleDateString()} - Toma ${count}`,
+            url: audioUrl,
+            date: now.toLocaleString()
+          });
+          
+          saveLocalStorage();
+          if (window.SongsService) {
+            window.SongsService.saveSong(song).catch(err => console.error("Error al guardar grabacion en Supabase:", err));
+          }
+          renderRehearsalRoom();
+        }
+        isRecordingRehearsal = false;
+      };
+      
+      mediaRecorder.start();
+      isRecordingRehearsal = true;
+      btn.innerHTML = "⏹️ Detener";
+      btn.style.background = "#E24B4A";
+      triggerEnsayoToast("Grabando ensayo...");
+    } catch (err) {
+      console.error("Error al acceder al micrófono:", err);
+      alert("No se pudo acceder al micrófono para grabar.");
+    }
+  }
+};
+
+window.toggleLineAudioRecording = async function(lineIdx) {
+  const btn = document.getElementById("btn-record-line-audio");
+  if (!btn) return;
+  
+  if (isRecordingLineAudio) {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+  } else {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = event => {
+        audioChunks.push(event.data);
+      };
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+        if (song) {
+          if (!song.lineAudios) song.lineAudios = {};
+          if (!song.lineAudios[lineIdx]) song.lineAudios[lineIdx] = [];
+          
+          const count = song.lineAudios[lineIdx].length + 1;
+          song.lineAudios[lineIdx].push({
+            name: `Idea de Arreglo ${count}`,
+            url: audioUrl
+          });
+          
+          saveLocalStorage();
+          if (window.SongsService) {
+            window.SongsService.saveSong(song).catch(err => console.error("Error al guardar idea de audio en Supabase:", err));
+          }
+          renderRehearsalRoom();
+        }
+        isRecordingLineAudio = false;
+        recordingLineIndex = null;
+      };
+      
+      mediaRecorder.start();
+      isRecordingLineAudio = true;
+      recordingLineIndex = lineIdx;
+      btn.innerHTML = "⏹️ Detener Grabación";
+      btn.style.background = "#E24B4A";
+      triggerEnsayoToast(`Grabando arreglo para la Línea ${lineIdx + 1}...`);
+    } catch (err) {
+      console.error("Error al acceder al micrófono:", err);
+      alert("No se pudo acceder al micrófono para grabar.");
+    }
+  }
+};
+
+window.playAudioUrl = function(url, name) {
+  const container = document.getElementById("ensayo-audio-player-container");
+  const title = document.getElementById("audio-player-title");
+  const player = document.getElementById("ensayo-global-audio-element");
+  
+  if (container && title && player) {
+    title.textContent = name;
+    player.src = url;
+    container.style.display = "flex";
+    player.play().catch(err => {
+      console.warn("Autoplay bloqueado o URL inválida:", err);
+    });
+  } else {
+    // Si no está en el panel central, usar un Audio flotante
+    const audio = new Audio(url);
+    audio.play().catch(() => {
+      window.open(url, '_blank');
+    });
+    triggerEnsayoToast(`Reproduciendo: ${name}`);
+  }
+};
+
+window.closeEnsayoAudioPlayer = function() {
+  const container = document.getElementById("ensayo-audio-player-container");
+  const player = document.getElementById("ensayo-global-audio-element");
+  if (player) {
+    player.pause();
+    player.src = "";
+  }
+  if (container) {
+    container.style.display = "none";
+  }
+};
+
+window.addReferenceAudioPrompt = function() {
+  const name = prompt("Escribe el nombre del tema de referencia (Ej: Boyz II Men - Yesterday):");
+  if (!name) return;
+  const url = prompt("Pega el enlace o URL del audio (Ej: YouTube, Spotify, o archivo online):");
+  if (!url) return;
+  
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (song) {
+    if (!song.audios) song.audios = [];
+    song.audios.push({ name, url });
+    saveLocalStorage();
+    if (window.SongsService) {
+      window.SongsService.saveSong(song).catch(err => console.error("Error al guardar pista de referencia:", err));
+    }
+    renderRehearsalRoom();
+  }
+};
+
+window.deleteReferenceAudio = function(index) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (song && song.audios) {
+    song.audios.splice(index, 1);
+    saveLocalStorage();
+    if (window.SongsService) {
+      window.SongsService.saveSong(song).catch(err => console.error("Error al borrar referencia:", err));
+    }
+    renderRehearsalRoom();
+  }
+};
+
+window.deleteRehearsalRecording = function(index) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (song && song.grabaciones_ensayo) {
+    song.grabaciones_ensayo.splice(index, 1);
+    saveLocalStorage();
+    if (window.SongsService) {
+      window.SongsService.saveSong(song).catch(err => console.error("Error al borrar grabacion:", err));
+    }
+    renderRehearsalRoom();
+  }
+};
+
+window.deleteLineAudio = function(lineIdx, audIdx) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (song && song.lineAudios && song.lineAudios[lineIdx]) {
+    song.lineAudios[lineIdx].splice(audIdx, 1);
+    if (song.lineAudios[lineIdx].length === 0) {
+      delete song.lineAudios[lineIdx];
+    }
+    saveLocalStorage();
+    if (window.SongsService) {
+      window.SongsService.saveSong(song).catch(err => console.error("Error al borrar idea de audio:", err));
+    }
+    renderRehearsalRoom();
+  }
+};
+
+window.selectAndGoToLine = function(idx) {
+  state.ensayoActiveTab = "chords";
+  state.lineaActivaIndex = idx;
+  renderRehearsalRoom();
+  scrollToEnsayoLine(idx);
 };
