@@ -239,11 +239,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Limpia datos obsoletos de localStorage para evitar contaminación de cache
 function clearObsoleteLocalStorage() {
-  localStorage.removeItem("coop_songs");
-  localStorage.removeItem("coop_members");
-  localStorage.removeItem("coop_band_metadata");
-  localStorage.removeItem("coop_fav_chords");
-  // Mantener solo currentBandId y requestedBandId para la inicialización rápida
+  try {
+    localStorage.removeItem("coop_songs");
+    localStorage.removeItem("coop_members");
+    localStorage.removeItem("coop_band_metadata");
+    localStorage.removeItem("coop_fav_chords");
+  } catch(e) {}
 }
 
 async function loadSongsFromDB() {
@@ -1004,7 +1005,7 @@ async function loadUserProfile(user) {
     ? memberBands.map(m => m.band_id)
     : [userData.current_band_id];
 
-  localStorage.setItem("coop_current_band_id", state.currentBandId);
+  try { localStorage.setItem("coop_current_band_id", state.currentBandId); } catch(e) {}
 
   // Cargar datos de la banda
   const { data: bandDoc } = await window.supabaseClient
@@ -1085,7 +1086,11 @@ async function initAuthAndApp() {
 
   } catch (e) {
     console.error("Error crítico en la inicialización de auth:", e);
-    window.location.href = "auth.html";
+    // EVITAR BUCLE INFINITO: Si falla la carga de la app (ej. loadSongsFromDB), 
+    // NO redirigir a auth.html. auth.html redirigiría de vuelta aquí.
+    alert("Error cargando la aplicación:\n" + (e.message || JSON.stringify(e)));
+    const overlay = document.getElementById("auth-guard-overlay");
+    if (overlay) overlay.style.display = "none";
   }
 }
 
@@ -6705,7 +6710,7 @@ function initQuickChordInsertion() {
 async function cancelPendingRequest() {
   state.requestedBandId = null;
   state.currentBandId = "KAWSAY";
-  localStorage.setItem("coop_current_band_id", "KAWSAY");
+  try { localStorage.setItem("coop_current_band_id", "KAWSAY"); } catch(e) {}
   await loadSongsFromDB();
   await loadMembersFromDB();
   renderApp();
