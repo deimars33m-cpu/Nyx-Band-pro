@@ -1542,7 +1542,15 @@ function saveSongFromForm() {
   const status = document.getElementById("song-status").value;
   const rhythm = "↓ ↑ ↓ ↑";
   const rawLyrics = document.getElementById("song-lyrics").value;
-  const lyrics = convertTraditionalToBracket(rawLyrics.trim());
+  const bracketConverted = convertTraditionalToBracket(rawLyrics.trim());
+  
+  // Auto-etiquetar automáticamente si no contiene cabeceras estructuradas, para que el usuario no tenga que pulsar botones
+  let lyrics = bracketConverted;
+  const linesOfLyrics = bracketConverted.split("\n");
+  const hasHeaders = linesOfLyrics.some(l => isSectionHeader(l));
+  if (!hasHeaders) {
+    lyrics = autoTagStanzas(bracketConverted);
+  }
   
   if (!title || title.trim() === "" || title === "Título del Tema") {
     alert("Por favor, completa el título del tema.");
@@ -4407,8 +4415,11 @@ function isChordLine(line) {
 function autoTagStanzas(rawText) {
   if (!rawText || !rawText.trim()) return rawText;
 
-  // Normalizar saltos de línea
-  const normalized = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  // Normalizar saltos de línea y convertir líneas de solo espacios en líneas vacías reales
+  const normalized = rawText
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n\s+\n/g, "\n\n");
 
   // Dividir en bloques por una o más líneas en blanco consecutivas
   const rawBlocks = normalized.split(/\n{2,}/);
@@ -4420,7 +4431,7 @@ function autoTagStanzas(rawText) {
 
   // Detectar qué bloques ya tienen una etiqueta de sección al inicio
   const SECTION_HEADER_RE = /^\[([^\]]+)\]/;
-  const KNOWN_TAGS_RE = /^(VERSO|CORO|CHORUS|ESTRIBILLO|PUENTE|BRIDGE|INTRO|OUTRO|FINAL|PRE.CORO|PRE.CHORUS|SOLO|INTERLUDE|INSTRUMENTAL)/i;
+  const KNOWN_TAGS_RE = /^(VERSO|ESTROFA|COPLA|CORO|CHORUS|ESTRIBILLO|PUENTE|BRIDGE|INTRO|OUTRO|FINAL|PRE.CORO|PRE.CHORUS|SOLO|INTERLUDE|INSTRUMENTAL)/i;
 
   function hasTag(block) {
     const firstLine = block.split("\n")[0].trim();
