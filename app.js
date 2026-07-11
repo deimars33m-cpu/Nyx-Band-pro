@@ -229,8 +229,9 @@ window.state = state;
 // --- INICIALIZACIÓN ---
 document.addEventListener("DOMContentLoaded", () => {
   try {
-    initEventHandlers();
     clearObsoleteLocalStorage();
+    initEventHandlers();    // Registra listeners de UI (navegación, filtros, etc.)
+    initAuthAndApp();       // Verifica sesión con getSession() y carga la app
   } catch (err) {
     console.error("Error on DOMContentLoaded:", err);
   }
@@ -972,187 +973,124 @@ function renderNav() {
   if (metronomeFab) metronomeFab.style.display = isRehearsalActive ? "block" : "none";
 }
 
-// --- EVENTOS Y CONTROLADORES ---
-function initEventHandlers() {
-  // Listener de Auth
-  if (window.supabaseClient) {
-    window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      if (window.logDebug) window.logDebug(`onAuthStateChange disparado en index.html (Evento: ${event})`);
-      // Cancelar el timeout de seguridad
-      if (window._authTimeout) clearTimeout(window._authTimeout);
+// --- INICIALIZACIÓN DE AUTENTICACIÓN ---
+// Patrón correcto de Supabase: getSession() primero, onAuthStateChange solo para cambios futuros
 
-      const user = session ? session.user : null;
-      state.currentUser = user;
-      
-      if (!user) {
-        const hasLocalStorageSession = Object.keys(localStorage).some(key => key.includes("auth-token"));
-        if (hasLocalStorageSession && event === "INITIAL_SESSION") {
-          if (window.logDebug) window.logDebug("onAuthStateChange en index.html: Sesión inicial nula pero detectado token en localStorage. Esperando...");
-          return;
-        }
-        if (window.logDebug) window.logDebug("onAuthStateChange en index.html: No hay sesión activa. Redirigiendo a auth.html...");
-        window.location.href = "auth.html";
-        return;
-      }
+async function loadUserProfile(user) {
+  const { data: userData, error: userError } = await window.supabaseClient
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle();
 
-      if (user) {
-        try {
-          if (window.logDebug) window.logDebug(`onAuthStateChange en index.html: Sesión activa de: ${user.email}`);
-          // Desuscribirse del anterior si existe
-          if (window._supabaseUserChannel) {
-            window._supabaseUserChannel.unsubscribe();
-          }
+  if (userError) throw userError;
 
-          // Función para cargar/recargar datos de perfil desde Supabase
-          const loadUserProfile = async () => {
-            try {
-              if (window.logDebug) window.logDebug(`loadUserProfile: Consultando 'users' para ID: ${user.id}`);
-              const { data: userData, error: userError } = await window.supabaseClient
-                .from('users')
-                .select('*')
-                .eq('id', user.id)
-                .maybeSingle();
-
-              if (userError) {
-                if (window.logDebug) window.logDebug(`❌ loadUserProfile error consultando 'users': ${userError.message}`);
-                throw userError;
-              }
-
-              if (window.logDebug) window.logDebug(`loadUserProfile: Resultado de 'users' = ${userData ? JSON.stringify(userData) : "Nulo"}`);
-
-              if (!userData) {
-                if (window.logDebug) window.logDebug("loadUserProfile: Perfil inexistente en 'users'. Insertando nuevo perfil y redirigiendo a auth.html...");
-                const name = user.user_metadata.nombre || user.email.split("@")[0];
-                const { error: insertError } = await window.supabaseClient.from('users').insert({
-                  id: user.id,
-                  email: user.email,
-                  nombre: name,
-                  current_band_id: null
-                });
-                if (insertError) {
-                  if (window.logDebug) window.logDebug(`❌ Error insertando perfil nuevo: ${insertError.message}`);
-                  throw insertError;
-                }
-                
-                window.location.href = "auth.html";
-                return;
-              }
-
-              const oldBandId = state.currentBandId;
-              const oldRequest = state.requestedBandId;
-
-              if (userData.current_band_id && userData.current_band_id !== "KAWSAY") {
-                if (window.logDebug) window.logDebug(`loadUserProfile: Perfil válido con banda = ${userData.current_band_id}. Cargando integrantes y canciones...`);
-                state.currentBandId = userData.current_band_id;
-                state.requestedBandId = null;
-
-                // Cargar myBands desde la tabla members
-                const { data: memberBands } = await window.supabaseClient
-                  .from('members')
-                  .select('band_id')
-                  .eq('user_id', user.id);
-                
-                state.myBands = memberBands && memberBands.length > 0 
-                  ? memberBands.map(m => m.band_id) 
-                  : [userData.current_band_id];
-
-                const onboardingModal = document.getElementById("modal-onboarding");
-                if (onboardingModal) onboardingModal.style.display = "none";
-              } else {
-                if (window.logDebug) window.logDebug(`loadUserProfile: Banda es nula o KAWSAY (${userData.current_band_id}). Redirigiendo a auth.html para onboarding...`);
-                window.location.href = "auth.html";
-                return;
-              }
-
-              if (state.currentBandId) {
-                localStorage.setItem("coop_current_band_id", state.currentBandId);
-              }
-
-              const reloadNeeded = (oldBandId !== state.currentBandId || oldRequest !== state.requestedBandId || !state._initialDataLoaded);
-
-              if (reloadNeeded) {
-                state._initialDataLoaded = true;
-
-                if (state.currentBandId) {
-                  const { data: bandDoc, error: bandError } = await window.supabaseClient
-                    .from('bands')
-                    .select('*')
-                    .eq('id', state.currentBandId)
-                    .maybeSingle();
-
-                  if (bandError) throw bandError;
-
-                  if (bandDoc) {
-                    state.bandMetadata = {
-                      ...state.bandMetadata,
-                      name: bandDoc.name,
-                      logoUrl: bandDoc.logo_url
-                    };
-                  } else {
-                    state.bandMetadata = { name: state.currentBandId, logoUrl: null };
-                  }
-
-                  await loadSongsFromDB();
-                  await loadMembersFromDB();
-                  await loadFavoriteChordsFromDB();
-
-                  if (!state._uiInitialized) {
-                    state._uiInitialized = true;
-                    checkSharedSong();
-                    renderApp();
-                    selectChord("C");
-                    initChordPickerHandlers();
-                    initInlineEditFields();
-                    initInterventionPopupDraggable();
-                    makeChordBadgesDraggable();
-                    initQuickChordInsertion();
-                  }
-                } else {
-                  state.bandMetadata = { name: "Sin Grupo", logoUrl: null };
-                  state.songs = [];
-                  state.members = [];
-                  state.favoritesChords = [];
-                }
-                
-                renderSetlist();
-                updateBandUI();
-                updateProfileBadge();
-                updatePermissionsUI();
-                
-                const overlay = document.getElementById("auth-guard-overlay");
-                if (overlay) overlay.style.display = "none";
-              }
-            } catch (err) {
-              console.error("Error en render/carga de datos de la app:", err);
-              alert("Error al cargar la aplicación:\n" + err.message);
-              const overlay = document.getElementById("auth-guard-overlay");
-              if (overlay) overlay.style.display = "none";
-            }
-          };
-
-          // Carga inicial
-          await loadUserProfile();
-
-          // Suscribirse a cambios en tiempo real en su propio registro de usuario
-          window._supabaseUserChannel = window.supabaseClient
-            .channel(`user-profile-${user.id}`)
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` }, payload => {
-              loadUserProfile();
-            })
-            .subscribe();
-
-        } catch (e) {
-          console.error("Error cargando perfil multi-tenant de Supabase:", e);
-        }
-      } else {
-        window.location.href = "auth.html";
-      }
-
-      updateProfileBadge();
-      updatePermissionsUI();
-    });
+  if (!userData || !userData.current_band_id || userData.current_band_id === "KAWSAY") {
+    // No tiene perfil completo — volver a auth para onboarding
+    window.location.href = "auth.html";
+    return false;
   }
 
+  state.currentUser = user;
+  state.currentBandId = userData.current_band_id;
+  state.requestedBandId = null;
+
+  const { data: memberBands } = await window.supabaseClient
+    .from('members')
+    .select('band_id')
+    .eq('user_id', user.id);
+
+  state.myBands = memberBands && memberBands.length > 0
+    ? memberBands.map(m => m.band_id)
+    : [userData.current_band_id];
+
+  localStorage.setItem("coop_current_band_id", state.currentBandId);
+
+  // Cargar datos de la banda
+  const { data: bandDoc } = await window.supabaseClient
+    .from('bands')
+    .select('*')
+    .eq('id', state.currentBandId)
+    .maybeSingle();
+
+  state.bandMetadata = bandDoc
+    ? { name: bandDoc.name, logoUrl: bandDoc.logo_url }
+    : { name: state.currentBandId, logoUrl: null };
+
+  await loadSongsFromDB();
+  await loadMembersFromDB();
+  await loadFavoriteChordsFromDB();
+
+  if (!state._uiInitialized) {
+    state._uiInitialized = true;
+    checkSharedSong();
+    renderApp();
+    selectChord("C");
+    initChordPickerHandlers();
+    initInlineEditFields();
+    initInterventionPopupDraggable();
+    makeChordBadgesDraggable();
+    initQuickChordInsertion();
+  }
+
+  renderSetlist();
+  updateBandUI();
+  updateProfileBadge();
+  updatePermissionsUI();
+
+  const overlay = document.getElementById("auth-guard-overlay");
+  if (overlay) overlay.style.display = "none";
+
+  // Suscribirse a cambios en tiempo real del perfil
+  if (window._supabaseUserChannel) window._supabaseUserChannel.unsubscribe();
+  window._supabaseUserChannel = window.supabaseClient
+    .channel(`user-profile-${user.id}`)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` }, () => {
+      loadUserProfile(user);
+    })
+    .subscribe();
+
+  return true;
+}
+
+async function initAuthAndApp() {
+  if (!window.supabaseClient) {
+    console.error("Supabase no inicializado.");
+    window.location.href = "auth.html";
+    return;
+  }
+
+  if (window._authTimeout) clearTimeout(window._authTimeout);
+
+  try {
+    // Obtener sesión actual de forma directa y fiable
+    const { data: { session }, error } = await window.supabaseClient.auth.getSession();
+
+    if (error || !session || !session.user) {
+      window.location.href = "auth.html";
+      return;
+    }
+
+    await loadUserProfile(session.user);
+
+    // Listener solo para CAMBIOS FUTUROS (SIGNED_OUT, TOKEN_REFRESHED)
+    window.supabaseClient.auth.onAuthStateChange(async (event, newSession) => {
+      if (event === "SIGNED_OUT") {
+        window.location.href = "auth.html";
+      } else if (event === "TOKEN_REFRESHED" && newSession) {
+        // Solo actualizar el estado, no recargar toda la UI
+        state.currentUser = newSession.user;
+      }
+    });
+
+  } catch (e) {
+    console.error("Error crítico en la inicialización de auth:", e);
+    window.location.href = "auth.html";
+  }
+}
+
+
+function initEventHandlers() {
   // Navegación
   document.querySelectorAll(".nav-pill").forEach(pill => {
     pill.addEventListener("click", () => {
