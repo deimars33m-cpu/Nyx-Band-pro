@@ -21,7 +21,26 @@ const SongsService = {
         .eq('band_id', bandId);
 
       if (error) throw error;
-      return data || [];
+      
+      // Mapear y parsear metadatos guardados en la columna chords
+      return (data || []).map(song => {
+        let metadata = { key: "C", timeSig: "4/4", rhythm: "Pop" };
+        if (song.chords) {
+          try {
+            metadata = JSON.parse(song.chords);
+          } catch (e) {
+            // fallback si no es JSON válido (texto plano antiguo)
+          }
+        }
+        return {
+          ...song,
+          key: metadata.key || "C",
+          timeSig: metadata.timeSig || "4/4",
+          rhythm: metadata.rhythm || "Pop",
+          // mantenemos la referencia por si se necesita
+          chords: song.chords
+        };
+      });
     } catch (error) {
       console.error("Error al obtener canciones de Supabase:", error);
       return [];
@@ -37,16 +56,20 @@ const SongsService = {
       return song;
     }
     try {
-      const { id, ...data } = song;
       const record = {
-        id: id,
+        id: song.id,
         band_id: bandId,
-        title: data.title,
-        artist: data.artist || "",
-        lyrics: data.lyrics || "",
-        chords: data.chords || "",
-        bpm: data.bpm || 120,
-        status: data.status || "pendiente"
+        title: song.title,
+        artist: song.artist || "",
+        lyrics: song.lyrics || "",
+        // Guardamos los metadatos serializados en chords
+        chords: JSON.stringify({
+          key: song.key || "C",
+          timeSig: song.timeSig || "4/4",
+          rhythm: song.rhythm || "Pop"
+        }),
+        bpm: song.bpm || 120,
+        status: song.status || "pendiente"
       };
 
       const { error } = await supabase
@@ -101,7 +124,11 @@ const SongsService = {
         title: song.title,
         artist: song.artist || "",
         lyrics: song.lyrics || "",
-        chords: song.chords || "",
+        chords: JSON.stringify({
+          key: song.key || "C",
+          timeSig: song.timeSig || "4/4",
+          rhythm: song.rhythm || "Pop"
+        }),
         bpm: song.bpm || 120,
         status: song.status || "pendiente"
       }));

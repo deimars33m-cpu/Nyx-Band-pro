@@ -940,6 +940,8 @@ textarea {
   user-select: none;
   font-size: 14px;
   text-shadow: 0 0 6px rgba(76, 215, 246, 0.4);
+
+  white-space: nowrap;
 }
 
 .chord-in-text {
@@ -962,6 +964,8 @@ textarea {
   min-height: 24px;
   margin-bottom: 14px;
   font-weight: 400;
+
+  white-space: nowrap;
 }
 
 .instrumental-row {
@@ -3503,6 +3507,12 @@ textarea {
   border-left: 2px solid transparent;
   transition: background .2s, border-color .2s;
   cursor: pointer;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+}
+.lyric-line-editor::-webkit-scrollbar {
+  display: none;
 }
 .lyric-line-editor:hover {
   background: rgba(255,62,165,0.05);
@@ -3553,6 +3563,7 @@ textarea {
   height: 18px;
   margin-bottom: 1px;
   overflow: visible;
+  white-space: nowrap;
 }
 .chord-pill {
   position: absolute;
@@ -3602,6 +3613,8 @@ textarea {
   padding: 0;
   transition: color .2s;
   letter-spacing: -0.2px;
+
+  white-space: nowrap;
 }
 .lyric-text-input:focus { color: #fff; }
 .lyric-text-display {
@@ -3610,8 +3623,12 @@ textarea {
   line-height: 1.5;
   font-family: var(--font-mono);
   letter-spacing: -0.2px;
+
+  white-space: nowrap;
 }
-.lyric-line-editor.active .lyric-text-display { color: #fff; font-weight: 500; }
+.lyric-line-editor.active .lyric-text-display { color: #fff; font-weight: 500; 
+  white-space: nowrap;
+}
 
 /* Lyric notes */
 .lyric-notes {
@@ -4407,4 +4424,15 @@ textarea {
   transform: translateY(-2px) scale(1.05);
   box-shadow: 0 0 24px rgba(0, 229, 255, 0.5);
   border-color: var(--neon-cyan);
+}
+
+
+/* Soporte de scroll horizontal para no romper alineacion de acordes y letras */
+.song-line-right-col {
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+}
+.song-line-right-col::-webkit-scrollbar {
+  display: none;
 }
