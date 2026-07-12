@@ -1683,7 +1683,45 @@ function renderRehearsalRoom() {
     if (!room) return;
 
   if (!state.activeSongId) {
-    room.innerHTML = `
+      // — MOBILE BULK ASSIGN PANEL —
+  let mobileBulkBarHtml = "";
+  if (selectedCount > 0) {
+    const avatarsHtml = members.map(m => {
+      const anyHave = state.selectedLineIndices.some(idx => 
+        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
+      );
+      const allHave = state.selectedLineIndices.every(idx => 
+        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
+      );
+      
+      const statusClass = allHave ? 'active' : anyHave ? 'partial' : '';
+      const ringColor = allHave ? 'var(--neon-lime)' : anyHave ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
+      const borderStyle = anyHave && !allHave ? 'dashed' : 'solid';
+      
+      return `
+        <button class="mobile-bulk-avatar-btn ${statusClass}" onclick="toggleLinePerformer('${m.id}')" style="background:none; border:none; padding:0; position:relative; cursor:pointer; outline:none; display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0;">
+          <div class="mobile-bulk-avatar" style="width:32px; height:32px; border-radius:50%; border:2px ${borderStyle} ${ringColor}; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; color:white; background:rgba(0,0,0,0.3); transition:all 0.2s;">
+            ${m.iniciales}
+          </div>
+          <span style="font-size:8px; color:var(--text-dim); max-width:40px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.nombre}</span>
+        </button>
+      `;
+    }).join("");
+
+    mobileBulkBarHtml = `
+      <div class="mobile-bulk-assign-bar">
+        <button onclick="clearMassiveSelection()" style="background:rgba(255,255,255,0.05); border:none; border-radius:50%; width:28px; height:28px; color:white; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; outline:none;"><i class="ti ti-x"></i></button>
+        <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:bold; line-height:1.2; max-width:70px;">
+          Asignar <br><span style="color:var(--neon-cyan);">${selectedCount} líneas</span>
+        </div>
+        <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:2px; flex:1; scrollbar-width:none;">
+          ${avatarsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  room.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:center; height:100%; background:var(--bg-stage);">
         <div style="text-align:center; max-width:320px; padding:24px; border:1px solid var(--border); border-radius:18px; background:var(--bg-panel);">
           <div style="font-size:38px; margin-bottom:12px;">🎙️</div>
@@ -1854,13 +1892,25 @@ function renderRehearsalRoom() {
   }).join("");
 
   // — PARTICIPANTS (right sidebar) —
-  const activeLinePerformers = (song.linePerformers && song.linePerformers[lineIdx]) ? song.linePerformers[lineIdx] : [];
-  
   const participantsHtml = members.map(m => {
-    const activo = activeLinePerformers.includes(m.id);
+    let activo = false;
+    let esParcial = false;
+    
+    if (state.selectedLineIndices && state.selectedLineIndices.length > 0) {
+      const anyHave = state.selectedLineIndices.some(idx => 
+        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
+      );
+      const allHave = state.selectedLineIndices.every(idx => 
+        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
+      );
+      activo = anyHave;
+      esParcial = anyHave && !allHave;
+    } else {
+      activo = (song.linePerformers && song.linePerformers[lineIdx] && song.linePerformers[lineIdx].includes(m.id)) ? true : false;
+    }
 
     return `
-      <div class="participant-card ${activo ? 'active' : ''}" data-id="${m.id}" onclick="toggleLinePerformer('${m.id}')" style="cursor:pointer">
+      <div class="participant-card ${activo ? 'active' : ''} ${esParcial ? 'partial' : ''}" data-id="${m.id}" onclick="toggleLinePerformer('${m.id}')" style="cursor:pointer">
         <div class="participant-avatar">${m.iniciales}</div>
         <div class="participant-info">
           <div class="participant-name">${m.nombre}</div>
@@ -2087,6 +2137,8 @@ function renderRehearsalRoom() {
           </div>
         </div>
       </div>
+      
+      ${mobileBulkBarHtml}
     </div>`;
 
   bindRehearsalEvents(structure, lines, song);
@@ -2140,13 +2192,19 @@ function bindRehearsalEvents(structure, lines, song) {
     });
   });
 
-  // Line click (activate line or multi-select with CTRL)
+  // Line click (activate line or multi-select with CTRL or touching line number/dot)
   document.querySelectorAll(".lyric-line-editor").forEach(el => {
     el.addEventListener("click", e => {
+      if (e.target.closest(".btn-line-menu") || e.target.closest(".line-dropdown-menu") || e.target.closest(".line-indicators")) return;
       if (e.target.tagName === "BUTTON" || e.target.tagName === "I" || e.target.tagName === "INPUT" || e.target.closest(".lyric-controls")) return;
       const idx = parseInt(el.getAttribute("data-index"));
       
-      if (e.ctrlKey) {
+      const isSelectionTrigger = e.target.classList.contains("line-number") || 
+                                 e.target.classList.contains("line-dot") || 
+                                 e.target.closest(".line-performers-dots") ||
+                                 e.target.classList.contains("line-dot-mini");
+      
+      if (isSelectionTrigger || e.ctrlKey) {
         e.preventDefault();
         if (!state.selectedLineIndices) state.selectedLineIndices = [];
         const pos = state.selectedLineIndices.indexOf(idx);
@@ -6940,19 +6998,34 @@ window.toggleLinePerformer = function(performerId) {
   if (!song) return;
   if (!song.linePerformers) song.linePerformers = {};
   
-  const lineIdx = state.lineaActivaIndex || 0;
-  if (!song.linePerformers[lineIdx]) {
-    song.linePerformers[lineIdx] = [];
-  }
-  
-  const pos = song.linePerformers[lineIdx].indexOf(performerId);
-  if (pos > -1) {
-    song.linePerformers[lineIdx].splice(pos, 1);
+  let targetIndices = [];
+  if (state.selectedLineIndices && state.selectedLineIndices.length > 0) {
+    targetIndices = [...state.selectedLineIndices];
   } else {
-    song.linePerformers[lineIdx].push(performerId);
+    targetIndices = [state.lineaActivaIndex || 0];
   }
   
-  // Guardar en Supabase y localmente
+  // Determinar si todos ya lo tienen asignado
+  const allHaveIt = targetIndices.every(idx => 
+    song.linePerformers[idx] && song.linePerformers[idx].includes(performerId)
+  );
+  
+  targetIndices.forEach(idx => {
+    if (!song.linePerformers[idx]) {
+      song.linePerformers[idx] = [];
+    }
+    const pos = song.linePerformers[idx].indexOf(performerId);
+    if (allHaveIt) {
+      if (pos > -1) {
+        song.linePerformers[idx].splice(pos, 1);
+      }
+    } else {
+      if (pos === -1) {
+        song.linePerformers[idx].push(performerId);
+      }
+    }
+  });
+  
   saveLocalStorage();
   if (window.SongsService) {
     window.SongsService.saveSong(song).catch(err => {
@@ -6960,9 +7033,8 @@ window.toggleLinePerformer = function(performerId) {
     });
   }
   
-  // Re-renderizar la vista para reflejar el estado activo
   renderRehearsalRoom();
-};
+};;
 
 
 // --- VISTAS Y HELPERS PARA PESTAÑAS DE NOTAS Y AUDIO ---
@@ -7344,3 +7416,10 @@ window.closeAllLineMenus = function() {
 document.addEventListener("click", () => {
   closeAllLineMenus();
 });
+
+
+// --- LIMPIAR SELECCIÓN MASIVA DE INTÉRPRETES ---
+window.clearMassiveSelection = function() {
+  state.selectedLineIndices = [];
+  renderRehearsalRoom();
+};
