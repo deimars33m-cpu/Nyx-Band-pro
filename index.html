@@ -391,10 +391,14 @@
           <!-- Sub-pestañas internas de Grupo -->
           <div class="page-actions">
             <div class="instrument-select-btns" id="group-subtab-headers">
-              <button class="active" onclick="switchGroupSubtab('perfil')"><i class="ti ti-settings" style="font-size: 13px; margin-right: 4px;"></i> Grupo</button>
-              <button onclick="switchGroupSubtab('miembros')"><i class="ti ti-users" style="font-size: 13px; margin-right: 4px;"></i> Miembros</button>
-              <button onclick="switchGroupSubtab('ensayos')"><i class="ti ti-calendar" style="font-size: 13px; margin-right: 4px;"></i> Ensayos</button>
-              <button onclick="switchGroupSubtab('shows')"><i class="ti ti-device-speaker" style="font-size: 13px; margin-right: 4px;"></i> Presentaciones</button>
+              <button class="active" onclick="switchGroupSubtab('perfil')"><i class="ti ti-settings"
+                  style="font-size: 13px; margin-right: 4px;"></i> Grupo</button>
+              <button onclick="switchGroupSubtab('miembros')"><i class="ti ti-users"
+                  style="font-size: 13px; margin-right: 4px;"></i> Miembros</button>
+              <button onclick="switchGroupSubtab('ensayos')"><i class="ti ti-calendar"
+                  style="font-size: 13px; margin-right: 4px;"></i> Ensayos</button>
+              <button onclick="switchGroupSubtab('shows')"><i class="ti ti-device-speaker"
+                  style="font-size: 13px; margin-right: 4px;"></i> Presentaciones</button>
             </div>
           </div>
         </div>
@@ -581,46 +585,38 @@
               <!-- Renderizado dinámico -->
             </div>
 
-            <div
-              style="margin-top:20px; padding: 12px; background: rgba(255,235,59,0.05); border: 1px solid rgba(255,235,59,0.15); border-radius:8px;">
-              <p style="font-size:11px; color:var(--text-secondary); margin:0;">🎤 <strong style="color:#ffeb3b;">Coro /
-                  Todos:</strong> Color amarillo neón <span style="color:#ffeb3b;">█</span> — Se aplica automáticamente
-                para el coro en la hoja de ensayo.</p>
+            <!-- Sub-tab 3: Ensayos (📅 Ensayos) -->
+            <div id="group-subtab-ensayos" class="group-subtab-content glass"
+              style="display: none; padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h4
+                  style="color: var(--neon-cyan); margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+                  Organización de Próximos Ensayos</h4>
+                <button class="btn btn-primary" onclick="addRehearsalPrompt()"
+                  style="padding: 6px 12px; font-size: 12px; border-radius: 6px;">+ Nuevo Ensayo</button>
+              </div>
+
+              <div id="rehearsals-schedule-list" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Cargado dinámicamente -->
+              </div>
+            </div>
+
+            <!-- Sub-tab 4: Presentaciones / Gigs (🎸 Shows) -->
+            <div id="group-subtab-shows" class="group-subtab-content glass"
+              style="display: none; padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h4
+                  style="color: var(--neon-cyan); margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+                  Agenda de Eventos y Presentaciones</h4>
+                <button class="btn btn-primary" onclick="addGigPrompt()"
+                  style="padding: 6px 12px; font-size: 12px; border-radius: 6px;">+ Nuevo Evento</button>
+              </div>
+
+              <div id="gigs-schedule-list" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Cargado dinámicamente -->
+              </div>
             </div>
           </div>
-
-          <!-- Sub-tab 3: Ensayos (📅 Ensayos) -->
-          <div id="group-subtab-ensayos" class="group-subtab-content glass"
-            style="display: none; padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h4
-                style="color: var(--neon-cyan); margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
-                Organización de Próximos Ensayos</h4>
-              <button class="btn btn-primary" onclick="addRehearsalPrompt()"
-                style="padding: 6px 12px; font-size: 12px; border-radius: 6px;">+ Nuevo Ensayo</button>
-            </div>
-
-            <div id="rehearsals-schedule-list" style="display: flex; flex-direction: column; gap: 10px;">
-              <!-- Cargado dinámicamente -->
-            </div>
-          </div>
-
-          <!-- Sub-tab 4: Presentaciones / Gigs (🎸 Shows) -->
-          <div id="group-subtab-shows" class="group-subtab-content glass"
-            style="display: none; padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h4
-                style="color: var(--neon-cyan); margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
-                Agenda de Eventos y Presentaciones</h4>
-              <button class="btn btn-primary" onclick="addGigPrompt()"
-                style="padding: 6px 12px; font-size: 12px; border-radius: 6px;">+ Nuevo Evento</button>
-            </div>
-
-            <div id="gigs-schedule-list" style="display: flex; flex-direction: column; gap: 10px;">
-              <!-- Cargado dinámicamente -->
-            </div>
-          </div>
-        </div>
       </main>
     </div>
 
@@ -888,9 +884,9 @@
   <script src="chords.js?v=2.0"></script>
   <!-- SDK de Supabase desde CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js?v=3.0"></script>
-  <script src="songsService.js?v=3.0"></script>
-  <script src="app.js?v=3.0"></script>
+  <script src="supabase.js?v=3.2"></script>
+  <script src="songsService.js?v=3.2"></script>
+  <script src="app.js?v=3.2"></script>
 </body>
 
 </html>
