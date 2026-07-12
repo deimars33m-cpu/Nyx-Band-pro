@@ -1865,7 +1865,8 @@ function renderRehearsalRoom() {
             <!-- 3 puntos al final a la derecha -->
             <div class="line-menu-container" style="position: relative;">
               <button class="btn-line-menu" onclick="toggleLineMenu(event, ${idx})" style="background:none; border:none; color:var(--text-dim); padding:4px 8px; cursor:pointer; font-size:14px; outline:none;"><i class="ti ti-dots-vertical"></i></button>
-              <div class="line-dropdown-menu" id="line-dropdown-${idx}" style="display:none; position:absolute; right:0; top:24px; background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:8px; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,0.5); width:100px;">
+              <div class="line-dropdown-menu" id="line-dropdown-${idx}" style="display:none; position:absolute; right:0; top:24px; background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:8px; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,0.5); width:125px;">
+                <button onclick="event.stopPropagation(); openEditStanzaModal(${idx}); closeAllLineMenus();" style="width:100%; text-align:left; background:none; border:none; color:var(--neon-cyan); padding:8px 12px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;"><i class="ti ti-edit"></i> Editar Estrofa</button>
                 <button onclick="event.stopPropagation(); duplicateDesktopLine(state.songs.find(s => String(s.id) === String(state.activeSongId)), ${idx}); closeAllLineMenus();" style="width:100%; text-align:left; background:none; border:none; color:var(--text-main); padding:8px 12px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;"><i class="ti ti-copy"></i> Duplicar</button>
                 <button onclick="event.stopPropagation(); deleteDesktopLine(state.songs.find(s => String(s.id) === String(state.activeSongId)), ${idx}); closeAllLineMenus();" style="width:100%; text-align:left; background:none; border:none; color:#E24B4A; padding:8px 12px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;"><i class="ti ti-trash"></i> Eliminar</button>
               </div>
@@ -2432,17 +2433,7 @@ function bindRehearsalEvents(structure, lines, song) {
     });
   }
 
-  // Edit Stanza Modal click bindings (line dot and number)
-  document.querySelectorAll(".lyric-line-editor .line-dot, .lyric-line-editor .line-number").forEach(el => {
-    el.addEventListener("click", e => {
-      e.stopPropagation();
-      const parent = el.closest(".lyric-line-editor");
-      if (parent) {
-        const idx = parseInt(parent.getAttribute("data-index"));
-        openEditStanzaModal(idx);
-      }
-    });
-  });
+
 
   const btnEditCancel = document.getElementById("btn-modal-edit-cancel");
   const btnEditSave = document.getElementById("btn-modal-edit-save");
