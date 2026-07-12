@@ -1683,45 +1683,7 @@ function renderRehearsalRoom() {
     if (!room) return;
 
   if (!state.activeSongId) {
-      // — MOBILE BULK ASSIGN PANEL —
-  let mobileBulkBarHtml = "";
-  if (selectedCount > 0) {
-    const avatarsHtml = members.map(m => {
-      const anyHave = state.selectedLineIndices.some(idx => 
-        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
-      );
-      const allHave = state.selectedLineIndices.every(idx => 
-        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
-      );
-      
-      const statusClass = allHave ? 'active' : anyHave ? 'partial' : '';
-      const ringColor = allHave ? 'var(--neon-lime)' : anyHave ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
-      const borderStyle = anyHave && !allHave ? 'dashed' : 'solid';
-      
-      return `
-        <button class="mobile-bulk-avatar-btn ${statusClass}" onclick="toggleLinePerformer('${m.id}')" style="background:none; border:none; padding:0; position:relative; cursor:pointer; outline:none; display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0;">
-          <div class="mobile-bulk-avatar" style="width:32px; height:32px; border-radius:50%; border:2px ${borderStyle} ${ringColor}; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; color:white; background:rgba(0,0,0,0.3); transition:all 0.2s;">
-            ${m.iniciales}
-          </div>
-          <span style="font-size:8px; color:var(--text-dim); max-width:40px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.nombre}</span>
-        </button>
-      `;
-    }).join("");
-
-    mobileBulkBarHtml = `
-      <div class="mobile-bulk-assign-bar">
-        <button onclick="clearMassiveSelection()" style="background:rgba(255,255,255,0.05); border:none; border-radius:50%; width:28px; height:28px; color:white; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; outline:none;"><i class="ti ti-x"></i></button>
-        <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:bold; line-height:1.2; max-width:70px;">
-          Asignar <br><span style="color:var(--neon-cyan);">${selectedCount} líneas</span>
-        </div>
-        <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:2px; flex:1; scrollbar-width:none;">
-          ${avatarsHtml}
-        </div>
-      </div>
-    `;
-  }
-
-  room.innerHTML = `
+    room.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:center; height:100%; background:var(--bg-stage);">
         <div style="text-align:center; max-width:320px; padding:24px; border:1px solid var(--border); border-radius:18px; background:var(--bg-panel);">
           <div style="font-size:38px; margin-bottom:12px;">🎙️</div>
@@ -1770,6 +1732,44 @@ function renderRehearsalRoom() {
     { id: "int-male",    nombre: "Male",    instrumento: "Batería", iniciales: "MA" },
     { id: "int-franco",  nombre: "Franco",  instrumento: "Teclado", iniciales: "FR" }
   ]);
+
+  // — MOBILE BULK ASSIGN PANEL —
+  let mobileBulkBarHtml = "";
+  if (selectedCount > 0) {
+    const avatarsHtml = members.map(m => {
+      const anyHave = state.selectedLineIndices.some(idx => 
+        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
+      );
+      const allHave = state.selectedLineIndices.every(idx => 
+        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
+      );
+      
+      const statusClass = allHave ? 'active' : anyHave ? 'partial' : '';
+      const ringColor = allHave ? 'var(--neon-lime)' : anyHave ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
+      const borderStyle = anyHave && !allHave ? 'dashed' : 'solid';
+      
+      return `
+        <button class="mobile-bulk-avatar-btn ${statusClass}" onclick="toggleLinePerformer('${m.id}')" style="background:none; border:none; padding:0; position:relative; cursor:pointer; outline:none; display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0;">
+          <div class="mobile-bulk-avatar" style="width:32px; height:32px; border-radius:50%; border:2px ${borderStyle} ${ringColor}; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; color:white; background:rgba(0,0,0,0.3); transition:all 0.2s;">
+            ${m.iniciales}
+          </div>
+          <span style="font-size:8px; color:var(--text-dim); max-width:40px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.nombre}</span>
+        </button>
+      `;
+    }).join("");
+
+    mobileBulkBarHtml = `
+      <div class="mobile-bulk-assign-bar">
+        <button onclick="clearMassiveSelection()" style="background:rgba(255,255,255,0.05); border:none; border-radius:50%; width:28px; height:28px; color:white; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; outline:none;"><i class="ti ti-x"></i></button>
+        <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:bold; line-height:1.2; max-width:70px;">
+          Asignar <br><span style="color:var(--neon-cyan);">${selectedCount} líneas</span>
+        </div>
+        <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:2px; flex:1; scrollbar-width:none;">
+          ${avatarsHtml}
+        </div>
+      </div>
+    `;
+  }
 
   // — STRUCTURE SIDEBAR —
   const structureHtml = structure.map(sec => {
