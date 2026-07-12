@@ -1800,15 +1800,23 @@ function renderRosterHtml(activeSec, members, song, lineIdx) {
 
   return songPerformers.map(m => {
     const activo = activeLinePerformers.includes(m.id);
-    // En el roster de móviles, si hay músicos asignados al verso, ocultar los que no participan para vista limpia
     if (activeLinePerformers.length > 0 && !activo) return "";
+
+    const groupMember = state.members.find(g => ("int-" + g.name.toLowerCase().replace(/\s+/g, "-")) === m.id);
+    const memberColor = groupMember ? groupMember.color : "#00e5ff";
+
+    const borderColor = activo ? memberColor : 'var(--border-soft)';
+    const avatarBg = activo ? memberColor : 'rgba(255,255,255,0.05)';
+    const avatarColor = activo ? '#000' : 'var(--text-dim)';
+    const shadowStyle = activo ? `box-shadow: 0 0 8px ${memberColor};` : '';
+    const nameColor = activo ? memberColor : 'var(--text-primary)';
 
     return `
       <div class="roster-member ${activo ? 'active' : 'inactive'}" style="opacity: ${activo ? 1 : 0.5}">
-        <div class="roster-avatar-circle" style="border-color: ${activo ? 'var(--neon-lime)' : 'var(--border-soft)'}; color: ${activo ? '#fff' : 'var(--text-dim)'}">
+        <div class="roster-avatar-circle" style="border-color: ${borderColor}; background: ${avatarBg}; color: ${avatarColor}; ${shadowStyle} font-weight: bold;">
           ${m.iniciales}
         </div>
-        <div class="roster-member-name">${m.nombre}</div>
+        <div class="roster-member-name" style="color: ${nameColor}; font-weight: ${activo ? '700' : 'normal'};">${m.nombre}</div>
         <div class="roster-member-role">${m.instrumento}</div>
       </div>`;
   }).join("");
@@ -1882,13 +1890,19 @@ function renderRehearsalRoom() {
           song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
         );
 
+        const groupMember = state.members.find(g => ("int-" + g.name.toLowerCase().replace(/\s+/g, "-")) === m.id);
+        const memberColor = groupMember ? groupMember.color : "#00e5ff";
+
         const statusClass = allHave ? 'active' : anyHave ? 'partial' : '';
-        const ringColor = allHave ? 'var(--neon-lime)' : anyHave ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
+        const ringColor = allHave ? memberColor : anyHave ? `${memberColor}bb` : 'rgba(255,255,255,0.15)';
         const borderStyle = anyHave && !allHave ? 'dashed' : 'solid';
+        const shadowStyle = allHave ? `box-shadow: 0 0 8px ${memberColor};` : '';
+        const avatarBg = allHave ? memberColor : 'rgba(0,0,0,0.3)';
+        const avatarColor = allHave ? '#000' : 'white';
 
         return `
         <button class="mobile-bulk-avatar-btn ${statusClass}" onclick="toggleLinePerformer('${m.id}')" style="background:none; border:none; padding:0; position:relative; cursor:pointer; outline:none; display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0;">
-          <div class="mobile-bulk-avatar" style="width:32px; height:32px; border-radius:50%; border:2px ${borderStyle} ${ringColor}; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; color:white; background:rgba(0,0,0,0.3); transition:all 0.2s;">
+          <div class="mobile-bulk-avatar" style="width:32px; height:32px; border-radius:50%; border:2px ${borderStyle} ${ringColor}; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; color:${avatarColor}; background:${avatarBg}; ${shadowStyle} transition:all 0.2s;">
             ${m.iniciales}
           </div>
           <span style="font-size:8px; color:var(--text-dim); max-width:40px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.nombre}</span>
@@ -2048,14 +2062,33 @@ function renderRehearsalRoom() {
         activo = (song.linePerformers && song.linePerformers[lineIdx] && song.linePerformers[lineIdx].includes(m.id)) ? true : false;
       }
 
+      const groupMember = state.members.find(g => ("int-" + g.name.toLowerCase().replace(/\s+/g, "-")) === m.id);
+      const memberColor = groupMember ? groupMember.color : m.color || "#00e5ff";
+
+      let cardStyle = "cursor:pointer; transition:all 0.25s ease; border-radius:10px; display:flex; align-items:center; gap:12px; padding:10px 14px; margin-bottom:8px;";
+      let avatarStyle = "width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; transition:all 0.2s; flex-shrink:0;";
+      let checkIconHtml = "";
+
+      if (activo) {
+        const bgColor = esParcial ? memberColor + "0e" : memberColor + "1a";
+        const borderType = esParcial ? 'dashed' : 'solid';
+        cardStyle += " background:" + bgColor + " !important; border: 1.5px " + borderType + " " + memberColor + " !important; box-shadow: 0 0 10px " + memberColor + "22 !important;";
+        avatarStyle += " background:" + memberColor + "; color:#000; text-shadow:none; box-shadow: 0 0 8px " + memberColor + ";";
+        checkIconHtml = "<i class=\"ti ti-check participant-check\" style=\"color:" + memberColor + " !important; display:block; margin-left:auto; font-size:16px;\"></i>";
+      } else {
+        cardStyle += " background:rgba(255,255,255,0.02) !important; border: 1.5px solid rgba(255,255,255,0.06) !important;";
+        avatarStyle += " background:rgba(255,255,255,0.08); color:var(--text-secondary); border: 1px solid rgba(255,255,255,0.1);";
+        checkIconHtml = "<i class=\"ti ti-circle participant-check\" style=\"color:rgba(255,255,255,0.15) !important; display:block; margin-left:auto; font-size:16px;\"></i>";
+      }
+
       return `
-      <div class="participant-card ${activo ? 'active' : ''} ${esParcial ? 'partial' : ''}" data-id="${m.id}" onclick="toggleLinePerformer('${m.id}')" style="cursor:pointer">
-        <div class="participant-avatar">${m.iniciales}</div>
+      <div class="participant-card ${activo ? 'active' : ''} ${esParcial ? 'partial' : ''}" data-id="${m.id}" onclick="toggleLinePerformer('${m.id}')" style="${cardStyle}">
+        <div class="participant-avatar" style="${avatarStyle}">${m.iniciales}</div>
         <div class="participant-info">
-          <div class="participant-name">${m.nombre}</div>
-          <div class="participant-role">${m.instrumento}</div>
+          <div class="participant-name" style="font-weight:700; color:#fff; font-size:13px; text-shadow: ${activo ? '0 0 4px ' + memberColor + '44' : 'none'};">${m.nombre}</div>
+          <div class="participant-role" style="font-size:10px; color:var(--text-muted); margin-top:2px;">${m.instrumento}</div>
         </div>
-        <i class="ti ti-check participant-check"></i>
+        ${checkIconHtml}
       </div>`;
     }).join("");
 
