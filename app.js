@@ -155,16 +155,16 @@ let state = {
   currentScaleRoot: 0, // C (semitono 0)
   chordFilterRoot: "C",
   chordFilterType: "",
-  
+
   // Caja de Ritmos
   drumMachine: {
     enabled: false,
     currentStep: 0,
     selectedPattern: "rock",
     grid: {
-      kick:  [true,  false, false, false, true,  false, false, false],
-      snare: [false, false, true,  false, false, false, true,  false],
-      hihat: [true,  false, true,  false, true,  false, true,  false]
+      kick: [true, false, false, false, true, false, false, false],
+      snare: [false, false, true, false, false, false, true, false],
+      hihat: [true, false, true, false, true, false, true, false]
     }
   },
 
@@ -179,14 +179,14 @@ let state = {
     isMuted: false,
     volume: 0.8
   },
-  
+
   // Scroll Automático
   autoScroll: {
     isActive: false,
     speed: 1.5, // factor multiplicador
     intervalId: null
   },
-  
+
   // Grabadora
   recorder: {
     mediaRecorder: null,
@@ -245,7 +245,7 @@ function clearObsoleteLocalStorage() {
     localStorage.removeItem("coop_members");
     localStorage.removeItem("coop_band_metadata");
     localStorage.removeItem("coop_fav_chords");
-  } catch(e) {}
+  } catch (e) { }
 }
 
 async function loadSongsFromDB() {
@@ -254,7 +254,7 @@ async function loadSongsFromDB() {
       const fbSongs = await window.SongsService.getAllSongs();
       if (fbSongs !== null && fbSongs !== undefined) {
         state.songs = fbSongs;
-        
+
         // Re-renderizar la UI
         renderApp();
         if (state.activeSongId) {
@@ -275,7 +275,7 @@ async function loadMembersFromDB() {
         .select('*')
         .eq('band_id', state.currentBandId);
       if (error) throw error;
-      
+
       // Adaptar el formato de la base de datos relacional al estado local de la app
       state.members = (data || []).filter(m => m && m.name).map(m => ({
         name: m.name || "Sin nombre",
@@ -303,7 +303,7 @@ async function loadFavoriteChordsFromDB() {
         .eq('band_id', state.currentBandId)
         .maybeSingle();
       if (error) throw error;
-      
+
       state.favoritesChords = (data && data.list) ? data.list : [];
       renderDictionary();
     } catch (e) {
@@ -424,7 +424,7 @@ function renderMembersList() {
     list.innerHTML = `<p style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px;">Aún no hay integrantes. ¡Agrega el primero!</p>`;
     return;
   }
-  
+
   const isAdmin = state.currentUser && (
     state.members.some(m => m.linkedUid === state.currentUser.uid && m.role === "Administrador") ||
     state.members.some(m => m.name && m.name.toLowerCase() === (state.currentUser.email || "").split("@")[0].toLowerCase() && m.role === "Administrador")
@@ -435,7 +435,7 @@ function renderMembersList() {
     const statusTag = isLinked
       ? `<span style="color:var(--neon-green); font-size:10px; font-weight:bold; margin-left:6px;">● Activo</span>`
       : `<span style="color:var(--text-muted); font-size:10px; margin-left:6px;">○ Creado</span>`;
-      
+
     const removeBtn = isAdmin ? `<button onclick="removeBandMember(${i})" style="background:rgba(255,51,75,0.12); border:1px solid rgba(255,51,75,0.3); color:#ff334b; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:11px;">✕</button>` : '';
 
     return `
@@ -454,7 +454,7 @@ function renderMembersList() {
       </div>
     `;
   }).join("");
-  
+
   // Alternar sección de administración (Solicitudes pendientes)
   const reqSection = document.getElementById("admin-requests-section");
   if (reqSection) {
@@ -474,27 +474,27 @@ function addBandMember() {
   const instInput = document.getElementById("new-member-instruments");
   const vocInput = document.getElementById("new-member-vocals");
   const activeSwatchEl = document.querySelector("#member-color-picker .color-swatch.active");
-  
+
   const name = nameInput ? nameInput.value.trim() : "";
   if (!name) { alert("Ingresa el nombre del integrante."); return; }
   if (state.members.find(m => m.name && m.name.toLowerCase() === name.toLowerCase())) {
     alert("Ya existe un integrante con ese nombre.");
     return;
   }
-  
+
   const color = activeSwatchEl ? activeSwatchEl.getAttribute("data-color") : "#00e5ff";
   const role = roleInput ? roleInput.value : "Integrante";
   const instruments = instInput ? instInput.value.trim() : "";
   const vocals = vocInput ? vocInput.value : "Ninguna";
-  
+
   state.members.push({ name, role, instruments, vocals, color, linkedUid: null });
   saveMembers();
-  
+
   if (nameInput) nameInput.value = "";
   if (instInput) instInput.value = "";
   if (roleInput) roleInput.value = "Integrante";
   if (vocInput) vocInput.value = "Ninguna";
-  
+
   renderMembersList();
 }
 
@@ -516,16 +516,16 @@ let _selectedMembersForIntervention = [];
 
 function setEditorMode(mode) {
   state.editorMode = mode;
-  
+
   const btnChords = document.getElementById("btn-editor-mode-chords");
   const btnInstrumental = document.getElementById("btn-editor-mode-instrumental");
   const hint = document.getElementById("editor-hint");
-  
+
   if (btnChords && btnInstrumental) {
     btnChords.classList.toggle("active", mode === "chords");
     btnInstrumental.classList.toggle("active", mode === "instrumental");
   }
-  
+
   const editor = document.getElementById("editor-rich-lyrics");
   if (editor) {
     if (mode === "instrumental") {
@@ -536,7 +536,7 @@ function setEditorMode(mode) {
       editor.style.userSelect = "none";
       editor.style.webkitUserSelect = "none";
       if (hint) hint.textContent = "Modo Instrumental: Muestra una vista limpia con la estructura de acordes de la canción, excluyendo la letra.";
-      
+
       // Guardar cambios actuales y renderizar instrumental
       const serialized = serializeRichLyrics();
       document.getElementById("song-lyrics").value = serialized;
@@ -549,7 +549,7 @@ function setEditorMode(mode) {
       editor.style.userSelect = "";
       editor.style.webkitUserSelect = "";
       if (hint) hint.textContent = "Escribe con corchetes (ej: [C]Letra). Clic derecho (PC) o 3s (móvil) en acordes para editarlos.";
-      
+
       // Restaurar letra con acordes original
       const originalRaw = document.getElementById("song-lyrics").value || "";
       editor.innerHTML = parseTextToRichLyrics(originalRaw);
@@ -566,7 +566,7 @@ function parseTextToInstrumentalLyrics(text) {
     if (isSectionHeader(line)) {
       return `<div class="editor-section-header" style="color: var(--neon-magenta); font-weight: bold; margin-top: 10px; margin-bottom: 5px; user-select: none;">${line}</div>`;
     }
-    
+
     // Extraer los acordes
     const chords = [];
     const regex = /\[([^\]]+)\]/g;
@@ -574,16 +574,16 @@ function parseTextToInstrumentalLyrics(text) {
     while ((match = regex.exec(line)) !== null) {
       chords.push(match[1]);
     }
-    
+
     if (chords.length === 0) {
       return "<div><br></div>";
     }
-    
+
     // Generar spans de acordes juntos
     const htmlLine = chords.map(chord => {
       return `<span class="editor-chord-badge" contenteditable="false" data-chord="${chord}">[${chord}]</span>`;
     }).join(" ");
-    
+
     return `<div>${htmlLine}</div>`;
   });
   return parsedLines.join("");
@@ -622,12 +622,12 @@ let _savedInterventionRange = null; // Respaldo estable del DOM Range para evita
 
 function buildVocalColorStyle(names) {
   if (!names || names.length === 0) return "color:#ffeb3b; text-shadow:0 0 8px #ffeb3b80;";
-  
+
   const colors = names.map(n => {
     if (n.toLowerCase() === "coro") return "#ffeb3b";
     return getMemberColor(n);
   });
-  
+
   if (colors.length === 1) {
     const c = colors[0];
     return `color:${c}; text-shadow:0 0 8px ${c}80;`;
@@ -641,12 +641,12 @@ function buildVocalColorStyle(names) {
 
 function buildInitialsBadgesHtml(names) {
   if (!names || names.length === 0) return "";
-  
+
   // Si es una nota general de ensayo, no mostrar iniciales
   if (names.length === 1 && names[0].toLowerCase() === "nota") {
     return "";
   }
-  
+
   return names.filter(name => typeof name === 'string' && name.length > 0).map(name => {
     const isCoro = name.toLowerCase() === "coro";
     const color = isCoro ? "#ffeb3b" : getMemberColor(name);
@@ -668,24 +668,24 @@ function buildInitialsBadgesHtml(names) {
 function checkSharedSong() {
   const urlParams = new URLSearchParams(window.location.search);
   const songDataEncoded = urlParams.get("song");
-  
+
   if (songDataEncoded) {
     try {
       // Decodificar Base64
       const songDataDecoded = decodeURIComponent(escape(atob(songDataEncoded)));
       const sharedSong = JSON.parse(songDataDecoded);
-      
+
       if (sharedSong && sharedSong.title && sharedSong.artist) {
         // Generar un ID único para evitar colisiones
         sharedSong.id = "shared_" + Date.now();
         sharedSong.lastEdit = "compartido hoy";
-        
+
         // Si no tiene imagen, le asignamos una por defecto
         if (!sharedSong.image) sharedSong.image = "./assets/yesterday.png";
-        
+
         // Validar si ya existe una con el mismo título/artista
-        const exists = state.songs.some(s => (s.title||"").toLowerCase() === (sharedSong.title||"").toLowerCase() && (s.artist||"").toLowerCase() === (sharedSong.artist||"").toLowerCase());
-        
+        const exists = state.songs.some(s => (s.title || "").toLowerCase() === (sharedSong.title || "").toLowerCase() && (s.artist || "").toLowerCase() === (sharedSong.artist || "").toLowerCase());
+
         setTimeout(() => {
           const confirmAdd = confirm(`¿Quieres agregar el tema compartido "${sharedSong.title}" de "${sharedSong.artist}" a tu repertorio?`);
           if (confirmAdd) {
@@ -735,7 +735,7 @@ function renderNav() {
       pill.classList.remove("active");
     }
   });
-  
+
   // Show / Hide tabs view
   document.querySelectorAll(".tab-content").forEach(content => {
     const tabName = content.id.replace("tab-", "");
@@ -745,7 +745,7 @@ function renderNav() {
       content.classList.remove("active");
     }
   });
-  
+
   // Update header active song title
   const activeIndicator = document.getElementById("nav-active-song");
   if (state.activeSongId) {
@@ -755,7 +755,7 @@ function renderNav() {
   } else {
     activeIndicator.style.display = "none";
   }
-  
+
   // Update mobile metronome button visibility
   const btnToggleMetronome = document.getElementById("btn-toggle-metronome");
   if (btnToggleMetronome) {
@@ -765,14 +765,14 @@ function renderNav() {
       btnToggleMetronome.style.display = "none";
     }
   }
-  
+
   // Mostrar/Ocultar botón flotante de edición y paneles de ensayo (Metrónomo y Grabación)
   const editBtn = document.getElementById("rehearsal-fullscreen-edit-btn");
   const recordFab = document.getElementById("rehearsal-record-fab-container");
   const metronomeFab = document.getElementById("rehearsal-fab-container");
-  
+
   const isRehearsalActive = (state.currentTab === "rehearsal" && state.activeSongId);
-  
+
   if (editBtn) editBtn.style.display = isRehearsalActive ? "flex" : "none";
   if (recordFab) recordFab.style.display = isRehearsalActive ? "block" : "none";
   if (metronomeFab) metronomeFab.style.display = isRehearsalActive ? "block" : "none";
@@ -809,7 +809,7 @@ async function loadUserProfile(user) {
     ? memberBands.map(m => m.band_id)
     : [userData.current_band_id];
 
-  try { localStorage.setItem("coop_current_band_id", state.currentBandId); } catch(e) {}
+  try { localStorage.setItem("coop_current_band_id", state.currentBandId); } catch (e) { }
 
   // Cargar datos de la banda
   const { data: bandDoc } = await window.supabaseClient
@@ -907,7 +907,7 @@ function initEventHandlers() {
       if (targetTab) switchTab(targetTab);
     });
   });
-  
+
   // Navegación (mobile bottom bar)
   document.querySelectorAll(".mobile-nav-pill").forEach(pill => {
     pill.addEventListener("click", () => {
@@ -915,7 +915,7 @@ function initEventHandlers() {
       if (targetTab) switchTab(targetTab);
     });
   });
-  
+
   // Filtros de Setlist (Restringido para no interferir con el diccionario)
   document.querySelectorAll(".search-filter-bar .filter-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -925,7 +925,7 @@ function initEventHandlers() {
       renderSetlist();
     });
   });
-  
+
   // Búsqueda de Setlist
   const searchInput = document.getElementById("search-songs");
   if (searchInput) {
@@ -943,7 +943,7 @@ function initEventHandlers() {
       if (deleteBtn) {
         e.stopPropagation();
         const songId = deleteBtn.getAttribute("data-id");
-        
+
         if (!deleteBtn.classList.contains("confirm-delete")) {
           deleteBtn.classList.add("confirm-delete");
           deleteBtn.style.color = "var(--magenta)";
@@ -951,7 +951,7 @@ function initEventHandlers() {
           deleteBtn.style.borderRadius = "14px";
           deleteBtn.style.padding = "0 8px";
           deleteBtn.innerHTML = `<i class="ti ti-check" style="color: var(--magenta);"></i><span style="font-size: 8px; font-weight: 700; color: var(--magenta); margin-left: 2px;">¿BORRAR?</span>`;
-          
+
           // Resetear después de 3 segundos
           const timeoutId = setTimeout(() => {
             deleteBtn.classList.remove("confirm-delete");
@@ -961,13 +961,13 @@ function initEventHandlers() {
             deleteBtn.style.padding = "0";
             deleteBtn.innerHTML = `<i class="ti ti-trash"></i>`;
           }, 3000);
-          
+
           deleteBtn.setAttribute("data-timeout-id", timeoutId);
         } else {
           // Limpiar timeout
           const timeoutId = deleteBtn.getAttribute("data-timeout-id");
           if (timeoutId) clearTimeout(parseInt(timeoutId));
-          
+
           // Confirmar borrado
           deleteSongFromRepertorio(songId);
         }
@@ -978,12 +978,12 @@ function initEventHandlers() {
   // Modal de Agregar Tema
   const btnAdd = document.getElementById("btn-add-song");
   const modal = document.getElementById("modal-add-song");
-  
+
   if (btnAdd && modal) {
     btnAdd.addEventListener("click", () => {
       document.getElementById("form-song-id").value = "";
       document.getElementById("song-form").reset();
-      
+
       // Restablecer campos ocultos
       document.getElementById("song-title").value = "";
       document.getElementById("song-artist").value = "";
@@ -993,7 +993,7 @@ function initEventHandlers() {
       document.getElementById("song-status").value = "todo";
       document.getElementById("song-lyrics").value = "";
       document.getElementById("song-image").value = "";
-      
+
       // Restablecer campos inline
       const metaTitle = document.getElementById("meta-title");
       const metaArtist = document.getElementById("meta-artist");
@@ -1001,7 +1001,7 @@ function initEventHandlers() {
       const metaKey = document.getElementById("meta-key");
       const metaTimesig = document.getElementById("meta-timesig");
       const metaStatus = document.getElementById("meta-status");
-      
+
       if (metaTitle) updateTextElement(metaTitle, "");
       if (metaArtist) updateTextElement(metaArtist, "");
       if (metaBpm) updateTextElement(metaBpm, "120");
@@ -1010,13 +1010,13 @@ function initEventHandlers() {
       if (metaStatus) metaStatus.textContent = "Por Aprender";
       const metaImage = document.getElementById("meta-image");
       if (metaImage) updateTextElement(metaImage, "");
-      
+
       // Limpiar editor de letras rico
       const richEditor = document.getElementById("editor-rich-lyrics");
       if (richEditor) {
         richEditor.innerHTML = "";
       }
-      
+
       // Cargar integrantes elegibles para el nuevo tema (todos marcados por defecto)
       const performersContainer = document.getElementById("editor-song-performers-list");
       if (performersContainer) {
@@ -1033,7 +1033,7 @@ function initEventHandlers() {
       modal.classList.add("open");
     });
   }
-  
+
   // Cerrar cualquier modal al hacer clic en sus botones de cerrar/cancelar (Soporta múltiples formularios, dinámicos o estáticos)
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".close-modal-btn");
@@ -1057,7 +1057,7 @@ function initEventHandlers() {
       });
     }
   });
-  
+
   // Importar archivo de letras
   const fileInput = document.getElementById("lyrics-file-input");
   if (fileInput) {
@@ -1068,7 +1068,7 @@ function initEventHandlers() {
       }
     });
   }
-  
+
   // Convertir letra tradicional + auto-etiquetar estrofas
   const btnConvert = document.getElementById("btn-convert-lyrics");
   if (btnConvert) {
@@ -1099,48 +1099,48 @@ function initEventHandlers() {
       saveSongFromForm();
     });
   }
-  
+
   // Metrónomo
   const playMetronomeBtn = document.getElementById("btn-play-metronome");
   if (playMetronomeBtn) {
     playMetronomeBtn.addEventListener("click", toggleMetronome);
   }
-  
+
   const bpmSlider = document.getElementById("metronome-bpm-slider");
   if (bpmSlider) {
     bpmSlider.addEventListener("input", (e) => {
       updateBpm(parseInt(e.target.value));
     });
   }
-  
+
   const btnBpmMinus = document.getElementById("btn-bpm-minus");
   const btnBpmPlus = document.getElementById("btn-bpm-plus");
   if (btnBpmMinus) btnBpmMinus.addEventListener("click", () => updateBpm(state.metronome.bpm - 1));
   if (btnBpmPlus) btnBpmPlus.addEventListener("click", () => updateBpm(state.metronome.bpm + 1));
-  
+
   // Reproducción de Grabaciones
   const btnScrollPlay = document.getElementById("btn-scroll-play");
   if (btnScrollPlay) {
     btnScrollPlay.addEventListener("click", togglePlaybackTransport);
   }
-  
+
   // Grabación
   const btnRecord = document.getElementById("btn-record");
   const btnStopRecord = document.getElementById("btn-stop-record");
-  
+
   if (btnRecord) btnRecord.addEventListener("click", startRecording);
   if (btnStopRecord) btnStopRecord.addEventListener("click", stopRecording);
 }
 
 function switchTab(tabName) {
   state.currentTab = tabName;
-  
+
   // Detener metrónomo y scroll si salimos de la sala de ensayo
   if (tabName !== "rehearsal") {
     if (state.metronome.isPlaying) toggleMetronome();
     if (state.autoScroll.isActive) toggleAutoScroll();
   }
-  
+
   // Ajustar paddings y scroll del layout principal si estamos en Ensayo
   const mainContentEl = document.querySelector(".main-content");
   if (mainContentEl) {
@@ -1150,12 +1150,12 @@ function switchTab(tabName) {
       mainContentEl.classList.remove("ensayo-active");
     }
   }
-  
 
-  
+
+
   // Cerrar paneles móviles al cambiar de pestaña
   closeMobileDrawers();
-  
+
   renderNav();
 }
 
@@ -1163,7 +1163,7 @@ function switchTab(tabName) {
 function renderSetlist() {
   const grid = document.getElementById("setlist-grid");
   if (!grid) return;
-  
+
   // Si hay una solicitud pendiente de unirse a otra banda
   if (state.requestedBandId) {
     grid.innerHTML = `
@@ -1180,37 +1180,37 @@ function renderSetlist() {
         </div>
       </div>
     `;
-    
+
     if (window.supabaseClient) {
       window.supabaseClient.from('bands').select('name').eq('id', state.requestedBandId).maybeSingle().then(({ data }) => {
         const el = document.getElementById("waiting-band-name");
         if (el && data && data.name) {
           el.textContent = data.name;
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
-    
+
     const totalCount = document.getElementById("total-songs-count");
     if (totalCount) totalCount.textContent = "0 Temas";
     return;
   }
-  
+
   // Filtrar
   const filteredSongs = state.songs.filter(song => {
     // Filtro por Estado
     const matchesStatus = state.filters.status === "all" || song.status === state.filters.status;
-    
+
     // Filtro por Búsqueda (Título o Artista)
-    const matchesSearch = (song.title||'').toLowerCase().includes((state.filters.search||'').toLowerCase()) || 
-                          (song.artist||'').toLowerCase().includes((state.filters.search||'').toLowerCase());
-                          
+    const matchesSearch = (song.title || '').toLowerCase().includes((state.filters.search || '').toLowerCase()) ||
+      (song.artist || '').toLowerCase().includes((state.filters.search || '').toLowerCase());
+
     return matchesStatus && matchesSearch;
   });
-  
+
   // Actualizar contador
   const totalCount = document.getElementById("total-songs-count");
   if (totalCount) totalCount.textContent = `${state.songs.length} Temas`;
-  
+
   if (filteredSongs.length === 0) {
     grid.innerHTML = `
       <div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-muted)">
@@ -1219,7 +1219,7 @@ function renderSetlist() {
     `;
     return;
   }
-  
+
   grid.innerHTML = filteredSongs.map(song => {
     let statusClass = "status-todo";
     let statusText = "Por Aprender";
@@ -1230,7 +1230,7 @@ function renderSetlist() {
       statusClass = "status-ready";
       statusText = "Listo";
     }
-    
+
     return `
       <div class="song-card" onclick="openSongInRehearsal(event, '${song.id}')">
         <div class="song-card-bg" style="background-image: url('${song.image}')"></div>
@@ -1241,7 +1241,7 @@ function renderSetlist() {
         
         <div class="song-card-content">
           <div class="card-top">
-            <span class="last-edit" style="margin-left: 28px;">LAST EDIT: ${(song.lastEdit||"").toUpperCase()}</span>
+            <span class="last-edit" style="margin-left: 28px;">LAST EDIT: ${(song.lastEdit || "").toUpperCase()}</span>
           </div>
           
           <div class="song-title-group">
@@ -1270,7 +1270,7 @@ function renderSetlist() {
       </div>
     `;
   }).join("");
-  
+
   // Renderizar listado de grabaciones globales en la barra lateral
   renderGlobalRecordingsList();
 }
@@ -1280,23 +1280,23 @@ function openSongInRehearsal(eventOrId, optionalSongId) {
   try {
     let songId;
     let event;
-    
+
     if (typeof eventOrId === "string") {
       songId = eventOrId;
     } else {
       event = eventOrId;
       songId = optionalSongId;
     }
-    
+
     if (event && event.target && event.target.closest(".btn-delete-song")) {
       return;
     }
-    
+
     if (!songId) {
       console.error("openSongInRehearsal called without a song ID");
       return;
     }
-    
+
     state.activeSongId = songId;
     state.transposeOffset = 0;
     state.autoscrollActivo = true;
@@ -1304,7 +1304,7 @@ function openSongInRehearsal(eventOrId, optionalSongId) {
     state.tiempoActual = 0;
     state.mostrarTransposer = false;
     state.lineaActivaIndex = 0;
-    
+
     const song = state.songs.find(s => String(s.id) === String(songId));
     if (song) {
       const lines = parseLyricsToEnsayoModel(song.lyrics);
@@ -1313,7 +1313,7 @@ function openSongInRehearsal(eventOrId, optionalSongId) {
         state.seccionActivaId = structure[0].id;
       }
     }
-    
+
     switchTab("rehearsal");
     renderApp();
   } catch (err) {
@@ -1326,12 +1326,12 @@ function saveSongFromForm() {
   // Asegurar que la letra rica esté serializada antes de guardar
   const serializedLyrics = serializeRichLyrics();
   document.getElementById("song-lyrics").value = serializedLyrics;
-  
+
   // Asegurar que los campos inline se sincronicen por si están en edición activa
   const metaTitle = document.getElementById("meta-title");
   const metaArtist = document.getElementById("meta-artist");
   const metaBpm = document.getElementById("meta-bpm");
-  
+
   if (metaTitle && metaTitle.getAttribute("contenteditable") === "true") {
     metaTitle.blur();
   }
@@ -1352,7 +1352,7 @@ function saveSongFromForm() {
   const rhythm = "↓ ↑ ↓ ↑";
   const rawLyrics = document.getElementById("song-lyrics").value;
   const bracketConverted = convertTraditionalToBracket(rawLyrics.trim());
-  
+
   // Auto-etiquetar automáticamente si no contiene cabeceras estructuradas, para que el usuario no tenga que pulsar botones
   let lyrics = bracketConverted;
   const linesOfLyrics = bracketConverted.split("\n");
@@ -1360,7 +1360,7 @@ function saveSongFromForm() {
   if (!hasHeaders) {
     lyrics = autoTagStanzas(bracketConverted);
   }
-  
+
   if (!title || title.trim() === "" || title === "Título del Tema") {
     alert("Por favor, completa el título del tema.");
     return;
@@ -1373,7 +1373,7 @@ function saveSongFromForm() {
     alert("Por favor, escribe la letra del tema.");
     return;
   }
-  
+
   let songToSave;
   if (songId) {
     // Recopilar checkboxes de integrantes del tema
@@ -1419,14 +1419,14 @@ function saveSongFromForm() {
     };
     state.songs.unshift(songToSave);
   }
-  
+
   // Guardar directamente en Firestore la canción modificada/creada
   if (songToSave && window.SongsService) {
     window.SongsService.saveSong(songToSave).catch(err => {
       console.error("Error al guardar canción en Firebase:", err);
     });
   }
-  
+
   document.getElementById("modal-add-song").classList.remove("open");
   renderApp();
 }
@@ -1442,14 +1442,14 @@ function parseLyricsToEnsayoModel(lyricsText) {
   let seccionId = "sec-intro";
   let seccionNotas = "";
   let nextIsNewParagraph = false;
-  
+
   lines.forEach((line, index) => {
     const trimmed = line.trim();
     if (trimmed === "") {
       nextIsNewParagraph = true;
       return;
     }
-    
+
     // Detectar cabecera de sección, e.g. [CORO // ENTRA BATERIA] o [INTRO]
     if (isSectionHeader(trimmed)) {
       let name = trimmed.slice(1, -1).trim();
@@ -1464,34 +1464,34 @@ function parseLyricsToEnsayoModel(lyricsText) {
       nextIsNewParagraph = true;
       return;
     }
-    
+
     // Extraer acordes entre corchetes y calcular su posición exacta relativa al texto limpio
     const chordRegex = /\[([^\]]+)\]/g;
     const lineChords = [];
     let match;
-    
+
     let cleanLineText = "";
     let lastIndex = 0;
     let cleanIndex = 0;
-    
+
     while ((match = chordRegex.exec(line)) !== null) {
       const segment = line.substring(lastIndex, match.index);
       cleanLineText += segment;
       cleanIndex += segment.length;
-      
+
       lineChords.push({
         id: `ac-${index}-${match.index}`,
         acorde: match[1],
         posicionCaracter: cleanIndex
       });
-      
+
       lastIndex = chordRegex.lastIndex;
     }
     cleanLineText += line.substring(lastIndex);
-    
+
     const trimmedLeadingSpaces = cleanLineText.length - cleanLineText.trimStart().length;
     const cleanText = cleanLineText.trim();
-    
+
     // Ajustar posiciones de acordes según los espacios eliminados al inicio por trim()
     // SOLO si la línea contiene letra (no es puramente instrumental)
     if (cleanText !== "") {
@@ -1499,7 +1499,7 @@ function parseLyricsToEnsayoModel(lyricsText) {
         c.posicionCaracter = Math.max(0, c.posicionCaracter - trimmedLeadingSpaces);
       });
     }
-    
+
     result.push({
       id: `line-${index}`,
       texto: cleanText || "(Instrumental)",
@@ -1516,15 +1516,15 @@ function parseLyricsToEnsayoModel(lyricsText) {
 function getSongEstructuraEnsayo(song, lines) {
   const sections = [];
   const uniqueSecIds = [...new Set(lines.map(l => l.seccionId))];
-  
+
   uniqueSecIds.forEach((secId) => {
     const name = secId.replace("sec-", "").toUpperCase().replace(/-/g, " ");
     const secLines = lines.filter(l => l.seccionId === secId);
     if (secLines.length === 0) return;
-    
+
     const startIdx = lines.indexOf(secLines[0]);
     const endIdx = lines.indexOf(secLines[secLines.length - 1]);
-    
+
     let type = "verso";
     if (name.includes("INTRO")) type = "intro";
     else if (name.startsWith("PRE") || name.includes("PRE-CORO") || name.includes("PRE CORO")) type = "pre-coro";
@@ -1532,7 +1532,7 @@ function getSongEstructuraEnsayo(song, lines) {
     else if (name.includes("PUENTE") || name.includes("BRIDGE")) type = "puente";
     else if (name.includes("SOLO")) type = "solo";
     else if (name.includes("FINAL") || name.includes("OUTRO")) type = "outro";
-    
+
     sections.push({
       id: secId,
       nombre: name,
@@ -1542,7 +1542,7 @@ function getSongEstructuraEnsayo(song, lines) {
       notas: secLines[0].seccionNotas || ""
     });
   });
-  
+
   if (sections.length === 0) {
     sections.push({
       id: "sec-intro",
@@ -1576,11 +1576,11 @@ function transposeChord(chord, offset) {
 function triggerEnsayoToast(msg) {
   const existing = document.querySelector(".ensayo-toast");
   if (existing) existing.remove();
-  
+
   const toast = document.createElement("div");
   toast.className = "ensayo-toast glass";
   toast.innerHTML = `<span>🔔</span> ${msg}`;
-  const room = document.getElementById("rehearsal-room-content"); if(room) room.appendChild(toast);
+  const room = document.getElementById("rehearsal-room-content"); if (room) room.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
 }
 
@@ -1614,7 +1614,7 @@ function getLineColor(lineSec) {
 // Renderizar fila de acordes con posicionamiento real por carácter o flujo normal para instrumentales
 function renderChordRow(acordes, transposeOffset, isInstrumental = false) {
   if (!acordes || acordes.length === 0) return "";
-  
+
   if (isInstrumental) {
     const pills = acordes.map(ac => {
       const chord = transposeChord(ac.acorde, transposeOffset);
@@ -1637,10 +1637,10 @@ function renderChordRow(acordes, transposeOffset, isInstrumental = false) {
 function renderRosterHtml(activeSec, members, song, lineIdx) {
   // Si no hay canción, retornar vacío
   if (!song) return "";
-  
+
   // Obtener los asignados a la línea activa
   const activeLinePerformers = (song.linePerformers && song.linePerformers[lineIdx]) ? song.linePerformers[lineIdx] : [];
-  
+
   // Obtener los intérpretes específicos del tema (o por defecto los del grupo)
   const songPerformers = song.interpretes || (state.members && state.members.length > 0 ? state.members.map(m => ({
     id: "int-" + m.name.toLowerCase().replace(/\s+/g, "-"),
@@ -1648,15 +1648,15 @@ function renderRosterHtml(activeSec, members, song, lineIdx) {
     instrumento: m.instruments || m.role || "Músico",
     iniciales: m.name.slice(0, 2).toUpperCase()
   })) : [
-    { id: "int-camila",  nombre: "Camila",  instrumento: "Voz",    iniciales: "CA" },
-    { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro",   iniciales: "RO" }
+    { id: "int-camila", nombre: "Camila", instrumento: "Voz", iniciales: "CA" },
+    { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro", iniciales: "RO" }
   ]);
-  
+
   return songPerformers.map(m => {
     const activo = activeLinePerformers.includes(m.id);
     // En el roster de móviles, si hay músicos asignados al verso, ocultar los que no participan para vista limpia
     if (activeLinePerformers.length > 0 && !activo) return "";
-    
+
     return `
       <div class="roster-member ${activo ? 'active' : 'inactive'}" style="opacity: ${activo ? 1 : 0.5}">
         <div class="roster-avatar-circle" style="border-color: ${activo ? 'var(--neon-lime)' : 'var(--border-soft)'}; color: ${activo ? '#fff' : 'var(--text-dim)'}">
@@ -1674,8 +1674,8 @@ function renderRehearsalRoom() {
     const room = document.getElementById("rehearsal-room-content");
     if (!room) return;
 
-  if (!state.activeSongId) {
-    room.innerHTML = `
+    if (!state.activeSongId) {
+      room.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:center; height:100%; background:var(--bg-stage);">
         <div style="text-align:center; max-width:320px; padding:24px; border:1px solid var(--border); border-radius:18px; background:var(--bg-panel);">
           <div style="font-size:38px; margin-bottom:12px;">🎙️</div>
@@ -1688,59 +1688,59 @@ function renderRehearsalRoom() {
           </button>
         </div>
       </div>`;
-    return;
-  }
+      return;
+    }
 
-  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
-  if (!song) return;
+    const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+    if (!song) return;
 
-  const lines = parseLyricsToEnsayoModel(song.lyrics);
-  const structure = getSongEstructuraEnsayo(song, lines);
+    const lines = parseLyricsToEnsayoModel(song.lyrics);
+    const structure = getSongEstructuraEnsayo(song, lines);
 
-  if (!state.seccionActivaId && structure.length > 0) {
-    state.seccionActivaId = structure[0].id;
-  }
+    if (!state.seccionActivaId && structure.length > 0) {
+      state.seccionActivaId = structure[0].id;
+    }
 
-  const tonalidadTranspuesta = transposeChord(song.key || "C", state.transposeOffset || 0);
-  const activeSec = structure.find(s => s.id === state.seccionActivaId) || structure[0];
-  const activeNotas = activeSec ? (activeSec.notes || activeSec.notas || "") : "";
-  const lineIdx = state.lineaActivaIndex || 0;
-  const activeLineNotes = (song.lineNotes && song.lineNotes[lineIdx] !== undefined) ? song.lineNotes[lineIdx] : "";
-  const duration = song.duracionSegundos || 220;
-  const progressPercent = Math.min(100, ((state.tiempoActual || 0) / duration) * 100);
-  const selectedCount = state.selectedLineIndices ? state.selectedLineIndices.length : 0;
-  const isMultiSelect = selectedCount > 0;
+    const tonalidadTranspuesta = transposeChord(song.key || "C", state.transposeOffset || 0);
+    const activeSec = structure.find(s => s.id === state.seccionActivaId) || structure[0];
+    const activeNotas = activeSec ? (activeSec.notes || activeSec.notas || "") : "";
+    const lineIdx = state.lineaActivaIndex || 0;
+    const activeLineNotes = (song.lineNotes && song.lineNotes[lineIdx] !== undefined) ? song.lineNotes[lineIdx] : "";
+    const duration = song.duracionSegundos || 220;
+    const progressPercent = Math.min(100, ((state.tiempoActual || 0) / duration) * 100);
+    const selectedCount = state.selectedLineIndices ? state.selectedLineIndices.length : 0;
+    const isMultiSelect = selectedCount > 0;
 
-  // Importar por defecto los integrantes desde la ficha de músicos del grupo
-  const members = song.interpretes || (state.members && state.members.length > 0 ? state.members.map(m => ({
-    id: "int-" + m.name.toLowerCase().replace(/\s+/g, "-"),
-    nombre: m.name,
-    instrumento: m.instruments || m.role || "Músico",
-    iniciales: m.name.slice(0, 2).toUpperCase()
-  })) : [
-    { id: "int-camila",  nombre: "Camila",  instrumento: "Voz",    iniciales: "CA" },
-    { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro",   iniciales: "RO" },
-    { id: "int-julian",  nombre: "Julián",  instrumento: "Bajo",   iniciales: "JU" },
-    { id: "int-male",    nombre: "Male",    instrumento: "Batería", iniciales: "MA" },
-    { id: "int-franco",  nombre: "Franco",  instrumento: "Teclado", iniciales: "FR" }
-  ]);
+    // Importar por defecto los integrantes desde la ficha de músicos del grupo
+    const members = song.interpretes || (state.members && state.members.length > 0 ? state.members.map(m => ({
+      id: "int-" + m.name.toLowerCase().replace(/\s+/g, "-"),
+      nombre: m.name,
+      instrumento: m.instruments || m.role || "Músico",
+      iniciales: m.name.slice(0, 2).toUpperCase()
+    })) : [
+      { id: "int-camila", nombre: "Camila", instrumento: "Voz", iniciales: "CA" },
+      { id: "int-rodrigo", nombre: "Rodrigo", instrumento: "Coro", iniciales: "RO" },
+      { id: "int-julian", nombre: "Julián", instrumento: "Bajo", iniciales: "JU" },
+      { id: "int-male", nombre: "Male", instrumento: "Batería", iniciales: "MA" },
+      { id: "int-franco", nombre: "Franco", instrumento: "Teclado", iniciales: "FR" }
+    ]);
 
-  // — MOBILE BULK ASSIGN PANEL —
-  let mobileBulkBarHtml = "";
-  if (selectedCount > 0) {
-    const avatarsHtml = members.map(m => {
-      const anyHave = state.selectedLineIndices.some(idx => 
-        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
-      );
-      const allHave = state.selectedLineIndices.every(idx => 
-        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
-      );
-      
-      const statusClass = allHave ? 'active' : anyHave ? 'partial' : '';
-      const ringColor = allHave ? 'var(--neon-lime)' : anyHave ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
-      const borderStyle = anyHave && !allHave ? 'dashed' : 'solid';
-      
-      return `
+    // — MOBILE BULK ASSIGN PANEL —
+    let mobileBulkBarHtml = "";
+    if (selectedCount > 0) {
+      const avatarsHtml = members.map(m => {
+        const anyHave = state.selectedLineIndices.some(idx =>
+          song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
+        );
+        const allHave = state.selectedLineIndices.every(idx =>
+          song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
+        );
+
+        const statusClass = allHave ? 'active' : anyHave ? 'partial' : '';
+        const ringColor = allHave ? 'var(--neon-lime)' : anyHave ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.15)';
+        const borderStyle = anyHave && !allHave ? 'dashed' : 'solid';
+
+        return `
         <button class="mobile-bulk-avatar-btn ${statusClass}" onclick="toggleLinePerformer('${m.id}')" style="background:none; border:none; padding:0; position:relative; cursor:pointer; outline:none; display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0;">
           <div class="mobile-bulk-avatar" style="width:32px; height:32px; border-radius:50%; border:2px ${borderStyle} ${ringColor}; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; color:white; background:rgba(0,0,0,0.3); transition:all 0.2s;">
             ${m.iniciales}
@@ -1748,9 +1748,9 @@ function renderRehearsalRoom() {
           <span style="font-size:8px; color:var(--text-dim); max-width:40px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.nombre}</span>
         </button>
       `;
-    }).join("");
+      }).join("");
 
-    mobileBulkBarHtml = `
+      mobileBulkBarHtml = `
       <div class="mobile-bulk-assign-bar">
         <button onclick="clearMassiveSelection()" style="background:rgba(255,255,255,0.05); border:none; border-radius:50%; width:28px; height:28px; color:white; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; outline:none;"><i class="ti ti-x"></i></button>
         <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:bold; line-height:1.2; max-width:70px;">
@@ -1761,87 +1761,87 @@ function renderRehearsalRoom() {
         </div>
       </div>
     `;
-  }
+    }
 
-  // — STRUCTURE SIDEBAR —
-  const structureHtml = structure.map(sec => {
-    const isActive = state.seccionActivaId === sec.id;
-    return `
+    // — STRUCTURE SIDEBAR —
+    const structureHtml = structure.map(sec => {
+      const isActive = state.seccionActivaId === sec.id;
+      return `
       <div class="section-item ${isActive ? 'active' : ''}" data-id="${sec.id}">
         <i class="ti ti-music section-icon"></i>
         <div class="section-label">${sec.nombre}</div>
         <i class="ti ti-menu-2 section-menu"></i>
       </div>`;
-  }).join("");
+    }).join("");
 
-  // — SECTION TAB CHIPS (mobile) —
-  const sectionChipsHtml = structure.map(sec => {
-    const isActive = state.seccionActivaId === sec.id;
-    return `<button class="section-tab-chip ${isActive ? 'active' : ''}" data-id="${sec.id}">${sec.nombre}</button>`;
-  }).join("");
+    // — SECTION TAB CHIPS (mobile) —
+    const sectionChipsHtml = structure.map(sec => {
+      const isActive = state.seccionActivaId === sec.id;
+      return `<button class="section-tab-chip ${isActive ? 'active' : ''}" data-id="${sec.id}">${sec.nombre}</button>`;
+    }).join("");
 
-  // — LYRIC LINES GROUPED BY STANZA/SECTION —
-  let currentSecId = null;
-  let stanzaBlocks = [];
-  let currentBlock = null;
+    // — LYRIC LINES GROUPED BY STANZA/SECTION —
+    let currentSecId = null;
+    let stanzaBlocks = [];
+    let currentBlock = null;
 
-  lines.forEach((line, idx) => {
-    if (line.seccionId !== currentSecId) {
-      currentSecId = line.seccionId;
-      const sec = structure.find(s => s.id === currentSecId);
-      currentBlock = {
-        seccionId: currentSecId,
-        nombre: sec ? sec.nombre : "Sin Sección",
-        tipo: sec ? sec.tipo : "verso",
-        notes: sec ? (sec.notes || sec.notas || "") : "",
-        lines: []
-      };
-      stanzaBlocks.push(currentBlock);
-    }
-    currentBlock.lines.push({ line, idx });
-  });
-
-  const linesHtml = stanzaBlocks.map(block => {
-    const secColor = getLineColor(block);
-    
-    const blockLinesHtml = block.lines.map(({ line, idx }) => {
-      const isActive = state.lineaActivaIndex === idx;
-      const isSelected = state.selectedLineIndices && state.selectedLineIndices.includes(idx);
-      const isInst = line.texto === "(Instrumental)";
-      const chordRow = renderChordRow(line.acordes, state.transposeOffset || 0, isInst);
-      const lineNotes = isActive && activeNotas ? `<div class="lyric-notes">💡 ${activeNotas}</div>` : "";
-
-      // Obtener los intérpretes específicos de esta línea
-      const activeLinePerformers = (song.linePerformers && song.linePerformers[idx]) ? song.linePerformers[idx] : [];
-      
-      // Renderizar entre 1 y 5 puntos de colores indicando los intérpretes
-      let dotsHtml = "";
-      if (activeLinePerformers.length > 0) {
-        dotsHtml = `<div class="line-performers-dots" style="position:absolute; left:-22px; width:16px; top:9px; display:flex; gap:1.5px; justify-content:center; align-items:center; z-index:10;">`;
-        activeLinePerformers.slice(0, 5).forEach(perfId => {
-          const member = state.members.find(m => ("int-" + m.name.toLowerCase().replace(/\s+/g, "-")) === perfId);
-          const color = member ? member.color : "#FF3EA5";
-          dotsHtml += `<div class="line-dot-mini" style="width:6px; height:6px; border-radius:50%; background:${color}; box-shadow:0 0 4px ${color};"></div>`;
-        });
-        dotsHtml += `</div>`;
-      } else {
-        dotsHtml = `<div class="line-dot" style="background:${secColor}; box-shadow:0 0 7px ${secColor};"></div>`;
+    lines.forEach((line, idx) => {
+      if (line.seccionId !== currentSecId) {
+        currentSecId = line.seccionId;
+        const sec = structure.find(s => s.id === currentSecId);
+        currentBlock = {
+          seccionId: currentSecId,
+          nombre: sec ? sec.nombre : "Sin Sección",
+          tipo: sec ? sec.tipo : "verso",
+          notes: sec ? (sec.notes || sec.notas || "") : "",
+          lines: []
+        };
+        stanzaBlocks.push(currentBlock);
       }
+      currentBlock.lines.push({ line, idx });
+    });
 
-      // Verificar si la línea tiene notas de texto o de audio
-      const hasTextNotes = song.lineNotes && song.lineNotes[idx] && song.lineNotes[idx].trim() !== "";
-      const hasAudioNotes = song.lineAudios && song.lineAudios[idx] && song.lineAudios[idx].length > 0;
-      
-      let indicatorsHtml = `<div class="line-indicators" style="display:flex; gap:6px; align-items:center; margin-right: 8px;">`;
-      if (hasTextNotes) {
-        indicatorsHtml += `<i class="ti ti-file-text" style="color: var(--neon-cyan); font-size:12px; text-shadow: 0 0 4px var(--neon-cyan);" title="Tiene notas de texto"></i>`;
-      }
-      if (hasAudioNotes) {
-        indicatorsHtml += `<i class="ti ti-microphone" style="color: var(--neon-magenta); font-size:12px; text-shadow: 0 0 4px var(--neon-magenta);" title="Tiene ideas de arreglo grabadas"></i>`;
-      }
-      indicatorsHtml += `</div>`;
+    const linesHtml = stanzaBlocks.map(block => {
+      const secColor = getLineColor(block);
 
-      return `
+      const blockLinesHtml = block.lines.map(({ line, idx }) => {
+        const isActive = state.lineaActivaIndex === idx;
+        const isSelected = state.selectedLineIndices && state.selectedLineIndices.includes(idx);
+        const isInst = line.texto === "(Instrumental)";
+        const chordRow = renderChordRow(line.acordes, state.transposeOffset || 0, isInst);
+        const lineNotes = isActive && activeNotas ? `<div class="lyric-notes">💡 ${activeNotas}</div>` : "";
+
+        // Obtener los intérpretes específicos de esta línea
+        const activeLinePerformers = (song.linePerformers && song.linePerformers[idx]) ? song.linePerformers[idx] : [];
+
+        // Renderizar entre 1 y 5 puntos de colores indicando los intérpretes
+        let dotsHtml = "";
+        if (activeLinePerformers.length > 0) {
+          dotsHtml = `<div class="line-performers-dots" style="position:absolute; left:-22px; width:16px; top:9px; display:flex; gap:1.5px; justify-content:center; align-items:center; z-index:10;">`;
+          activeLinePerformers.slice(0, 5).forEach(perfId => {
+            const member = state.members.find(m => ("int-" + m.name.toLowerCase().replace(/\s+/g, "-")) === perfId);
+            const color = member ? member.color : "#FF3EA5";
+            dotsHtml += `<div class="line-dot-mini" style="width:6px; height:6px; border-radius:50%; background:${color}; box-shadow:0 0 4px ${color};"></div>`;
+          });
+          dotsHtml += `</div>`;
+        } else {
+          dotsHtml = `<div class="line-dot" style="background:${secColor}; box-shadow:0 0 7px ${secColor};"></div>`;
+        }
+
+        // Verificar si la línea tiene notas de texto o de audio
+        const hasTextNotes = song.lineNotes && song.lineNotes[idx] && song.lineNotes[idx].trim() !== "";
+        const hasAudioNotes = song.lineAudios && song.lineAudios[idx] && song.lineAudios[idx].length > 0;
+
+        let indicatorsHtml = `<div class="line-indicators" style="display:flex; gap:6px; align-items:center; margin-right: 8px;">`;
+        if (hasTextNotes) {
+          indicatorsHtml += `<i class="ti ti-file-text" style="color: var(--neon-cyan); font-size:12px; text-shadow: 0 0 4px var(--neon-cyan);" title="Tiene notas de texto"></i>`;
+        }
+        if (hasAudioNotes) {
+          indicatorsHtml += `<i class="ti ti-microphone" style="color: var(--neon-magenta); font-size:12px; text-shadow: 0 0 4px var(--neon-magenta);" title="Tiene ideas de arreglo grabadas"></i>`;
+        }
+        indicatorsHtml += `</div>`;
+
+        return `
         <div class="lyric-line-editor ${isActive ? 'active' : ''} ${isSelected ? 'selected' : ''}" id="ensayo-line-${idx}" data-index="${idx}" style="display:flex; justify-content:space-between; align-items:center; width:100%; position:relative;">
           <div style="flex:1; position:relative; min-width:0; padding-right:15px;">
             <span class="line-number">${idx + 1}</span>
@@ -1865,15 +1865,15 @@ function renderRehearsalRoom() {
             </div>
           </div>
         </div>`;
-    }).join("");
+      }).join("");
 
-    // Cabecera de la estrofa
-    const blockHeader = `
+      // Cabecera de la estrofa
+      const blockHeader = `
       <div class="stanza-header" style="font-size:10px; font-weight:700; color:${secColor}; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px; opacity:0.8; padding-left: 6px;">
         ${block.nombre} ${block.notes ? `// <span style="font-style:italic; font-weight:normal; text-transform:none; color:var(--text-dim); font-size:10px;">${block.notes}</span>` : ""}
       </div>`;
 
-    return `
+      return `
       <div class="stanza-block" style="position:relative; padding-left:14px; margin-bottom:24px;">
         <!-- Línea vertical neon que delimita la estrofa -->
         <div class="stanza-cable" style="position:absolute; left:0; top:0; bottom:0; width:2px; background:${secColor}; box-shadow:0 0 6px ${secColor}; opacity:0.4; border-radius:2px;"></div>
@@ -1882,27 +1882,27 @@ function renderRehearsalRoom() {
           ${blockLinesHtml}
         </div>
       </div>`;
-  }).join("");
+    }).join("");
 
-  // — PARTICIPANTS (right sidebar) —
-  const participantsHtml = members.map(m => {
-    let activo = false;
-    let esParcial = false;
-    
-    if (state.selectedLineIndices && state.selectedLineIndices.length > 0) {
-      const anyHave = state.selectedLineIndices.some(idx => 
-        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
-      );
-      const allHave = state.selectedLineIndices.every(idx => 
-        song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
-      );
-      activo = anyHave;
-      esParcial = anyHave && !allHave;
-    } else {
-      activo = (song.linePerformers && song.linePerformers[lineIdx] && song.linePerformers[lineIdx].includes(m.id)) ? true : false;
-    }
+    // — PARTICIPANTS (right sidebar) —
+    const participantsHtml = members.map(m => {
+      let activo = false;
+      let esParcial = false;
 
-    return `
+      if (state.selectedLineIndices && state.selectedLineIndices.length > 0) {
+        const anyHave = state.selectedLineIndices.some(idx =>
+          song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
+        );
+        const allHave = state.selectedLineIndices.every(idx =>
+          song.linePerformers && song.linePerformers[idx] && song.linePerformers[idx].includes(m.id)
+        );
+        activo = anyHave;
+        esParcial = anyHave && !allHave;
+      } else {
+        activo = (song.linePerformers && song.linePerformers[lineIdx] && song.linePerformers[lineIdx].includes(m.id)) ? true : false;
+      }
+
+      return `
       <div class="participant-card ${activo ? 'active' : ''} ${esParcial ? 'partial' : ''}" data-id="${m.id}" onclick="toggleLinePerformer('${m.id}')" style="cursor:pointer">
         <div class="participant-avatar">${m.iniciales}</div>
         <div class="participant-info">
@@ -1911,12 +1911,12 @@ function renderRehearsalRoom() {
         </div>
         <i class="ti ti-check participant-check"></i>
       </div>`;
-  }).join("");
+    }).join("");
 
-  // — ROSTER STRIP (mobile) —
-  const rosterStripHtml = renderRosterHtml(activeSec, members, song, state.lineaActivaIndex || 0);
+    // — ROSTER STRIP (mobile) —
+    const rosterStripHtml = renderRosterHtml(activeSec, members, song, state.lineaActivaIndex || 0);
 
-  room.innerHTML = `
+    room.innerHTML = `
     <div class="layout">
 
       <!-- TOPBAR -->
@@ -1928,9 +1928,9 @@ function renderRehearsalRoom() {
             <div class="transposer-dropdown" id="ensayo-transposer-dropdown" style="display:none;">
               <div class="dropdown-title">Transponer</div>
               <div class="transposer-grid">
-                ${[-5,-4,-3,-2,-1,0,1,2,3,4,5].map(o => `
-                  <button class="transpose-btn ${(state.transposeOffset||0)===o?'active':''}" data-offset="${o}">
-                    ${o===0?'Orig':o>0?'+'+o:o}
+                ${[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5].map(o => `
+                  <button class="transpose-btn ${(state.transposeOffset || 0) === o ? 'active' : ''}" data-offset="${o}">
+                    ${o === 0 ? 'Orig' : o > 0 ? '+' + o : o}
                   </button>`).join("")}
               </div>
             </div>
@@ -2134,7 +2134,7 @@ function renderRehearsalRoom() {
       ${mobileBulkBarHtml}
     </div>`;
 
-  bindRehearsalEvents(structure, lines, song);
+    bindRehearsalEvents(structure, lines, song);
   } catch (err) {
     console.error("Error in renderRehearsalRoom:", err);
   }
@@ -2191,12 +2191,12 @@ function bindRehearsalEvents(structure, lines, song) {
       if (e.target.closest(".btn-line-menu") || e.target.closest(".line-dropdown-menu") || e.target.closest(".line-indicators")) return;
       if (e.target.tagName === "BUTTON" || e.target.tagName === "I" || e.target.tagName === "INPUT" || e.target.closest(".lyric-controls")) return;
       const idx = parseInt(el.getAttribute("data-index"));
-      
-      const isSelectionTrigger = e.target.classList.contains("line-number") || 
-                                 e.target.classList.contains("line-dot") || 
-                                 e.target.closest(".line-performers-dots") ||
-                                 e.target.classList.contains("line-dot-mini");
-      
+
+      const isSelectionTrigger = e.target.classList.contains("line-number") ||
+        e.target.classList.contains("line-dot") ||
+        e.target.closest(".line-performers-dots") ||
+        e.target.classList.contains("line-dot-mini");
+
       if (isSelectionTrigger || e.ctrlKey) {
         e.preventDefault();
         if (!state.selectedLineIndices) state.selectedLineIndices = [];
@@ -2294,9 +2294,9 @@ function bindRehearsalEvents(structure, lines, song) {
 
   // Transport: Transpose +/-
   const btnTpDown = document.getElementById("btn-desktop-tp-down");
-  const btnTpUp   = document.getElementById("btn-desktop-tp-up");
-  if (btnTpDown) btnTpDown.addEventListener("click", () => { state.transposeOffset = Math.max(-5, (state.transposeOffset||0)-1); renderRehearsalRoom(); });
-  if (btnTpUp)   btnTpUp.addEventListener("click",   () => { state.transposeOffset = Math.min(5,  (state.transposeOffset||0)+1); renderRehearsalRoom(); });
+  const btnTpUp = document.getElementById("btn-desktop-tp-up");
+  if (btnTpDown) btnTpDown.addEventListener("click", () => { state.transposeOffset = Math.max(-5, (state.transposeOffset || 0) - 1); renderRehearsalRoom(); });
+  if (btnTpUp) btnTpUp.addEventListener("click", () => { state.transposeOffset = Math.min(5, (state.transposeOffset || 0) + 1); renderRehearsalRoom(); });
 
   // Transport: Progress bar click
   const progBar = document.getElementById("desktop-progress-bar");
@@ -2340,7 +2340,7 @@ function bindRehearsalEvents(structure, lines, song) {
     secNameInp.addEventListener("change", e => {
       const sec = structure.find(s => s.id === state.seccionActivaId);
       if (sec) {
-        const oldName = (sec.nombre||"").toUpperCase();
+        const oldName = (sec.nombre || "").toUpperCase();
         const newName = e.target.value.trim().toUpperCase();
         if (newName && newName !== oldName) {
           song.lyrics = song.lyrics.replace(`[${oldName}]`, `[${newName}]`);
@@ -2365,7 +2365,7 @@ function bindRehearsalEvents(structure, lines, song) {
         solo: "SOLO"
       };
       const keyword = typeKeywords[newType] || "VERSO";
-      
+
       let sectionsToUpdate = [];
       if (state.selectedLineIndices && state.selectedLineIndices.length > 0) {
         const selectedLines = state.selectedLineIndices.map(idx => lines[idx]);
@@ -2375,15 +2375,15 @@ function bindRehearsalEvents(structure, lines, song) {
         const activeSec = structure.find(s => s.id === state.seccionActivaId);
         if (activeSec) sectionsToUpdate = [activeSec];
       }
-      
+
       if (sectionsToUpdate.length === 0) return;
-      
+
       let updatedLyrics = song.lyrics || "";
       sectionsToUpdate.forEach(sec => {
-        const oldName = (sec.nombre||'').toUpperCase();
-        const suffix = (sec.nombre||'').replace(/^(verso|coro|estribillo|chorus|puente|bridge|intro|outro|final|solo)/i, "").trim();
+        const oldName = (sec.nombre || '').toUpperCase();
+        const suffix = (sec.nombre || '').replace(/^(verso|coro|estribillo|chorus|puente|bridge|intro|outro|final|solo)/i, "").trim();
         const newName = (keyword + " " + suffix).trim().toUpperCase();
-        
+
         if (oldName !== newName) {
           const linesOfLyrics = updatedLyrics.split("\n");
           for (let i = 0; i < linesOfLyrics.length; i++) {
@@ -2402,7 +2402,7 @@ function bindRehearsalEvents(structure, lines, song) {
           updatedLyrics = linesOfLyrics.join("\n");
         }
       });
-      
+
       song.lyrics = updatedLyrics;
       saveLocalStorage();
       renderRehearsalRoom();
@@ -2503,9 +2503,9 @@ function saveDesktopLyrics(song, lines, structure) {
     if (line.seccionId !== currentSecId) {
       currentSecId = line.seccionId;
       const sec = structure.find(s => s.id === currentSecId);
-      if (sec) newLyrics += "[" + (sec.nombre||"").toUpperCase() + "]\n";
+      if (sec) newLyrics += "[" + (sec.nombre || "").toUpperCase() + "]\n";
     }
-    
+
     // Reconstruir la línea con sus acordes para evitar eliminarlos al guardar
     let lineTextWithChords = "";
     if (line.texto === "(Instrumental)") {
@@ -2533,20 +2533,20 @@ function saveDesktopLyrics(song, lines, structure) {
         }
       }
     }
-    
+
     newLyrics += lineTextWithChords + "\n";
   });
-  
+
   song.lyrics = newLyrics.trim();
   saveLocalStorage();
-  
+
   // Guardar también en Firebase si está activo
   if (window.SongsService) {
     window.SongsService.saveSong(song).catch(err => {
       console.error("Error al guardar canción desde ensayo en Firebase:", err);
     });
   }
-  
+
   triggerEnsayoToast("Letra y acordes guardados correctamente");
 }
 
@@ -2608,18 +2608,18 @@ let currentEditingSectionOldName = null;
 function openEditStanzaModal(lineIndex) {
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (!song) return;
-  
+
   const lines = parseLyricsToEnsayoModel(song.lyrics);
   const line = lines[lineIndex];
   if (!line) return;
-  
+
   const structure = getSongEstructuraEnsayo(song, lines);
   const sec = structure.find(s => s.id === line.seccionId);
   if (!sec) return;
-  
+
   currentEditingSectionId = sec.id;
   currentEditingSectionOldName = sec.nombre;
-  
+
   // Reconstruct section raw text
   const secLines = lines.filter(l => l.seccionId === sec.id);
   const rawText = secLines.map(l => {
@@ -2631,18 +2631,18 @@ function openEditStanzaModal(lineIndex) {
     });
     return raw;
   }).join("\n");
-  
+
   // Set inputs
   const nameInp = document.getElementById("modal-edit-sec-name");
   const typeSel = document.getElementById("modal-edit-sec-type");
   const notesInp = document.getElementById("modal-edit-sec-notes");
   const lyricsTextarea = document.getElementById("modal-edit-sec-lyrics");
-  
+
   if (nameInp) nameInp.value = sec.nombre;
   if (typeSel) typeSel.value = sec.tipo;
   if (notesInp) notesInp.value = sec.notas || "";
   if (lyricsTextarea) lyricsTextarea.value = rawText;
-  
+
   // Show modal
   const modal = document.getElementById("modalEditStanza");
   if (modal) modal.classList.add("active");
@@ -2651,29 +2651,29 @@ function openEditStanzaModal(lineIndex) {
 function saveStanzaChanges() {
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (!song) return;
-  
+
   const nameInp = document.getElementById("modal-edit-sec-name");
   const typeSel = document.getElementById("modal-edit-sec-type");
   const notesInp = document.getElementById("modal-edit-sec-notes");
   const lyricsTextarea = document.getElementById("modal-edit-sec-lyrics");
-  
+
   if (!nameInp || !typeSel || !notesInp || !lyricsTextarea) return;
-  
+
   const newName = nameInp.value.trim().toUpperCase();
   const newNotes = notesInp.value.trim();
   const newLyrics = lyricsTextarea.value.trim();
-  
+
   if (!newName) {
     alert("El nombre de la sección no puede estar vacío.");
     return;
   }
-  
+
   updateSongSection(song, currentEditingSectionOldName, newName, newNotes, newLyrics);
-  
+
   // Close modal
   const modal = document.getElementById("modalEditStanza");
   if (modal) modal.classList.remove("active");
-  
+
   // Re-render
   renderRehearsalRoom();
   triggerEnsayoToast("Estrofa editada correctamente");
@@ -2682,12 +2682,12 @@ function saveStanzaChanges() {
 function updateSongSection(song, oldSecName, newSecName, newSectionNotes, newSectionLyrics) {
   const raw = song.lyrics || "";
   const lines = raw.split("\n");
-  
+
   let sectionStartIndex = -1;
   let sectionEndIndex = -1;
-  
+
   const targetTag = oldSecName.toUpperCase().trim();
-  
+
   // We search for oldSecName header tag. It might have notes, so we check if it starts with [oldSecName
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i].trim().toUpperCase();
@@ -2696,7 +2696,7 @@ function updateSongSection(song, oldSecName, newSecName, newSectionNotes, newSec
       break;
     }
   }
-  
+
   if (sectionStartIndex === -1) {
     if (targetTag === "INTRO" || targetTag === "SIN SECCION" || targetTag === "SIN-SECCION") {
       let firstTagIndex = -1;
@@ -2727,20 +2727,20 @@ function updateSongSection(song, oldSecName, newSecName, newSectionNotes, newSec
       sectionEndIndex = lines.length;
     }
   }
-  
+
   const before = lines.slice(0, sectionStartIndex);
   const after = lines.slice(sectionEndIndex);
-  
+
   let header = `[${newSecName.toUpperCase().trim()}`;
   if (newSectionNotes.trim() !== "") {
     header += ` // ${newSectionNotes.trim()}`;
   }
   header += "]";
-  
+
   const middle = [header, newSectionLyrics.trim()];
   const newRawLyrics = [...before, ...middle, ...after].join("\n");
   song.lyrics = newRawLyrics;
-  
+
   // Guardar la canción modificada directamente en Supabase
   if (window.SongsService) {
     window.SongsService.saveSong(song).catch(err => {
@@ -2760,14 +2760,14 @@ function changeTimeSignature(sig) {
       saveLocalStorage();
     }
   }
-  
+
   // Sincronizar el loop de batería al cambiar de compás
   if (state.drumMachine && state.drumMachine.selectedPattern) {
     const steps = getSequencerStepsCount();
     state.drumMachine.grid = buildDrumPatternGrid(state.drumMachine.selectedPattern, steps);
     saveDrumMachineSettingsToActiveSong();
   }
-  
+
   renderRehearsalRoom();
 }
 
@@ -2778,10 +2778,10 @@ function applyCustomTimeSig() {
     const beats = parseInt(beatsInput.value) || 4;
     const unit = parseInt(unitSelect.value) || 4;
     const sig = `${beats}/${unit}`;
-    
+
     state.metronome.beatsPerMeasure = beats;
     state.metronome.beatUnit = unit;
-    
+
     if (state.activeSongId) {
       const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
       if (song) {
@@ -2789,42 +2789,42 @@ function applyCustomTimeSig() {
         saveLocalStorage();
       }
     }
-    
+
     // Sincronizar el loop de batería al cambiar de compás
     if (state.drumMachine && state.drumMachine.selectedPattern) {
       const steps = getSequencerStepsCount();
       state.drumMachine.grid = buildDrumPatternGrid(state.drumMachine.selectedPattern, steps);
       saveDrumMachineSettingsToActiveSong();
     }
-    
+
     renderRehearsalRoom();
   }
 }
 
 function saveMetronomeParamsToSong() {
   if (!state.activeSongId) return;
-  
+
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (song) {
     const beatsInput = document.getElementById("custom-beats-num");
     const unitSelect = document.getElementById("custom-beats-unit");
-    
+
     let beats = state.metronome.beatsPerMeasure;
     let unit = state.metronome.beatUnit || 4;
-    
+
     if (beatsInput && unitSelect) {
       beats = parseInt(beatsInput.value) || beats;
       unit = parseInt(unitSelect.value) || unit;
     }
-    
+
     state.metronome.beatsPerMeasure = beats;
     state.metronome.beatUnit = unit;
     song.bpm = state.metronome.bpm;
     song.timeSig = `${beats}/${unit}`;
-    
+
     saveLocalStorage();
     renderApp();
-    
+
     // Proporcionar un feedback visual temporal (cambio de texto o alerta)
     const btn = document.querySelector(".btn-save-params");
     if (btn) {
@@ -2864,7 +2864,7 @@ function handleTapTempo() {
     btn.classList.add("flashing");
     setTimeout(() => btn.classList.remove("flashing"), 100);
   }
-  
+
   // Agregar destello visual con efectos de luces neón en el dial y el anillo
   const dialCenter = document.getElementById("metronome-dial-center");
   if (dialCenter) {
@@ -2880,11 +2880,11 @@ function handleTapTempo() {
   const now = Date.now();
   tapTimes.push(now);
   if (tapTimes.length > 4) tapTimes.shift();
-  
+
   if (tapTimes.length >= 2) {
     let intervals = [];
     for (let i = 1; i < tapTimes.length; i++) {
-      intervals.push(tapTimes[i] - tapTimes[i-1]);
+      intervals.push(tapTimes[i] - tapTimes[i - 1]);
     }
     const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
     const bpm = Math.round(60000 / avgInterval);
@@ -2895,16 +2895,16 @@ function handleTapTempo() {
 // --- SECCIONADO DE LETRAS PARA VISTA DE ENSAYO ---
 function parseLyricsToSections(lyricsText) {
   if (!lyricsText) return [];
-  
+
   const lines = lyricsText.split("\n");
   const sections = [];
   let currentSection = { header: "", lines: [] };
-  
+
   // Cabeceras explícitas estilo [VERSE 1]
   const sectionHeaderRegex = /^\[(INTRO|VERSE|CHORUS|SOLO|BRIDGE|OUTRO|INTRODUCCIÓN|CORO|ESTROFA|VERSO|PUENTE|ESTRIBILLO|FINAL)(\s+[\w\d]+)?(\s*\(ACTIVE\))?\]$/i;
-  
+
   let verseIndex = 1;
-  
+
   lines.forEach(line => {
     const trimmed = line.trim();
     if (trimmed === "") {
@@ -2914,7 +2914,7 @@ function parseLyricsToSections(lyricsText) {
       }
       return;
     }
-    
+
     const match = trimmed.match(sectionHeaderRegex);
     if (match) {
       if (currentSection.lines.length > 0) {
@@ -2925,11 +2925,11 @@ function parseLyricsToSections(lyricsText) {
       currentSection.lines.push(line);
     }
   });
-  
+
   if (currentSection.lines.length > 0) {
     sections.push(currentSection);
   }
-  
+
   // Auto-sección si no hay cabeceras explícitas
   sections.forEach((sec, idx) => {
     if (!sec.header) {
@@ -2944,18 +2944,18 @@ function parseLyricsToSections(lyricsText) {
       }
     }
   });
-  
+
   return sections;
 }
 
 function renderLyricsBySections(song) {
   const sections = parseLyricsToSections(song.lyrics);
-  
+
   return sections.map((section, idx) => {
     const isActive = state.activeSectionIndex === idx;
     const activeClass = isActive ? "active" : "";
     const loopBtn = `<button class="btn-loop-section ${isActive ? 'active' : ''}" onclick="event.stopPropagation(); toggleSectionLoop(${idx})">Loop</button>`;
-    
+
     // Section header shown vertically on the left margin (notebook style)
     const sectionLabel = section.header
       .replace(/VERSE/gi, 'Verso')
@@ -2964,7 +2964,7 @@ function renderLyricsBySections(song) {
       .replace(/PRE-CHORUS/gi, 'Pre-Coro')
       .replace(/INTRO/gi, 'Intro')
       .replace(/OUTRO/gi, 'Outro');
-    
+
     return `
       <div class="lyrics-section-card glass ${activeClass}" id="section-card-${idx}">
         <div class="lyrics-section-sidebar" onclick="toggleSectionLoop(${idx})">
@@ -2984,13 +2984,13 @@ function renderLyricsBySections(song) {
 // También reconoce anotaciones de voz tipo "(Henry: Hola mundo)"
 function parseLyrics(lyricsText) {
   if (!lyricsText) return "";
-  
+
   const lines = lyricsText.split("\n");
   let activeVocal = null; // Guardará { names: Array, colorStyle: String, isGeneralNote: Boolean }
-  
+
   return lines.map(line => {
     line = line.trimRight();
-    
+
     // Si la línea es vacía
     if (line === "") {
       return `
@@ -3002,7 +3002,7 @@ function parseLyrics(lyricsText) {
         </div>
       `;
     }
-    
+
     // Si es una línea instrumental
     if (line.startsWith("Solo:") || line.startsWith("Intro:") || line.startsWith("Puente:") || line.startsWith("Instrumental:")) {
       return `
@@ -3014,16 +3014,16 @@ function parseLyrics(lyricsText) {
         </div>
       `;
     }
-    
+
     let cleanLine = line;
     let shouldClearActiveVocal = false;
     let commentText = "";
     let lyricTextToColor = "";
     let hasAnnotation = false;
-    
+
     // Guardamos la referencia de activeVocal para usarla al final del map de esta línea
     let noteActiveVocal = activeVocal;
-    
+
     if (!activeVocal) {
       // 1. Detectar inicio de anotación (Javi, Deimars: ...
       const matchOpen = cleanLine.match(/\(([^:)]+):\s*/);
@@ -3033,7 +3033,7 @@ function parseLyrics(lyricsText) {
         const namesList = namesStr.split(",").map(n => n.trim());
         const isCoro = namesList.some(n => n.toLowerCase() === "coro");
         const isGeneralNote = namesList.some(n => n.toLowerCase() === "nota");
-        
+
         let colorStyle;
         if (isCoro) {
           colorStyle = "color:#ffeb3b; text-shadow:0 0 8px #ffeb3b80;";
@@ -3042,14 +3042,14 @@ function parseLyrics(lyricsText) {
         } else {
           colorStyle = buildVocalColorStyle(namesList);
         }
-        
+
         const tempActiveVocal = { names: namesList, colorStyle: colorStyle, isGeneralNote: isGeneralNote };
         noteActiveVocal = tempActiveVocal;
-        
+
         // Verificar si cierra en la misma línea
         const openParenIndex = matchOpen.index;
         const closeParenIndex = cleanLine.indexOf(")", openParenIndex + matchOpen[0].length);
-        
+
         if (closeParenIndex !== -1) {
           const innerContent = cleanLine.substring(openParenIndex + matchOpen[0].length, closeParenIndex);
           const lastHyphenIndex = innerContent.lastIndexOf(" - ");
@@ -3058,18 +3058,18 @@ function parseLyrics(lyricsText) {
             lyricPart = innerContent.substring(0, lastHyphenIndex);
             commentText = innerContent.substring(lastHyphenIndex + 3).trim();
           }
-          
+
           lyricTextToColor = lyricPart;
           activeVocal = tempActiveVocal;
           shouldClearActiveVocal = true;
-          
+
           cleanLine = cleanLine.substring(0, openParenIndex) + lyricPart + cleanLine.substring(closeParenIndex + 1);
         } else {
           const innerContent = cleanLine.substring(openParenIndex + matchOpen[0].length);
           lyricTextToColor = innerContent;
           activeVocal = tempActiveVocal;
           shouldClearActiveVocal = false;
-          
+
           cleanLine = cleanLine.substring(0, openParenIndex) + innerContent;
         }
       }
@@ -3077,7 +3077,7 @@ function parseLyrics(lyricsText) {
       // 2. Si ya hay una anotación activa de líneas previas
       hasAnnotation = true;
       const closeParenIndex = cleanLine.indexOf(")");
-      
+
       if (closeParenIndex !== -1) {
         const innerContent = cleanLine.substring(0, closeParenIndex);
         const lastHyphenIndex = innerContent.lastIndexOf(" - ");
@@ -3086,24 +3086,24 @@ function parseLyrics(lyricsText) {
           lyricPart = innerContent.substring(0, lastHyphenIndex);
           commentText = innerContent.substring(lastHyphenIndex + 3).trim();
         }
-        
+
         lyricTextToColor = lyricPart;
         shouldClearActiveVocal = true;
-        
+
         cleanLine = lyricPart + cleanLine.substring(closeParenIndex + 1);
       } else {
         lyricTextToColor = cleanLine;
         shouldClearActiveVocal = false;
       }
     }
-    
+
     // 3. Extraer acordes de la porción de letra limpia
     let finalLyricText = "";
     let chordsList = [];
     const regexClean = /\[([^\]]+)\]/g;
     let matchClean;
     let lastIndexClean = 0;
-    
+
     while ((matchClean = regexClean.exec(cleanLine)) !== null) {
       finalLyricText += cleanLine.substring(lastIndexClean, matchClean.index);
       chordsList.push({
@@ -3113,15 +3113,15 @@ function parseLyrics(lyricsText) {
       lastIndexClean = regexClean.lastIndex;
     }
     finalLyricText += cleanLine.substring(lastIndexClean);
-    
+
     // 4. Determinar si hay anotación activa para iniciales y colores
     let renderedLyric = finalLyricText;
     let initialsHtml = "";
-    
+
     if (activeVocal) {
       hasAnnotation = true;
       initialsHtml = buildInitialsBadgesHtml(activeVocal.names);
-      
+
       if (activeVocal.isGeneralNote) {
         renderedLyric = finalLyricText;
       } else {
@@ -3136,7 +3136,7 @@ function parseLyrics(lyricsText) {
         }
       }
     }
-    
+
     // Construir nota HTML si se extrajo un comentario
     let noteHtml = "";
     if (commentText && noteActiveVocal) {
@@ -3150,18 +3150,18 @@ function parseLyrics(lyricsText) {
       }
       noteHtml = `<div class="vocal-note-row" style="color: ${noteColor};">${commentText}</div>`;
     }
-    
+
     // Si al final de la línea se cerró el paréntesis, limpiar el estado activo para la siguiente línea
     if (shouldClearActiveVocal) {
       activeVocal = null;
     }
 
-    
+
     const hasChordsClass = chordsList.length > 0 ? "has-chords" : "";
     const annotatedClass = hasAnnotation ? "notebook-annotation" : "";
-    
+
     let contentHtml = "";
-    
+
     // Si la línea no tiene acordes
     if (chordsList.length === 0) {
       contentHtml = `
@@ -3181,14 +3181,14 @@ function parseLyrics(lyricsText) {
         chordHtml += `<span class="chord-in-text text-cyan" onclick="playAndSelectChord('${c.name}')">${c.name}</span>`;
         lastPos = alignedPos + c.name.length;
       });
-      
+
       contentHtml = `
         <div class="chord-row">${chordHtml}</div>
         <div class="lyric-row ${annotatedClass}">${renderedLyric}</div>
         ${noteHtml}
       `;
     }
-    
+
     return `
       <div class="song-line-wrapper ${hasChordsClass} ${annotatedClass}">
         <div class="song-line-left-col">${initialsHtml}</div>
@@ -3209,7 +3209,7 @@ function playAndSelectChord(chordName) {
 // --- RITMO: RENDERIZAR FLECHAS ---
 function renderStrummingArrows(rhythmString) {
   if (!rhythmString) return "";
-  
+
   const beats = rhythmString.split(/\s+/);
   return beats.map((beat, i) => {
     let arrow = "•";
@@ -3229,7 +3229,7 @@ function renderStrummingArrows(rhythmString) {
 function editActiveSong() {
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (!song) return;
-  
+
   document.getElementById("form-song-id").value = song.id;
   document.getElementById("song-title").value = song.title;
   document.getElementById("song-artist").value = song.artist;
@@ -3238,7 +3238,7 @@ function editActiveSong() {
   document.getElementById("song-timesig").value = song.timeSig;
   document.getElementById("song-status").value = song.status;
   document.getElementById("song-lyrics").value = song.lyrics;
-  
+
   // Rellenar campos de metadatos inline
   const metaTitle = document.getElementById("meta-title");
   const metaArtist = document.getElementById("meta-artist");
@@ -3246,20 +3246,20 @@ function editActiveSong() {
   const metaKey = document.getElementById("meta-key");
   const metaTimesig = document.getElementById("meta-timesig");
   const metaStatus = document.getElementById("meta-status");
-  
+
   if (metaTitle) updateTextElement(metaTitle, song.title);
   if (metaArtist) updateTextElement(metaArtist, song.artist);
   if (metaBpm) updateTextElement(metaBpm, song.bpm.toString());
   if (metaKey) metaKey.textContent = song.key;
   if (metaTimesig) metaTimesig.textContent = song.timeSig;
-  
+
   if (metaStatus) {
     let statusLabel = "Por Aprender";
     if (song.status === "practicing") statusLabel = "En Ensayo";
     else if (song.status === "ready") statusLabel = "Listo";
     metaStatus.textContent = statusLabel;
   }
-  
+
   // Rellenar portada en el formulario
   const songImageInp = document.getElementById("song-image");
   if (songImageInp) songImageInp.value = song.image || "";
@@ -3272,7 +3272,7 @@ function editActiveSong() {
     richEditor.innerHTML = parseTextToRichLyrics(song.lyrics);
     bindChordBadgeEvents();
   }
-  
+
   // Cargar integrantes específicos de este tema en los checkboxes
   const performersContainer = document.getElementById("editor-song-performers-list");
   if (performersContainer) {
@@ -3281,7 +3281,7 @@ function editActiveSong() {
       const id = "int-" + m.name.toLowerCase().replace(/\s+/g, "-");
       // Si la canción no tiene intérpretes guardados aún, marcar todos por defecto
       const isChecked = (!song.interpretes || song.interpretes.length === 0) || selectedIds.includes(id);
-      
+
       return `
         <label style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft); border-radius: 8px; cursor: pointer; font-size: 11px;">
           <input type="checkbox" class="song-performer-checkbox" data-id="${id}" data-name="${m.name}" data-instrument="${m.instruments || m.role || 'Músico'}" ${isChecked ? 'checked' : ''} style="accent-color: var(--neon-lime);" />
@@ -3297,7 +3297,7 @@ function editActiveSong() {
 function shareActiveSong() {
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (!song) return;
-  
+
   // Limpiar ID local y auditorias temporales antes de exportar
   const exportSong = {
     title: song.title,
@@ -3309,14 +3309,14 @@ function shareActiveSong() {
     rhythm: song.rhythm,
     lyrics: song.lyrics
   };
-  
+
   try {
     // Codificar en Base64 seguro para URL
     const songJson = JSON.stringify(exportSong);
     const base64 = btoa(unescape(encodeURIComponent(songJson)));
-    
+
     const shareUrl = `${window.location.origin}${window.location.pathname}?song=${base64}`;
-    
+
     // Copiar al portapapeles
     navigator.clipboard.writeText(shareUrl).then(() => {
       alert("¡Enlace compartido copiado al portapapeles! Envíalo a los miembros de tu banda.");
@@ -3334,20 +3334,20 @@ function shareActiveSong() {
 function updateBpm(val) {
   if (val < 40) val = 40;
   if (val > 240) val = 240;
-  
+
   state.metronome.bpm = val;
-  
+
   const bpmInput = document.getElementById("metronome-bpm-slider");
   const bpmDisplay = document.getElementById("bpm-number");
   const transportBpmDisplay = document.getElementById("transport-bpm-display");
-  
+
   if (bpmInput) bpmInput.value = val;
   if (bpmDisplay) bpmDisplay.textContent = val;
   if (transportBpmDisplay) transportBpmDisplay.textContent = `${val} BPM`;
-  
+
   const fabBpmDisplay = document.getElementById("fab-bpm-display");
   if (fabBpmDisplay) fabBpmDisplay.textContent = val;
-  
+
   // Si está sonando, reiniciar intervalo para aplicar cambio de velocidad
   if (state.metronome.isPlaying) {
     stopMetronomeTimer();
@@ -3358,7 +3358,7 @@ function updateBpm(val) {
 function toggleMetronome() {
   const btn = document.getElementById("btn-play-metronome");
   initAudioContext(); // Asegurar contexto activo
-  
+
   if (state.metronome.isPlaying) {
     // Apagar
     state.metronome.isPlaying = false;
@@ -3380,14 +3380,14 @@ function startMetronomeTimer() {
   const isDrumEnabled = state.drumMachine && state.drumMachine.enabled;
   const divider = isDrumEnabled ? 2 : 1;
   const intervalMs = ((60 / state.metronome.bpm) * (4 / beatUnit) * 1000) / divider;
-  
+
   if (isDrumEnabled) {
     state.drumMachine.currentStep = 0;
   }
-  
+
   // Ejecutar primer pulso inmediatamente
   playMetronomeTick();
-  
+
   state.metronome.intervalId = setInterval(() => {
     playMetronomeTick();
   }, intervalMs);
@@ -3402,47 +3402,47 @@ function stopMetronomeTimer() {
 
 function playMetronomeTick() {
   initAudioContext(); // Asegurar contexto activo
-  
+
   const isDrumEnabled = state.drumMachine && state.drumMachine.enabled;
-  
+
   if (isDrumEnabled) {
     const step = state.drumMachine.currentStep;
     const now = audioCtx ? audioCtx.currentTime : 0;
-    
+
     // 1. Play active sequencer instruments
     if (audioCtx) {
       if (state.drumMachine.grid.kick[step]) playKick(now);
       if (state.drumMachine.grid.snare[step]) playSnare(now);
       if (state.drumMachine.grid.hihat[step]) playHiHat(now);
     }
-    
+
     // 2. Play metronome tick only on main beats (even steps: 0, 2, 4, 6...)
     if (step % 2 === 0) {
       const beats = state.metronome.beatsPerMeasure;
       const current = state.metronome.currentBeat;
-      
+
       // Play click sound
       if (audioCtx && !state.metronome.isMuted) {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        
+
         const isFirstBeat = (current === 0);
         osc.frequency.setValueAtTime(isFirstBeat ? 1000 : 600, audioCtx.currentTime);
-        
+
         gain.gain.setValueAtTime(0.15 * state.metronome.volume, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
-        
+
         osc.start();
         osc.stop(audioCtx.currentTime + 0.1);
       }
-      
+
       // Animate metronome ring and beat indicators
       const ring = document.getElementById("metronome-ring");
       const dots = document.querySelectorAll("#beats-indicator .beat-dot");
       const miniDots = document.querySelectorAll("#mini-beats-indicator .mini-beat-dot");
-      
+
       if (ring) {
         ring.className = "metronome-ring";
         void ring.offsetWidth;
@@ -3452,7 +3452,7 @@ function playMetronomeTick() {
           ring.classList.add("beat-other");
         }
       }
-      
+
       // Actualizar puntos del compás
       dots.forEach((dot, idx) => {
         dot.className = "beat-dot";
@@ -3461,13 +3461,13 @@ function playMetronomeTick() {
           else dot.classList.add("active-other");
         }
       });
-      
+
       // Mini LEDs bar in header
       miniDots.forEach((dot, idx) => {
         dot.style.background = "rgba(255, 255, 255, 0.05)";
         dot.style.borderColor = "var(--border-color)";
         dot.style.boxShadow = "none";
-        
+
         if (idx === current) {
           if (current === 0) {
             dot.style.background = "var(--neon-orange)";
@@ -3480,7 +3480,7 @@ function playMetronomeTick() {
           }
         }
       });
-      
+
       // Sincronizar patrón de rasgueo
       const arrows = document.querySelectorAll("#strumming-pattern-visualizer .strum-arrow");
       if (arrows.length > 0) {
@@ -3493,12 +3493,12 @@ function playMetronomeTick() {
           else if (strokeType.includes("↑")) activeArrow.classList.add("up-active");
         }
       }
-      
+
       // Increment beat
       state.metronome.currentBeat = (current + 1) % beats;
       updateTimelineBeatVisuals();
     }
-    
+
     // 3. Highlight current sequencer step in UI
     const seqDots = document.querySelectorAll(".seq-step-dot");
     seqDots.forEach((dot, idx) => {
@@ -3511,36 +3511,36 @@ function playMetronomeTick() {
         }
       }
     });
-    
+
     // Increment step
     const stepsCount = getSequencerStepsCount();
     state.drumMachine.currentStep = (step + 1) % stepsCount;
-    
+
   } else {
     // Normal metronome tick
     const beats = state.metronome.beatsPerMeasure;
     const current = state.metronome.currentBeat;
-    
+
     if (audioCtx && !state.metronome.isMuted) {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.connect(gain);
       gain.connect(audioCtx.destination);
-      
+
       const isFirstBeat = (current === 0);
       osc.frequency.setValueAtTime(isFirstBeat ? 1000 : 600, audioCtx.currentTime);
-      
+
       gain.gain.setValueAtTime(0.15 * state.metronome.volume, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
-      
+
       osc.start();
       osc.stop(audioCtx.currentTime + 0.1);
     }
-    
+
     const ring = document.getElementById("metronome-ring");
     const dots = document.querySelectorAll("#beats-indicator .beat-dot");
     const miniDots = document.querySelectorAll("#mini-beats-indicator .mini-beat-dot");
-    
+
     if (ring) {
       ring.className = "metronome-ring";
       void ring.offsetWidth;
@@ -3550,7 +3550,7 @@ function playMetronomeTick() {
         ring.classList.add("beat-other");
       }
     }
-    
+
     dots.forEach((dot, idx) => {
       dot.className = "beat-dot";
       if (idx === current) {
@@ -3558,12 +3558,12 @@ function playMetronomeTick() {
         else dot.classList.add("active-other");
       }
     });
-    
+
     miniDots.forEach((dot, idx) => {
       dot.style.background = "rgba(255, 255, 255, 0.05)";
       dot.style.borderColor = "var(--border-color)";
       dot.style.boxShadow = "none";
-      
+
       if (idx === current) {
         if (current === 0) {
           dot.style.background = "var(--neon-orange)";
@@ -3576,7 +3576,7 @@ function playMetronomeTick() {
         }
       }
     });
-    
+
     const arrows = document.querySelectorAll("#strumming-pattern-visualizer .strum-arrow");
     if (arrows.length > 0) {
       arrows.forEach(a => a.classList.remove("down-active", "up-active"));
@@ -3588,7 +3588,7 @@ function playMetronomeTick() {
         else if (strokeType.includes("↑")) activeArrow.classList.add("up-active");
       }
     }
-    
+
     state.metronome.currentBeat = (current + 1) % beats;
     updateTimelineBeatVisuals();
   }
@@ -3597,10 +3597,10 @@ function playMetronomeTick() {
 function resetMetronomeVisuals() {
   const ring = document.getElementById("metronome-ring");
   if (ring) ring.className = "metronome-ring";
-  
+
   const dots = document.querySelectorAll("#beats-indicator .beat-dot");
   dots.forEach(dot => dot.className = "beat-dot");
-  
+
   const arrows = document.querySelectorAll("#strumming-pattern-visualizer .strum-arrow");
   arrows.forEach(a => a.classList.remove("down-active", "up-active"));
 }
@@ -3610,12 +3610,12 @@ function toggleAutoScroll() {
   const btn = document.getElementById("btn-scroll-play");
   const scrollArea = document.getElementById("lyrics-scroll-area");
   if (!btn || !scrollArea) return;
-  
+
   if (state.autoScroll.isActive) {
     state.autoScroll.isActive = false;
     btn.classList.remove("active");
     btn.innerHTML = `<span class="play-icon">▶</span>`;
-    
+
     if (state.autoScroll.intervalId) {
       clearInterval(state.autoScroll.intervalId);
       state.autoScroll.intervalId = null;
@@ -3624,25 +3624,25 @@ function toggleAutoScroll() {
     state.autoScroll.isActive = true;
     btn.classList.add("active");
     btn.innerHTML = `<span class="play-icon">⏸</span>`;
-    
+
     const delay = 40;
     const step = (state.metronome.bpm / 120) * state.autoScroll.speed * 0.45;
-    
+
     state.autoScroll.intervalId = setInterval(() => {
       scrollArea.scrollTop += step;
-      
+
       // Control de loop de estrofa activa
       const activeCard = scrollArea.querySelector(".lyrics-section-card.active");
       if (activeCard) {
         const sectionStart = activeCard.offsetTop;
         const sectionEnd = sectionStart + activeCard.offsetHeight;
-        
+
         // Si el tope del scroll llegó al final de la estrofa activa (con margen de 60px)
         if (scrollArea.scrollTop >= sectionEnd - 60) {
           scrollArea.scrollTop = sectionStart;
         }
       }
-      
+
       if (scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 2) {
         toggleAutoScroll();
       }
@@ -3653,16 +3653,16 @@ function toggleAutoScroll() {
 // --- GRABADORA DE AUDIO ---
 function startRecording() {
   initAudioContext();
-  
+
   const timerDisplays = document.querySelectorAll("#transport-record-timer, #fab-record-timer");
   const btnRec = document.getElementById("btn-record-transport");
-  
+
   navigator.mediaDevices.getUserMedia({ audio: true })
     .then(stream => {
       state.recorder.stream = stream;
       state.recorder.mediaRecorder = new MediaRecorder(stream);
       state.recorder.audioChunks = [];
-      
+
       // Configurar analizador de frecuencia para la onda visual
       if (audioCtx) {
         const source = audioCtx.createMediaStreamSource(stream);
@@ -3670,15 +3670,15 @@ function startRecording() {
         state.recorder.analyser.fftSize = 256;
         source.connect(state.recorder.analyser);
       }
-      
+
       state.recorder.mediaRecorder.ondataavailable = e => {
         state.recorder.audioChunks.push(e.data);
       };
-      
+
       state.recorder.mediaRecorder.onstop = () => {
         const audioBlob = new Blob(state.recorder.audioChunks, { type: "audio/webm" });
         const audioUrl = URL.createObjectURL(audioBlob);
-        
+
         // Agregar grabación al listado local
         const songName = state.activeSongId ? state.songs.find(s => String(s.id) === String(state.activeSongId)).title : "Ensayo Libre";
         const newRecord = {
@@ -3688,27 +3688,27 @@ function startRecording() {
           date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           url: audioUrl
         };
-        
+
         // Mantener solo los últimos 20 ensayos grabados para no sobrecargar el almacenamiento
         state.recorder.recordings.unshift(newRecord);
         if (state.recorder.recordings.length > 20) {
           state.recorder.recordings.pop();
         }
-        
+
         saveRecordingsState();
         renderRehearsalRoom();
         renderGlobalRecordingsList();
       };
-      
+
       // Comenzar
       state.recorder.mediaRecorder.start();
       state.recorder.isRecording = true;
-      
+
       if (btnRec) {
         btnRec.classList.add("recording");
         btnRec.title = "Detener Grabación";
       }
-      
+
       // Cronómetro
       let secs = 0;
       state.recorder.timerId = setInterval(() => {
@@ -3717,7 +3717,7 @@ function startRecording() {
         const s = (secs % 60).toString().padStart(2, '0');
         timerDisplays.forEach(td => td.textContent = `${m}:${s}`);
       }, 1000);
-      
+
       // Dibujar onda de audio
       visualizeAudioWave();
     })
@@ -3729,23 +3729,23 @@ function startRecording() {
 
 function stopRecording() {
   const btnRec = document.getElementById("btn-record-transport");
-  
+
   if (state.recorder.mediaRecorder && state.recorder.isRecording) {
     state.recorder.mediaRecorder.stop();
     state.recorder.isRecording = false;
-    
+
     // Detener tracks de micrófono
     if (state.recorder.stream) {
       state.recorder.stream.getTracks().forEach(track => track.stop());
     }
-    
+
     clearInterval(state.recorder.timerId);
-    
+
     // Detener animación de canvas
     if (state.recorder.animationFrameId) {
       cancelAnimationFrame(state.recorder.animationFrameId);
     }
-    
+
     if (btnRec) {
       btnRec.classList.remove("recording");
       btnRec.title = "Grabar Sesión";
@@ -3757,50 +3757,50 @@ function stopRecording() {
 function visualizeAudioWave() {
   const canvases = document.querySelectorAll("#transport-wave-canvas, #fab-record-canvas");
   if (canvases.length === 0) return;
-  
+
   const analyser = state.recorder.analyser;
   if (!analyser) return;
-  
+
   const bufferLength = analyser.frequencyBinCount;
   const dataArray = new Uint8Array(bufferLength);
-  
+
   // Redimensionar canvases internamente
   canvases.forEach(canvas => {
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
   });
-  
+
   function draw() {
     state.recorder.animationFrameId = requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
-    
+
     canvases.forEach(canvas => {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      
+
       ctx.fillStyle = "rgba(10, 11, 13, 0.4)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
+
       const barWidth = (canvas.width / bufferLength) * 2.5;
       let barHeight;
       let x = 0;
-      
+
       for (let i = 0; i < bufferLength; i++) {
         barHeight = dataArray[i] / 2;
-        
+
         // Degradado neón (púrpura a cian)
         const grad = ctx.createLinearGradient(0, canvas.height, 0, 0);
         grad.addColorStop(0, "var(--neon-purple)");
         grad.addColorStop(1, "var(--neon-cyan)");
-        
+
         ctx.fillStyle = grad;
         ctx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
-        
+
         x += barWidth;
       }
     });
   }
-  
+
   draw();
 }
 
@@ -3809,13 +3809,13 @@ function clearAudioCanvas() {
   canvases.forEach(canvas => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
+
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
-    
+
     ctx.fillStyle = "rgba(10, 11, 13, 0.6)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -3827,15 +3827,15 @@ function clearAudioCanvas() {
 
 function renderRecordingsList(songId) {
   const songRecordings = state.recorder.recordings.filter(r => r.songId === songId);
-  
+
   if (songRecordings.length === 0) {
     return `<div style="text-align:center; padding: 12px; color:var(--text-muted); font-size:12px">No hay grabaciones para este tema.</div>`;
   }
-  
+
   return songRecordings.map((rec, idx) => {
     const isCurrentPlaying = state.playback.recordingId === rec.id && state.playback.isPlaying;
     const playIcon = isCurrentPlaying ? "⏸" : "▶";
-    
+
     return `
       <div class="recording-item">
         <div class="recording-info">
@@ -3855,16 +3855,16 @@ function renderRecordingsList(songId) {
 function renderGlobalRecordingsList() {
   const container = document.getElementById("global-recordings-list");
   if (!container) return;
-  
+
   if (state.recorder.recordings.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding: 24px; color:var(--text-muted); font-size:12px">No hay grabaciones aún.</div>`;
     return;
   }
-  
+
   container.innerHTML = state.recorder.recordings.map((rec, idx) => {
     const isCurrentPlaying = state.playback.recordingId === rec.id && state.playback.isPlaying;
     const playIcon = isCurrentPlaying ? "⏸" : "▶";
-    
+
     return `
       <div class="recording-item" style="margin-bottom: 8px;">
         <div class="recording-info">
@@ -3884,12 +3884,12 @@ function renderGlobalRecordingsList() {
 function playAudioBlob(url, recordingId) {
   // Inicializar audio context si es necesario
   initAudioContext();
-  
+
   // Detener metrónomo si está sonando para no interferir con la escucha
   if (state.metronome.isPlaying) {
     toggleMetronome();
   }
-  
+
   if (state.playback.audio && state.playback.recordingId === recordingId) {
     // Es el mismo audio: reproducir o pausar
     if (state.playback.isPlaying) {
@@ -3903,7 +3903,7 @@ function playAudioBlob(url, recordingId) {
     updatePlaybackUI();
     return;
   }
-  
+
   // Si había otro audio sonando, pausarlo
   if (state.playback.audio) {
     state.playback.audio.pause();
@@ -3911,26 +3911,26 @@ function playAudioBlob(url, recordingId) {
       cancelAnimationFrame(state.playback.animationFrameId);
     }
   }
-  
+
   const audio = new Audio(url);
   state.playback.audio = audio;
   state.playback.recordingId = recordingId;
   state.playback.isPlaying = true;
-  
+
   audio.play().then(() => {
     animatePlaybackWave();
   }).catch(e => console.error("Error al reproducir audio:", e));
-  
+
   audio.addEventListener("timeupdate", () => {
     updateTransportProgress();
   });
-  
+
   audio.addEventListener("ended", () => {
     state.playback.isPlaying = false;
     updatePlaybackUI();
     clearAudioCanvas();
   });
-  
+
   updatePlaybackUI();
 }
 
@@ -3946,7 +3946,7 @@ function updatePlaybackUI() {
       playBtn.innerHTML = `<span class="play-icon">▶</span>`;
     }
   }
-  
+
   // 2. Volver a pintar las listas de reproducción para que cambien los iconos de play/pause
   const activeSong = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (activeSong) {
@@ -3955,7 +3955,7 @@ function updatePlaybackUI() {
       listContainer.innerHTML = renderRecordingsList(activeSong.id);
     }
   }
-  
+
   renderGlobalRecordingsList();
 }
 
@@ -3963,7 +3963,7 @@ function updateTransportProgress() {
   const audio = state.playback.audio;
   const timerDisplay = document.getElementById("transport-record-timer");
   if (!audio || !timerDisplay) return;
-  
+
   const cur = formatTime(audio.currentTime);
   const dur = isNaN(audio.duration) || !isFinite(audio.duration) ? "00:00" : formatTime(audio.duration);
   timerDisplay.textContent = `${cur} / ${dur}`;
@@ -3985,7 +3985,7 @@ function togglePlaybackTransport() {
     }
     return;
   }
-  
+
   if (state.playback.isPlaying) {
     audio.pause();
     state.playback.isPlaying = false;
@@ -4001,7 +4001,7 @@ function togglePlaybackTransport() {
 function skipPlaybackTransport(direction) {
   const audio = state.playback.audio;
   if (!audio) return;
-  
+
   if (direction === -1) {
     // Volver al inicio
     audio.currentTime = 0;
@@ -4018,40 +4018,40 @@ function skipPlaybackTransport(direction) {
 function animatePlaybackWave() {
   const canvas = document.getElementById("transport-wave-canvas");
   if (!canvas) return;
-  
+
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  
+
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
-  
+
   function draw() {
     if (!state.playback.isPlaying) {
       clearAudioCanvas();
       return;
     }
     state.playback.animationFrameId = requestAnimationFrame(draw);
-    
+
     ctx.fillStyle = "rgba(10, 11, 13, 0.4)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     const bars = 40;
     const barWidth = canvas.width / bars;
-    
+
     for (let i = 0; i < bars; i++) {
       // Onda simulada de ecualizador basada en el tiempo y el índice
       const factor = Math.sin(i * 0.15 + Date.now() * 0.015) * 0.4 + 0.6;
       const barHeight = (Math.random() * 0.3 + 0.7) * canvas.height * factor * 0.65;
-      
+
       const grad = ctx.createLinearGradient(0, canvas.height, 0, 0);
       grad.addColorStop(0, "var(--neon-purple)");
       grad.addColorStop(1, "var(--neon-cyan)");
-      
+
       ctx.fillStyle = grad;
       ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 2, barHeight);
     }
   }
-  
+
   if (state.playback.animationFrameId) {
     cancelAnimationFrame(state.playback.animationFrameId);
   }
@@ -4085,13 +4085,13 @@ function deleteRecording(id) {
 // --- VISTA 3: DICCIONARIO Y ESCALAS ---
 function switchDictMode(mode) {
   state.dictMode = mode;
-  
+
   const btnChords = document.getElementById("btn-dict-mode-chords");
   const btnScales = document.getElementById("btn-dict-mode-scales");
   const chordsSelectors = document.getElementById("dict-chords-selectors");
   const scalesSelectors = document.getElementById("dict-scales-selectors");
   const heartBtn = document.getElementById("chord-fav-heart");
-  
+
   if (mode === "chords") {
     if (btnChords) btnChords.classList.add("active");
     if (btnScales) btnScales.classList.remove("active");
@@ -4105,13 +4105,13 @@ function switchDictMode(mode) {
     if (scalesSelectors) scalesSelectors.style.display = "flex";
     if (heartBtn) heartBtn.style.display = "none"; // Escalas no tienen favoritos
   }
-  
+
   renderDictionary();
 }
 
 function filterChordRoot(root) {
   state.chordFilterRoot = root;
-  
+
   // Resaltar botón activo en el filtro de nota raíz
   const filterGroup = document.getElementById("dict-chord-root-filters");
   if (filterGroup) {
@@ -4123,14 +4123,14 @@ function filterChordRoot(root) {
       }
     });
   }
-  
+
   const chordName = state.chordFilterRoot + state.chordFilterType;
   selectChord(chordName);
 }
 
 function filterChordType(type) {
   state.chordFilterType = type;
-  
+
   // Resaltar botón activo en el filtro de tipo de acorde
   const filterGroup = document.getElementById("dict-chord-type-filters");
   if (filterGroup) {
@@ -4143,7 +4143,7 @@ function filterChordType(type) {
       }
     });
   }
-  
+
   const chordName = state.chordFilterRoot + state.chordFilterType;
   selectChord(chordName);
 }
@@ -4151,12 +4151,12 @@ function filterChordType(type) {
 function onScaleChange() {
   const rootSelect = document.getElementById("scale-root-select");
   const typeSelect = document.getElementById("scale-type-select");
-  
+
   if (rootSelect && typeSelect) {
     state.currentScaleRoot = parseInt(rootSelect.value);
     state.currentScale = typeSelect.value;
   }
-  
+
   renderDictionary();
 }
 
@@ -4195,9 +4195,9 @@ function renderDictionary() {
         </button>
       `).join("");
     }
-    
+
     renderFavoritesList();
-    
+
     // Títulos e información
     const chord = CHORD_DATABASE[state.currentChord];
     const chordNameTitle = document.getElementById("chord-name-title");
@@ -4207,7 +4207,7 @@ function renderDictionary() {
     const tipsDesc = document.getElementById("tips-panel-desc");
     const playBtn = document.getElementById("btn-play-dict-audio");
     const favHeart = document.getElementById("chord-fav-heart");
-    
+
     if (chord) {
       if (chordNameTitle) {
         chordNameTitle.className = state.currentInstrument === "guitar" ? "chord-guitar-title chord-guitar-title-glow" : "chord-piano-title chord-piano-title-glow";
@@ -4219,22 +4219,22 @@ function renderDictionary() {
         const color = state.currentInstrument === "guitar" ? "var(--neon-lime)" : "var(--neon-orange)";
         chordNameTitle.innerHTML = `<span class="chord-root" style="color: #ffffff; font-size: 40px; font-weight: 800;">${root}</span><span class="chord-type" style="color: ${color}; font-size: 24px; font-weight: 700; margin-left: 2px; vertical-align: top;">${type}</span>`;
       }
-      
+
       if (notesLabel) notesLabel.textContent = "Notas que lo componen";
-      
+
       if (chordNotesList) {
         chordNotesList.innerHTML = chord.notes.map(n => `<span class="note-bubble">${n}</span>`).join("");
       }
-      
+
       if (tipsTitle) tipsTitle.textContent = "Tips de Práctica";
       if (tipsDesc) {
         tipsDesc.innerHTML = `
           Asegúrate de presionar las cuerdas cerca de los trastes metálicos sin tocarlos para evitar el trasteo. Mantén los dedos arqueados para no mutear cuerdas adyacentes.
         `;
       }
-      
+
       if (playBtn) playBtn.textContent = "🔊 Escuchar Acorde";
-      
+
       if (favHeart) {
         const isFav = state.favoritesChords.includes(state.currentChord);
         if (isFav) {
@@ -4245,7 +4245,7 @@ function renderDictionary() {
           favHeart.innerHTML = "🤍";
         }
       }
-      
+
       // Renderizar los diagramas SVG correspondientes
       if (state.currentInstrument === "guitar") {
         renderGuitarChordSVG(state.currentChord, "chord-svg-render-area");
@@ -4272,36 +4272,36 @@ function renderDictionary() {
     // --- MODO ESCALAS ---
     const voicingContainer = document.getElementById("chord-voicing-dots-container");
     if (voicingContainer) voicingContainer.innerHTML = "";
-    
+
     const scale = SCALE_DATABASE[state.currentScale];
     const rootName = NOTE_NAMES[state.currentScaleRoot];
-    
+
     const scaleNameTitle = document.getElementById("chord-name-title");
     const scaleNotesList = document.getElementById("chord-notes-list");
     const notesLabel = document.getElementById("notes-list-label");
     const tipsTitle = document.getElementById("tips-panel-title");
     const tipsDesc = document.getElementById("tips-panel-desc");
     const playBtn = document.getElementById("btn-play-dict-audio");
-    
+
     if (scale) {
       if (scaleNameTitle) {
         scaleNameTitle.className = state.currentInstrument === "guitar" ? "chord-guitar-title chord-guitar-title-glow" : "chord-piano-title chord-piano-title-glow";
         scaleNameTitle.innerHTML = `${rootName} ${scale.name} <span style="font-size:14px; font-weight:400; color:var(--text-secondary)">Escala</span>`;
       }
-      
+
       if (notesLabel) notesLabel.textContent = "Estructura e Intervalos";
-      
+
       // Notas reales de la escala
       if (scaleNotesList) {
         const scaleNotes = scale.intervals.map(int => NOTE_NAMES[(state.currentScaleRoot + int) % 12]);
         scaleNotesList.innerHTML = scaleNotes.map(n => `<span class="note-bubble">${n}</span>`).join("");
       }
-      
+
       if (tipsTitle) tipsTitle.textContent = "Teoría y Origen";
       if (tipsDesc) tipsDesc.textContent = scale.desc;
-      
+
       if (playBtn) playBtn.textContent = "🔊 Escuchar Escala";
-      
+
       // Renderizar SVG de Escala
       if (state.currentInstrument === "guitar") {
         renderGuitarScaleSVG(state.currentScaleRoot, state.currentScale, "chord-svg-render-area");
@@ -4314,7 +4314,7 @@ function renderDictionary() {
 
 function selectChord(chordName) {
   state.currentChord = chordName;
-  
+
   // Parsear la raíz y el tipo
   // Las raíces pueden ser C, C#, D, Eb, E, F, F#, G, Ab, A, Bb, B (longitud 1 o 2)
   let root = chordName.substring(0, 1);
@@ -4322,10 +4322,10 @@ function selectChord(chordName) {
     root = chordName.substring(0, 2);
   }
   const type = chordName.substring(root.length);
-  
+
   state.chordFilterRoot = root;
   state.chordFilterType = type;
-  
+
   // Sincronizar botones de nota raíz
   const rootGroup = document.getElementById("dict-chord-root-filters");
   if (rootGroup) {
@@ -4337,7 +4337,7 @@ function selectChord(chordName) {
       }
     });
   }
-  
+
   // Sincronizar botones de tipo de acorde
   const typeGroup = document.getElementById("dict-chord-type-filters");
   if (typeGroup) {
@@ -4350,16 +4350,16 @@ function selectChord(chordName) {
       }
     });
   }
-  
+
   renderDictionary();
 }
 
 function selectInstrument(inst) {
   state.currentInstrument = inst;
-  
+
   const btnGuitar = document.getElementById("btn-select-guitar");
   const btnPiano = document.getElementById("btn-select-piano");
-  
+
   if (btnGuitar && btnPiano) {
     if (inst === "guitar") {
       btnGuitar.classList.add("active");
@@ -4369,7 +4369,7 @@ function selectInstrument(inst) {
       btnGuitar.classList.remove("active");
     }
   }
-  
+
   renderDictionary();
 }
 
@@ -4388,12 +4388,12 @@ function toggleFavoriteChord() {
 function renderFavoritesList() {
   const container = document.getElementById("favorites-chords-list");
   if (!container) return;
-  
+
   if (state.favoritesChords.length === 0) {
     container.innerHTML = `<span style="font-size:12px; color:var(--text-muted)">No tienes favoritos aún.</span>`;
     return;
   }
-  
+
   // Group by root note
   const groups = {};
   state.favoritesChords.forEach(chord => {
@@ -4404,7 +4404,7 @@ function renderFavoritesList() {
     if (!groups[root]) groups[root] = [];
     groups[root].push(chord);
   });
-  
+
   container.innerHTML = Object.keys(groups).map(root => {
     const chords = groups[root];
     return `
@@ -4446,17 +4446,17 @@ function toggleHeaderRecording() {
 function isChordLine(line) {
   const trimmed = line.trim();
   if (trimmed === "") return false;
-  
+
   const tokens = trimmed.split(/\s+/);
   let validChords = 0;
-  
+
   for (let t of tokens) {
     const cleanT = t.replace(/[()\[\]]/g, "").trim();
     if (CHORD_TOKEN_REGEX.test(cleanT)) {
       validChords++;
     }
   }
-  
+
   return (validChords / tokens.length) >= 0.7;
 }
 
@@ -4594,13 +4594,13 @@ function convertTraditionalToBracket(text) {
   for (let i = 0; i < lines.length; i++) {
     const currentLine = lines[i];
     const nextLine = lines[i + 1];
-    
+
     // SI LA LÍNEA YA CONTIENE CORCHETES, YA ESTÁ EN FORMATO BRACKET. PRESERVARLA SIN CAMBIOS.
     if (currentLine.includes("[") && currentLine.includes("]")) {
       result.push(currentLine);
       continue;
     }
-    
+
     // Si la línea es una cabecera de sección sin corchetes (ej: CORO o VERSO 1), envolverla en corchetes automáticamente
     const sectionKeywords = /^(INTRO|VERSE|CHORUS|SOLO|BRIDGE|OUTRO|INTRODUCCIÓN|CORO|ESTROFA|VERSO|PUENTE|ESTRIBILLO|FINAL|PRE-CORO|PRE-CHORUS|INTERLUDE|INSTRUMENTAL)(\s+[\w\d]+)?$/i;
     const trimmedLine = currentLine.trim();
@@ -4608,32 +4608,32 @@ function convertTraditionalToBracket(text) {
       result.push("[" + trimmedLine.toUpperCase() + "]");
       continue;
     }
-    
+
     if (isChordLine(currentLine) && nextLine !== undefined && !isChordLine(nextLine) && nextLine.trim() !== "") {
       const tokenRegex = /\S+/g;
       let match;
       const chords = [];
-      
+
       while ((match = tokenRegex.exec(currentLine)) !== null) {
         chords.push({
           name: match[0],
           pos: match.index
         });
       }
-      
+
       const lyricLine = nextLine;
-      
+
       // Mapear cada posición a sus acordes
       const positions = {};
       chords.forEach(c => {
         if (!positions[c.pos]) positions[c.pos] = [];
         positions[c.pos].push(c.name);
       });
-      
+
       // Construir la línea combinada
       let combined = "";
       const maxLen = Math.max(lyricLine.length, ...chords.map(c => c.pos));
-      
+
       for (let j = 0; j <= maxLen; j++) {
         // Si hay acordes en esta posición, los insertamos
         if (positions[j]) {
@@ -4649,7 +4649,7 @@ function convertTraditionalToBracket(text) {
           combined += " ";
         }
       }
-      
+
       result.push(combined);
       i++;
     } else if (isChordLine(currentLine)) {
@@ -4664,16 +4664,16 @@ function convertTraditionalToBracket(text) {
       result.push(currentLine);
     }
   }
-  
+
   return result.join("\n");
 }
 
 // Carga y lee el archivo importado
 function importLyricsFile(file) {
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     const text = e.target.result;
-    
+
     let title = "";
     let artist = "";
     let bpm = 120;
@@ -4681,17 +4681,17 @@ function importLyricsFile(file) {
     let timeSig = "4/4";
     let lyricsText = "";
     let hasDirectives = false;
-    
+
     const lines = text.split("\n");
     const directivesRegex = /^\{(\w+):\s*(.*)\}$/;
-    
+
     lines.forEach(line => {
       const match = line.trim().match(directivesRegex);
       if (match) {
         hasDirectives = true;
         const keyName = match[1].toLowerCase();
         const value = match[2].trim();
-        
+
         if (keyName === "title" || keyName === "t") {
           title = value;
         } else if (keyName === "artist" || keyName === "a") {
@@ -4707,11 +4707,11 @@ function importLyricsFile(file) {
         lyricsText += line + "\n";
       }
     });
-    
+
     if (!hasDirectives) {
       lyricsText = text;
     }
-    
+
     if (title) {
       document.getElementById("song-title").value = title;
       const metaTitle = document.getElementById("meta-title");
@@ -4737,7 +4737,7 @@ function importLyricsFile(file) {
       const metaTimesig = document.getElementById("meta-timesig");
       if (metaTimesig) metaTimesig.textContent = timeSig;
     }
-    
+
     const lyricsField = document.getElementById("song-lyrics");
     const richEditor = document.getElementById("editor-rich-lyrics");
     // 1. Convertir acordes tradicionales a formato [Acorde]
@@ -4754,7 +4754,7 @@ function importLyricsFile(file) {
     // 3. Actualizar panel de vista previa de estructura
     updateStructurePreview();
   };
-  
+
   reader.readAsText(file);
 }
 
@@ -4763,28 +4763,28 @@ function importLyricsFile(file) {
 // ─────────────────────────────────────────────────────────────
 
 const STANZA_TYPE_COLORS = {
-  "intro":      { bg: "rgba(41,240,214,0.12)",  border: "#29F0D6", text: "#29F0D6",  label: "Intro" },
-  "verso":      { bg: "rgba(41,240,214,0.08)",  border: "#29F0D6", text: "#29F0D6",  label: "Verso" },
-  "pre-coro":   { bg: "rgba(255,210,63,0.10)",  border: "#FFD23F", text: "#FFD23F",  label: "Pre-Coro" },
-  "coro":       { bg: "rgba(255,62,165,0.12)",  border: "#FF3EA5", text: "#FF3EA5",  label: "Coro" },
-  "estribillo": { bg: "rgba(255,62,165,0.12)",  border: "#FF3EA5", text: "#FF3EA5",  label: "Estribillo" },
-  "puente":     { bg: "rgba(255,210,63,0.10)",  border: "#FFD23F", text: "#FFD23F",  label: "Puente" },
-  "bridge":     { bg: "rgba(255,210,63,0.10)",  border: "#FFD23F", text: "#FFD23F",  label: "Bridge" },
-  "solo":       { bg: "rgba(255,62,165,0.08)",  border: "#FF3EA5", text: "#FF3EA5",  label: "Solo" },
-  "outro":      { bg: "rgba(120,120,120,0.12)", border: "#888",    text: "#aaa",     label: "Outro" },
-  "final":      { bg: "rgba(120,120,120,0.12)", border: "#888",    text: "#aaa",     label: "Final" },
-  "instrumental":{ bg: "rgba(120,120,120,0.10)",border: "#888",    text: "#aaa",     label: "Instrumental" },
+  "intro": { bg: "rgba(41,240,214,0.12)", border: "#29F0D6", text: "#29F0D6", label: "Intro" },
+  "verso": { bg: "rgba(41,240,214,0.08)", border: "#29F0D6", text: "#29F0D6", label: "Verso" },
+  "pre-coro": { bg: "rgba(255,210,63,0.10)", border: "#FFD23F", text: "#FFD23F", label: "Pre-Coro" },
+  "coro": { bg: "rgba(255,62,165,0.12)", border: "#FF3EA5", text: "#FF3EA5", label: "Coro" },
+  "estribillo": { bg: "rgba(255,62,165,0.12)", border: "#FF3EA5", text: "#FF3EA5", label: "Estribillo" },
+  "puente": { bg: "rgba(255,210,63,0.10)", border: "#FFD23F", text: "#FFD23F", label: "Puente" },
+  "bridge": { bg: "rgba(255,210,63,0.10)", border: "#FFD23F", text: "#FFD23F", label: "Bridge" },
+  "solo": { bg: "rgba(255,62,165,0.08)", border: "#FF3EA5", text: "#FF3EA5", label: "Solo" },
+  "outro": { bg: "rgba(120,120,120,0.12)", border: "#888", text: "#aaa", label: "Outro" },
+  "final": { bg: "rgba(120,120,120,0.12)", border: "#888", text: "#aaa", label: "Final" },
+  "instrumental": { bg: "rgba(120,120,120,0.10)", border: "#888", text: "#aaa", label: "Instrumental" },
 };
 
 const STANZA_TYPE_OPTIONS = [
-  { value: "verso",       label: "Verso" },
-  { value: "pre-coro",    label: "Pre-Coro" },
-  { value: "coro",        label: "Coro / Estribillo" },
-  { value: "puente",      label: "Puente / Bridge" },
-  { value: "intro",       label: "Intro" },
-  { value: "outro",       label: "Outro / Final" },
-  { value: "solo",        label: "Solo" },
-  { value: "instrumental",label: "Instrumental" },
+  { value: "verso", label: "Verso" },
+  { value: "pre-coro", label: "Pre-Coro" },
+  { value: "coro", label: "Coro / Estribillo" },
+  { value: "puente", label: "Puente / Bridge" },
+  { value: "intro", label: "Intro" },
+  { value: "outro", label: "Outro / Final" },
+  { value: "solo", label: "Solo" },
+  { value: "instrumental", label: "Instrumental" },
 ];
 
 /**
@@ -4895,8 +4895,8 @@ function changeStanzaType(sectionIdx, newType) {
   const newLabel = typeInfo.label.toUpperCase().replace(" / ", " ").replace("VERSO", "VERSO");
   // Para coro/estribillo: [CORO], para pre-coro: [PRE-CORO], etc.
   const newTag = newLabel.replace("CORO / ESTRIBILLO", "CORO")
-                         .replace("PUENTE / BRIDGE", "PUENTE")
-                         .replace("OUTRO / FINAL", "OUTRO");
+    .replace("PUENTE / BRIDGE", "PUENTE")
+    .replace("OUTRO / FINAL", "OUTRO");
 
   // Leer texto plano actual
   const lyricsField = document.getElementById("song-lyrics");
@@ -4956,9 +4956,9 @@ function parseTextToRichLyrics(text) {
 function serializeRichLyrics() {
   const editor = document.getElementById("editor-rich-lyrics");
   if (!editor) return "";
-  
+
   let text = "";
-  
+
   function traverse(node) {
     if (node.nodeType === Node.TEXT_NODE) {
       text += node.nodeValue;
@@ -4985,7 +4985,7 @@ function serializeRichLyrics() {
       }
     }
   }
-  
+
   editor.childNodes.forEach(traverse);
   return text.replace(/\n+$/, "\n").trim();
 }
@@ -4993,18 +4993,18 @@ function serializeRichLyrics() {
 function convertTypedBracketsToBadges() {
   const editor = document.getElementById("editor-rich-lyrics");
   if (!editor) return;
-  
+
   const popup = document.getElementById("chord-picker-popup");
   let activeIndex = -1;
   if (popup && popup.style.display !== "none" && activeChordBadge) {
     const allBadges = Array.from(document.querySelectorAll(".editor-chord-badge"));
     activeIndex = allBadges.indexOf(activeChordBadge);
   }
-  
+
   const rawText = serializeRichLyrics();
   editor.innerHTML = parseTextToRichLyrics(rawText);
   bindChordBadgeEvents();
-  
+
   // Re-vincular la referencia del acorde activo al nuevo elemento creado en el DOM
   if (activeIndex !== -1 && popup) {
     const newBadges = document.querySelectorAll(".editor-chord-badge");
@@ -5037,19 +5037,19 @@ function setupLongPress(element, callback) {
   let startX = 0;
   let startY = 0;
   let isLongPress = false;
-  
+
   element.addEventListener("touchstart", (e) => {
     isLongPress = false;
     const touch = e.touches[0];
     startX = touch.clientX;
     startY = touch.clientY;
-    
+
     pressTimer = setTimeout(() => {
       isLongPress = true;
       callback(e);
     }, 3000); // 3 segundos como solicita el usuario
   }, { passive: true });
-  
+
   element.addEventListener("touchmove", (e) => {
     const touch = e.touches[0];
     if (Math.abs(touch.clientX - startX) > 10 || Math.abs(touch.clientY - startY) > 10) {
@@ -5059,7 +5059,7 @@ function setupLongPress(element, callback) {
       }
     }
   }, { passive: true });
-  
+
   element.addEventListener("touchend", (e) => {
     if (pressTimer) {
       clearTimeout(pressTimer);
@@ -5069,7 +5069,7 @@ function setupLongPress(element, callback) {
       e.preventDefault();
     }
   });
-  
+
   element.addEventListener("touchcancel", () => {
     if (pressTimer) {
       clearTimeout(pressTimer);
@@ -5080,18 +5080,18 @@ function setupLongPress(element, callback) {
 
 function makeEditableInline(element, fieldType) {
   if (element.getAttribute("contenteditable") === "true") return;
-  
+
   const originalValue = element.textContent;
   if (element.classList.contains("placeholder-active")) {
     element.textContent = "";
   }
-  
+
   element.setAttribute("contenteditable", "true");
   element.classList.add("editing");
   element.focus();
-  
+
   setTimeout(() => selectAllText(element), 10);
-  
+
   const keydownHandler = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -5105,15 +5105,15 @@ function makeEditableInline(element, fieldType) {
       element.blur();
     }
   };
-  
+
   element.addEventListener("keydown", keydownHandler);
-  
+
   const blurHandler = () => {
     element.setAttribute("contenteditable", "false");
     element.classList.remove("editing");
     element.removeEventListener("keydown", keydownHandler);
     element.removeEventListener("blur", blurHandler);
-    
+
     let newValue = element.textContent.trim();
     if (fieldType === "bpm") {
       const parsedBpm = parseInt(newValue);
@@ -5123,16 +5123,16 @@ function makeEditableInline(element, fieldType) {
         newValue = parsedBpm.toString();
       }
     }
-    
+
     const hiddenInput = document.getElementById(`song-${fieldType}`);
     if (hiddenInput) {
       hiddenInput.value = newValue;
       hiddenInput.dispatchEvent(new Event("change"));
     }
-    
+
     updateTextElement(element, newValue);
   };
-  
+
   element.addEventListener("blur", blurHandler);
 }
 
@@ -5143,7 +5143,7 @@ function setupInlineEdit(element, fieldType) {
     }
     makeEditableInline(element, fieldType);
   });
-  
+
   setupLongPress(element, () => {
     if (navigator.vibrate) navigator.vibrate(50);
     makeEditableInline(element, fieldType);
@@ -5157,7 +5157,7 @@ function setupInlineSelect(element, fieldType) {
     }
     showInlineSelector(element, fieldType);
   });
-  
+
   setupLongPress(element, () => {
     if (navigator.vibrate) navigator.vibrate(50);
     showInlineSelector(element, fieldType);
@@ -5168,19 +5168,19 @@ function positionPopover(popover, targetElement) {
   popover.style.display = "block";
   const rect = targetElement.getBoundingClientRect();
   const popoverRect = popover.getBoundingClientRect();
-  
+
   let top = rect.bottom + window.scrollY + 5;
   let left = rect.left + window.scrollX;
-  
+
   if (left + popoverRect.width > window.innerWidth) {
     left = window.innerWidth - popoverRect.width - 15;
   }
   if (left < 10) left = 10;
-  
+
   if (rect.bottom + popoverRect.height > window.innerHeight) {
     top = rect.top + window.scrollY - popoverRect.height - 5;
   }
-  
+
   popover.style.top = `${top}px`;
   popover.style.left = `${left}px`;
 }
@@ -5190,21 +5190,21 @@ function showInlineSelector(element, field) {
   const titleSpan = document.getElementById("meta-popup-title");
   const optionsDiv = document.getElementById("meta-popup-options");
   if (!popup || !titleSpan || !optionsDiv) return;
-  
+
   let titleText = "Seleccionar";
   if (field === "key") titleText = "Tono (Key)";
   else if (field === "timesig") titleText = "Compás";
   else if (field === "status") titleText = "Estado";
   titleSpan.textContent = titleText;
-  
+
   optionsDiv.className = "popover-body popover-grid";
   if (field === "status") {
     optionsDiv.classList.add("meta-options-grid-3");
   }
-  
+
   const hiddenInput = document.getElementById(`song-${field}`);
   const currentVal = hiddenInput ? hiddenInput.value : element.textContent;
-  
+
   let options = [];
   if (field === "key") {
     options = [
@@ -5219,14 +5219,14 @@ function showInlineSelector(element, field) {
       { val: "ready", label: "Listo" }
     ];
   }
-  
+
   optionsDiv.innerHTML = "";
-  
+
   options.forEach(opt => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "picker-btn";
-    
+
     let val, label;
     if (typeof opt === "object") {
       val = opt.val;
@@ -5235,14 +5235,14 @@ function showInlineSelector(element, field) {
       val = opt;
       label = opt;
     }
-    
+
     btn.textContent = label;
     btn.setAttribute("data-val", val);
-    
+
     if (val === currentVal) {
       btn.classList.add("active");
     }
-    
+
     btn.addEventListener("click", () => {
       if (hiddenInput) {
         hiddenInput.value = val;
@@ -5254,10 +5254,10 @@ function showInlineSelector(element, field) {
       }
       popup.style.display = "none";
     });
-    
+
     optionsDiv.appendChild(btn);
   });
-  
+
   positionPopover(popup, element);
 }
 
@@ -5287,7 +5287,7 @@ function bindChordBadgeEvents() {
       e.preventDefault();
       openChordPickerForBadge(badge, e);
     });
-    
+
     setupLongPress(badge, (e) => {
       if (navigator.vibrate) navigator.vibrate(50);
       openChordPickerForBadge(badge, e);
@@ -5299,28 +5299,28 @@ function openChordPickerForBadge(badge, e) {
   activeChordBadge = badge;
   const popup = document.getElementById("chord-picker-popup");
   if (!popup) return;
-  
+
   // Guardar el índice del acorde activo en el DOM actual
   const allBadges = Array.from(document.querySelectorAll(".editor-chord-badge"));
   popup._activeChordIndex = allBadges.indexOf(badge);
-  
+
   // Limpiar corchetes al leer para inicializar el selector de acordes
   const currentChord = (badge.getAttribute("data-chord") || badge.textContent.trim()).replace(/[\[\]]/g, "");
-  
+
   let root = currentChord.substring(0, 1);
   if (currentChord.length > 1 && (currentChord[1] === '#' || currentChord[1] === 'b')) {
     root = currentChord.substring(0, 2);
   }
   const suffix = currentChord.substring(root.length);
-  
+
   const customInput = document.getElementById("picker-custom-val");
   if (customInput) {
     customInput.value = currentChord;
   }
-  
+
   popup._chordRoot = root;
   popup._chordSuffix = suffix;
-  
+
   const rootButtons = popup.querySelectorAll(".roots-grid .picker-btn");
   rootButtons.forEach(btn => {
     const val = btn.getAttribute("data-val");
@@ -5330,7 +5330,7 @@ function openChordPickerForBadge(badge, e) {
       btn.classList.remove("active");
     }
   });
-  
+
   const suffixButtons = popup.querySelectorAll(".suffixes-grid .picker-btn");
   suffixButtons.forEach(btn => {
     const val = btn.getAttribute("data-val");
@@ -5340,17 +5340,17 @@ function openChordPickerForBadge(badge, e) {
       btn.classList.remove("active");
     }
   });
-  
+
   positionPopover(popup, badge);
 }
 
 function initChordPickerHandlers() {
   const popup = document.getElementById("chord-picker-popup");
   if (!popup) return;
-  
+
   const customInput = document.getElementById("picker-custom-val");
   const confirmBtn = document.getElementById("btn-picker-confirm");
-  
+
   const rootButtons = popup.querySelectorAll(".roots-grid .picker-btn");
   rootButtons.forEach(btn => {
     btn.addEventListener("click", () => {
@@ -5361,14 +5361,14 @@ function initChordPickerHandlers() {
       const combined = (popup._chordRoot || "") + (popup._chordSuffix || "");
       if (customInput) customInput.value = combined;
     });
-    
+
     btn.addEventListener("dblclick", () => {
       const val = btn.getAttribute("data-val");
       popup._chordRoot = val;
       applyChordFromPicker();
     });
   });
-  
+
   const suffixButtons = popup.querySelectorAll(".suffixes-grid .picker-btn");
   suffixButtons.forEach(btn => {
     btn.addEventListener("click", () => {
@@ -5379,18 +5379,18 @@ function initChordPickerHandlers() {
       const combined = (popup._chordRoot || "") + (popup._chordSuffix || "");
       if (customInput) customInput.value = combined;
     });
-    
+
     btn.addEventListener("dblclick", () => {
       const val = btn.getAttribute("data-val");
       popup._chordSuffix = val;
       applyChordFromPicker();
     });
   });
-  
+
   if (confirmBtn) {
     confirmBtn.addEventListener("click", applyChordFromPicker);
   }
-  
+
   const deleteBtn = document.getElementById("btn-picker-delete");
   if (deleteBtn) {
     deleteBtn.addEventListener("click", () => {
@@ -5404,7 +5404,7 @@ function initChordPickerHandlers() {
         targetBadge.remove();
         activeChordBadge = null;
         popup.style.display = "none";
-        
+
         // Sincronizar
         const serialized = serializeRichLyrics();
         const rawInput = document.getElementById("song-lyrics");
@@ -5412,7 +5412,7 @@ function initChordPickerHandlers() {
       }
     });
   }
-  
+
   if (customInput) {
     customInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -5421,18 +5421,18 @@ function initChordPickerHandlers() {
       }
     });
   }
-  
+
   // Cerrar popups al hacer clic fuera
   document.addEventListener("click", (e) => {
     const chordPopup = document.getElementById("chord-picker-popup");
     const metaPopup = document.getElementById("meta-selector-popup");
-    
+
     if (chordPopup && chordPopup.style.display !== "none") {
       if (!chordPopup.contains(e.target) && !e.target.closest(".editor-chord-badge")) {
         chordPopup.style.display = "none";
       }
     }
-    
+
     if (metaPopup && metaPopup.style.display !== "none") {
       if (!metaPopup.contains(e.target) && !e.target.closest(".meta-inline-select")) {
         metaPopup.style.display = "none";
@@ -5445,7 +5445,7 @@ function applyChordFromPicker() {
   const popup = document.getElementById("chord-picker-popup");
   const customInput = document.getElementById("picker-custom-val");
   if (!popup) return;
-  
+
   // Localizar el elemento en el DOM usando el índice guardado como respaldo
   const index = popup._activeChordIndex;
   const badges = document.querySelectorAll(".editor-chord-badge");
@@ -5453,27 +5453,27 @@ function applyChordFromPicker() {
   if (index !== undefined && index !== -1 && badges[index]) {
     targetBadge = badges[index];
   }
-  
+
   if (!targetBadge) return;
-  
+
   let newChord = "";
   if (customInput && customInput.value.trim() !== "") {
     newChord = customInput.value.trim();
   } else {
     newChord = (popup._chordRoot || "") + (popup._chordSuffix || "");
   }
-  
+
   if (newChord !== "") {
     // Asegurar corchetes en el contenido de texto plano
     if (!newChord.startsWith("[")) newChord = "[" + newChord;
     if (!newChord.endsWith("]")) newChord = newChord + "]";
-    
+
     targetBadge.textContent = newChord;
     targetBadge.setAttribute("data-chord", newChord.replace(/[\[\]]/g, ""));
     const serialized = serializeRichLyrics();
     document.getElementById("song-lyrics").value = serialized;
   }
-  
+
   popup.style.display = "none";
 }
 
@@ -5484,33 +5484,33 @@ function initInlineEditFields() {
     { id: "meta-bpm", type: "bpm" },
     { id: "meta-image", type: "image" }
   ];
-  
+
   fields.forEach(f => {
     const el = document.getElementById(f.id);
     if (el) {
       setupInlineEdit(el, f.type);
     }
   });
-  
+
   const selects = [
     { id: "meta-key", type: "key" },
     { id: "meta-timesig", type: "timesig" },
     { id: "meta-status", type: "status" }
   ];
-  
+
   selects.forEach(s => {
     const el = document.getElementById(s.id);
     if (el) {
       setupInlineSelect(el, s.type);
     }
   });
-  
+
   const richEditor = document.getElementById("editor-rich-lyrics");
   if (richEditor) {
     richEditor.addEventListener("blur", () => {
       convertTypedBracketsToBadges();
     });
-    
+
     richEditor.addEventListener("input", () => {
       const serialized = serializeRichLyrics();
       document.getElementById("song-lyrics").value = serialized;
@@ -5533,9 +5533,9 @@ function toggleDrumMachine(enabled) {
 function toggleSequencerStep(inst, stepIdx, button) {
   const isActive = !state.drumMachine.grid[inst][stepIdx];
   state.drumMachine.grid[inst][stepIdx] = isActive;
-  
+
   saveDrumMachineSettingsToActiveSong();
-  
+
   if (isActive) {
     button.classList.add("active");
     initAudioContext();
@@ -5552,60 +5552,60 @@ function toggleSequencerStep(inst, stepIdx, button) {
 
 function buildDrumPatternGrid(pattern, steps) {
   let grid = {
-    kick:  Array(steps).fill(false),
+    kick: Array(steps).fill(false),
     snare: Array(steps).fill(false),
     hihat: Array(steps).fill(false)
   };
-  
+
   if (pattern === "rock") {
     if (steps === 8) {
-      grid.kick  = [true,  false, false, false, true,  false, false, false];
-      grid.snare = [false, false, true,  false, false, false, true,  false];
-      grid.hihat = [true,  false, true,  false, true,  false, true,  false];
+      grid.kick = [true, false, false, false, true, false, false, false];
+      grid.snare = [false, false, true, false, false, false, true, false];
+      grid.hihat = [true, false, true, false, true, false, true, false];
     } else if (steps === 6) {
       const beats = state.metronome.beatsPerMeasure || 3;
       const unit = state.metronome.beatUnit || 4;
       if (beats === 6 && unit === 8) {
         // Compás 6/8
-        grid.kick  = [true,  false, false, false, false, false];
-        grid.snare = [false, false, false, true,  false, false];
-        grid.hihat = [true,  false, true,  false, true,  false];
+        grid.kick = [true, false, false, false, false, false];
+        grid.snare = [false, false, false, true, false, false];
+        grid.hihat = [true, false, true, false, true, false];
       } else {
         // Compás 3/4
-        grid.kick  = [true,  false, false, false, false, false];
-        grid.snare = [false, false, true,  false, true,  false];
-        grid.hihat = [true,  false, true,  false, true,  false];
+        grid.kick = [true, false, false, false, false, false];
+        grid.snare = [false, false, true, false, true, false];
+        grid.hihat = [true, false, true, false, true, false];
       }
     } else if (steps === 4) {
-      grid.kick  = [true,  false, false, false];
-      grid.snare = [false, false, true,  false];
-      grid.hihat = [true,  false, true,  false];
+      grid.kick = [true, false, false, false];
+      grid.snare = [false, false, true, false];
+      grid.hihat = [true, false, true, false];
     } else {
       grid.kick[0] = true;
-      if (steps > 2) grid.snare[Math.floor(steps/2)] = true;
+      if (steps > 2) grid.snare[Math.floor(steps / 2)] = true;
       for (let i = 0; i < steps; i += 2) grid.hihat[i] = true;
     }
   } else if (pattern === "funk") {
     if (steps === 8) {
-      grid.kick  = [true,  false, false, true,  false, false, false, false];
-      grid.snare = [false, false, true,  false, false, true,  true,  false];
-      grid.hihat = [true,  true,  true,  true,  true,  true,  true,  true];
+      grid.kick = [true, false, false, true, false, false, false, false];
+      grid.snare = [false, false, true, false, false, true, true, false];
+      grid.hihat = [true, true, true, true, true, true, true, true];
     } else if (steps === 6) {
       const beats = state.metronome.beatsPerMeasure || 3;
       const unit = state.metronome.beatUnit || 4;
       if (beats === 6 && unit === 8) {
-        grid.kick  = [true,  false, false, false, true,  false];
-        grid.snare = [false, false, false, true,  false, true];
-        grid.hihat = [true,  true,  true,  true,  true,  true];
+        grid.kick = [true, false, false, false, true, false];
+        grid.snare = [false, false, false, true, false, true];
+        grid.hihat = [true, true, true, true, true, true];
       } else {
-        grid.kick  = [true,  false, false, true,  false, false];
-        grid.snare = [false, false, true,  false, true,  false];
-        grid.hihat = [true,  true,  true,  true,  true,  true];
+        grid.kick = [true, false, false, true, false, false];
+        grid.snare = [false, false, true, false, true, false];
+        grid.hihat = [true, true, true, true, true, true];
       }
     } else if (steps === 4) {
-      grid.kick  = [true,  false, false, true];
-      grid.snare = [false, false, true,  false];
-      grid.hihat = [true,  true,  true,  true];
+      grid.kick = [true, false, false, true];
+      grid.snare = [false, false, true, false];
+      grid.hihat = [true, true, true, true];
     } else {
       grid.kick[0] = true;
       if (steps > 3) grid.kick[3] = true;
@@ -5615,34 +5615,34 @@ function buildDrumPatternGrid(pattern, steps) {
     }
   } else if (pattern === "reggae") {
     if (steps === 8) {
-      grid.kick  = [false, false, false, false, true,  false, false, false];
-      grid.snare = [false, false, false, false, true,  false, false, false];
-      grid.hihat = [false, true,  false, true,  false, true,  false, true];
+      grid.kick = [false, false, false, false, true, false, false, false];
+      grid.snare = [false, false, false, false, true, false, false, false];
+      grid.hihat = [false, true, false, true, false, true, false, true];
     } else if (steps === 6) {
       const beats = state.metronome.beatsPerMeasure || 3;
       const unit = state.metronome.beatUnit || 4;
       if (beats === 6 && unit === 8) {
-        grid.kick  = [false, false, false, true,  false, false];
-        grid.snare = [false, false, false, true,  false, false];
-        grid.hihat = [false, true,  false, true,  false, true];
+        grid.kick = [false, false, false, true, false, false];
+        grid.snare = [false, false, false, true, false, false];
+        grid.hihat = [false, true, false, true, false, true];
       } else {
-        grid.kick  = [false, false, false, false, true,  false];
-        grid.snare = [false, false, false, false, true,  false];
-        grid.hihat = [false, true,  false, true,  false, true];
+        grid.kick = [false, false, false, false, true, false];
+        grid.snare = [false, false, false, false, true, false];
+        grid.hihat = [false, true, false, true, false, true];
       }
     } else if (steps === 4) {
-      grid.kick  = [false, false, true,  false];
-      grid.snare = [false, false, true,  false];
-      grid.hihat = [false, true,  false, true];
+      grid.kick = [false, false, true, false];
+      grid.snare = [false, false, true, false];
+      grid.hihat = [false, true, false, true];
     } else {
       if (steps > 3) {
-        grid.kick[Math.floor(steps/2)] = true;
-        grid.snare[Math.floor(steps/2)] = true;
+        grid.kick[Math.floor(steps / 2)] = true;
+        grid.snare[Math.floor(steps / 2)] = true;
       }
       for (let i = 0; i < steps; i += 2) grid.hihat[i] = true;
     }
   }
-  
+
   return grid;
 }
 
@@ -5679,13 +5679,13 @@ function playKick(time) {
   const gain = audioCtx.createGain();
   osc.connect(gain);
   gain.connect(audioCtx.destination);
-  
+
   osc.frequency.setValueAtTime(150, time);
   osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.3);
-  
+
   gain.gain.setValueAtTime(0.4 * state.metronome.volume, time);
   gain.gain.exponentialRampToValueAtTime(0.01, time + 0.3);
-  
+
   osc.start(time);
   osc.stop(time + 0.3);
 }
@@ -5698,33 +5698,33 @@ function playSnare(time) {
   for (let i = 0; i < bufferSize; i++) {
     data[i] = Math.random() * 2 - 1;
   }
-  
+
   const noise = audioCtx.createBufferSource();
   noise.buffer = buffer;
-  
+
   const filter = audioCtx.createBiquadFilter();
   filter.type = "highpass";
   filter.frequency.setValueAtTime(1000, time);
-  
+
   const noiseGain = audioCtx.createGain();
   noiseGain.gain.setValueAtTime(0.2 * state.metronome.volume, time);
   noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
-  
+
   noise.connect(filter);
   filter.connect(noiseGain);
   noiseGain.connect(audioCtx.destination);
-  
+
   const osc = audioCtx.createOscillator();
   const oscGain = audioCtx.createGain();
   osc.type = "triangle";
   osc.frequency.setValueAtTime(180, time);
-  
+
   oscGain.gain.setValueAtTime(0.15 * state.metronome.volume, time);
   oscGain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
-  
+
   osc.connect(oscGain);
   oscGain.connect(audioCtx.destination);
-  
+
   noise.start(time);
   noise.stop(time + 0.2);
   osc.start(time);
@@ -5739,22 +5739,22 @@ function playHiHat(time) {
   for (let i = 0; i < bufferSize; i++) {
     data[i] = Math.random() * 2 - 1;
   }
-  
+
   const noise = audioCtx.createBufferSource();
   noise.buffer = buffer;
-  
+
   const filter = audioCtx.createBiquadFilter();
   filter.type = "bandpass";
   filter.frequency.setValueAtTime(8000, time);
-  
+
   const gain = audioCtx.createGain();
   gain.gain.setValueAtTime(0.12 * state.metronome.volume, time);
   gain.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
-  
+
   noise.connect(filter);
   filter.connect(gain);
   gain.connect(audioCtx.destination);
-  
+
   noise.start(time);
   noise.stop(time + 0.05);
 }
@@ -5792,25 +5792,25 @@ function initInterventionPopupDraggable() {
   if (!header) return;
 
   let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-  
+
   header.style.cursor = "move"; // Indicate that the header is draggable
   header.onmousedown = dragMouseDown;
   header.ontouchstart = dragTouchStart;
-  
+
   function dragMouseDown(e) {
     e = e || window.event;
     if (e.target.tagName === 'BUTTON' || e.target.classList.contains('close-popover-btn')) return;
-    
+
     e.preventDefault();
     pos3 = e.clientX;
     pos4 = e.clientY;
     document.onmouseup = closeDragElement;
     document.onmousemove = elementDrag;
   }
-  
+
   function dragTouchStart(e) {
     if (e.target.tagName === 'BUTTON' || e.target.classList.contains('close-popover-btn')) return;
-    
+
     if (e.touches && e.touches[0]) {
       pos3 = e.touches[0].clientX;
       pos4 = e.touches[0].clientY;
@@ -5818,7 +5818,7 @@ function initInterventionPopupDraggable() {
       document.ontouchmove = elementTouchDrag;
     }
   }
-  
+
   function elementDrag(e) {
     e = e || window.event;
     e.preventDefault();
@@ -5829,7 +5829,7 @@ function initInterventionPopupDraggable() {
     popup.style.top = (popup.offsetTop - pos2) + "px";
     popup.style.left = (popup.offsetLeft - pos1) + "px";
   }
-  
+
   function elementTouchDrag(e) {
     if (e.touches && e.touches[0]) {
       pos1 = pos3 - e.touches[0].clientX;
@@ -5840,7 +5840,7 @@ function initInterventionPopupDraggable() {
       popup.style.left = (popup.offsetLeft - pos1) + "px";
     }
   }
-  
+
   function closeDragElement() {
     document.onmouseup = null;
     document.onmousemove = null;
@@ -5873,7 +5873,7 @@ function closeMobileDrawers() {
   const overlaySidebar = document.getElementById("mobile-sidebar-overlay");
   if (sidebar) sidebar.classList.remove("open");
   if (overlaySidebar) overlaySidebar.classList.remove("open");
-  
+
   const metronome = document.querySelector(".sidebar-panel");
   const overlayMetronome = document.getElementById("mobile-metronome-overlay");
   if (metronome) metronome.classList.remove("open");
@@ -5903,20 +5903,20 @@ function toggleModalFullscreen() {
 
 function deleteSongFromRepertorio(songId) {
   state.songs = state.songs.filter(s => String(s.id) !== String(songId));
-  
+
   // Eliminar en Firestore directamente
   if (window.SongsService) {
     window.SongsService.deleteSong(songId).catch(err => {
       console.error("Error al eliminar canción en Firebase:", err);
     });
   }
-  
+
   if (String(state.activeSongId) === String(songId)) {
     state.activeSongId = null;
     const indicator = document.getElementById("nav-active-song");
     if (indicator) indicator.style.display = "none";
   }
-  
+
   renderSetlist();
   triggerEnsayoToast("Tema eliminado correctamente");
 }
@@ -5925,15 +5925,15 @@ function deleteSongFromRepertorio(songId) {
 function triggerEnsayoToast(msg) {
   const existing = document.querySelector(".ensayo-toast");
   if (existing) existing.remove();
-  
+
   const toast = document.createElement("div");
   toast.className = "ensayo-toast glass";
   toast.innerHTML = `<span>🔔</span> ${msg}`;
-  
+
   // Agregar al contenedor de la app o al body
   const container = document.querySelector(".app-container") || document.body;
   container.appendChild(toast);
-  
+
   setTimeout(() => {
     toast.style.opacity = "0";
     setTimeout(() => toast.remove(), 300);
@@ -5970,7 +5970,7 @@ function updateProfileBadge() {
   const avatar = document.getElementById("current-user-avatar");
   const name = document.getElementById("current-user-name");
   const role = document.getElementById("current-user-role");
-  
+
   if (!name || !role) return;
 
   if (state.currentUser) {
@@ -5993,12 +5993,12 @@ function updatePermissionsUI() {
   const btnAdd = document.getElementById("btn-add-song");
   const btnMembers = document.getElementById("btn-members-registry");
   const grid = document.getElementById("setlist-grid");
-  
+
   // Mostrar los botones de agregar e integrantes para todos temporalmente
   // para evitar confusión (luego se restringirá la acción con un alert si es necesario)
   if (btnAdd) btnAdd.style.display = "";
   if (btnMembers) btnMembers.style.display = "";
-  
+
   if (state.currentUser) {
     if (grid) grid.classList.remove("guest-mode");
   } else {
@@ -6013,25 +6013,25 @@ function updatePermissionsUI() {
 function isCurrentUserAdmin() {
   if (!state.currentUser) return false;
   if (state.currentBandId === "KAWSAY") return false;
-  
+
   // 1. Si es el creador de la banda registrado en la metadata
   if (state.bandMetadata && state.bandMetadata.createdBy === state.currentUser.uid) {
     return true;
   }
-  
+
   // 2. Si está en la lista de miembros como Administrador
   if (state.members && state.members.length > 0) {
     const isMemberAdmin = state.members.some(m => m.linkedUid === state.currentUser.uid && m.role === "Administrador") ||
-                          state.members.some(m => m.name && m.name.toLowerCase() === (state.currentUser.email || "").split("@")[0].toLowerCase() && m.role === "Administrador");
+      state.members.some(m => m.name && m.name.toLowerCase() === (state.currentUser.email || "").split("@")[0].toLowerCase() && m.role === "Administrador");
     if (isMemberAdmin) return true;
   }
-  
+
   // 3. Fallback: Si es el único integrante del grupo, consideramos que es el administrador
   if (state.members && state.members.length === 1) {
     const singleMember = state.members[0];
-    if (singleMember.linkedUid === state.currentUser.uid || 
-        singleMember.email === state.currentUser.email || 
-        singleMember.name && singleMember.name.toLowerCase() === (state.currentUser.email||"").split("@")[0].toLowerCase()) {
+    if (singleMember.linkedUid === state.currentUser.uid ||
+      singleMember.email === state.currentUser.email ||
+      singleMember.name && singleMember.name.toLowerCase() === (state.currentUser.email || "").split("@")[0].toLowerCase()) {
       return true;
     }
   }
@@ -6056,15 +6056,15 @@ function initGroupTab() {
   const previewImg = document.getElementById("band-settings-logo-preview");
   const previewContainer = document.getElementById("band-settings-logo-preview-container");
   const regenerateBtn = document.getElementById("btn-regenerate-code");
-  
+
   // Determinar si el usuario actual es Administrador de la banda actual
   const userIsAdmin = isCurrentUserAdmin();
-  
+
   // Mostrar / ocultar botón de regenerar código
   if (regenerateBtn) {
     regenerateBtn.style.display = userIsAdmin ? "inline-block" : "none";
   }
-  
+
   // Ocultar botón de crear grupo si ya tiene uno real
   const createBandBtn = document.querySelector("button[onclick='createNewBandFlow()']");
   if (createBandBtn) {
@@ -6079,7 +6079,7 @@ function initGroupTab() {
   const groupsListEl = document.getElementById("band-settings-groups-list");
   if (groupsListEl && state.myBands && window.supabaseClient) {
     groupsListEl.innerHTML = `<p style="color:var(--text-muted); font-size:12px;">Cargando tus grupos...</p>`;
-    
+
     (async () => {
       try {
         const { data: bandsData, error: bandsError } = await window.supabaseClient
@@ -6088,7 +6088,7 @@ function initGroupTab() {
           .in('id', state.myBands);
 
         if (bandsError) throw bandsError;
-        
+
         let html = "";
         (bandsData || []).forEach(b => {
           const isActive = b.id === state.currentBandId;
@@ -6100,13 +6100,13 @@ function initGroupTab() {
           `;
         });
         groupsListEl.innerHTML = html || `<p style="color:var(--text-muted); font-size:12px;">No estás unido a ningún grupo.</p>`;
-      } catch(err) {
+      } catch (err) {
         console.error("Error al cargar grupos del usuario:", err);
         groupsListEl.innerHTML = `<p style="color:var(--red); font-size:12px;">Error al cargar grupos.</p>`;
       }
     })();
   }
-  
+
   // Habilitar o deshabilitar campos según rol
   if (nameInput) {
     nameInput.value = state.bandMetadata.name || "";
@@ -6136,7 +6136,7 @@ function initGroupTab() {
       warningEl.style.display = "none";
     }
   }
-  
+
   // Configurar vista previa del logo actual
   if (state.bandMetadata.logoUrl) {
     if (logoStatus) {
@@ -6154,45 +6154,45 @@ function initGroupTab() {
       previewContainer.style.display = "none";
     }
   }
-  
-  
-  
+
+
+
   // Inicializar sub-pestañas internas de grupo
   if (!state.groupActiveSubtab) {
     state.groupActiveSubtab = "perfil";
   }
-  
+
   // Renderizar listas e inicializar swatches
   renderPendingRequests();
   renderMembersList();
   setTimeout(() => initColorSwatches(), 50);
-  
+
   renderRehearsalsSchedule();
   renderGigsSchedule();
-  
+
   switchGroupSubtab(state.groupActiveSubtab);
 }
 
 function handleLogoUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-  
+
   const statusEl = document.getElementById("band-settings-logo-status");
   const previewImg = document.getElementById("band-settings-logo-preview");
   const previewContainer = document.getElementById("band-settings-logo-preview-container");
-  
+
   statusEl.innerHTML = "Optimizando imagen...";
-  
+
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     const img = new Image();
-    img.onload = function() {
+    img.onload = function () {
       const canvas = document.createElement("canvas");
       const MAX_HEIGHT = 100; // Altura máxima para el logo
       const MAX_WIDTH = 300;  // Ancho máximo para el logo
       let width = img.width;
       let height = img.height;
-      
+
       // Ajuste proporcional según límites máximos
       if (width > MAX_WIDTH) {
         height = Math.round((height * MAX_WIDTH) / width);
@@ -6202,22 +6202,22 @@ function handleLogoUpload(event) {
         width = Math.round((width * MAX_HEIGHT) / height);
         height = MAX_HEIGHT;
       }
-      
+
       canvas.width = width;
       canvas.height = height;
-      
+
       const ctx = canvas.getContext("2d");
       // Limpiar canvas para asegurar transparencia de base
       ctx.clearRect(0, 0, width, height);
       ctx.drawImage(img, 0, 0, width, height);
-      
+
       // Convertir a PNG para mantener la transparencia
       const compressedBase64 = canvas.toDataURL("image/png");
       state.bandMetadata.logoUrl = compressedBase64;
-      
+
       // Actualizar estado visual
       statusEl.innerHTML = `<span style="color:var(--neon-green)">✓ Logo optimizado y listo</span>`;
-      
+
       // Mostrar vista previa en vivo
       if (previewImg && previewContainer) {
         previewImg.src = compressedBase64;
@@ -6235,10 +6235,10 @@ async function saveBandSettings() {
     alert("El nombre de la banda es requerido.");
     return;
   }
-  
+
   const newName = nameInput.value.trim();
   state.bandMetadata.name = newName;
-  
+
   if (window.supabaseClient && state.currentBandId) {
     try {
       const { error } = await window.supabaseClient
@@ -6248,20 +6248,20 @@ async function saveBandSettings() {
           logo_url: state.bandMetadata.logoUrl || null
         })
         .eq('id', state.currentBandId);
-      
+
       if (error) throw error;
-      
+
       updateBandUI();
-      document.getElementById("modal-band-settings").classList.remove("open");
-    } catch(e) {
+      const mBand = document.getElementById("modal-band-settings"); if (mBand) mBand.classList.remove("open");
+    } catch (e) {
       console.error("Error guardando settings en Supabase:", e);
       alert("Guardado localmente. Hubo un problema al sincronizar con Supabase.");
       updateBandUI();
-      document.getElementById("modal-band-settings").classList.remove("open");
+      const mBand = document.getElementById("modal-band-settings"); if (mBand) mBand.classList.remove("open");
     }
   } else {
     updateBandUI();
-    document.getElementById("modal-band-settings").classList.remove("open");
+    const mBand = document.getElementById("modal-band-settings"); if (mBand) mBand.classList.remove("open");
   }
 }
 
@@ -6269,9 +6269,9 @@ function updateBandUI() {
   const headerTitle = document.getElementById("header-band-title");
   const headerLogo = document.getElementById("header-band-logo");
   const welcomeBanner = document.getElementById("band-welcome-banner");
-  
+
   const bandName = state.bandMetadata.name || "KAWSAY";
-  
+
   if (headerLogo) {
     if (state.bandMetadata.logoUrl) {
       headerLogo.src = state.bandMetadata.logoUrl;
@@ -6288,7 +6288,7 @@ function updateBandUI() {
     headerTitle.textContent = bandName;
     headerTitle.style.display = "block";
   }
-  
+
   // Renderizar banner de bienvenida en KAWSAY (si el usuario no tiene bandas creadas)
   if (welcomeBanner) {
     if (state.currentBandId === "KAWSAY" && state.currentUser) {
@@ -6312,7 +6312,7 @@ function updateBandUI() {
 
 // Llamar a updateBandUI cuando sea necesario
 const originalRenderApp = renderApp;
-renderApp = function() {
+renderApp = function () {
   originalRenderApp();
   updateBandUI();
 };
@@ -6320,10 +6320,10 @@ renderApp = function() {
 function copyBandIdCode() {
   const idInput = document.getElementById("band-settings-id");
   if (!idInput || !idInput.value) return;
-  
+
   idInput.select();
   idInput.setSelectionRange(0, 99999); // Para móviles
-  
+
   try {
     navigator.clipboard.writeText(idInput.value);
     alert("Código de Grupo copiado al portapapeles: " + idInput.value);
@@ -6338,24 +6338,24 @@ async function joinBandByCode() {
     alert("Ingresa un código de banda válido.");
     return;
   }
-  
+
   const code = joinInput.value.trim().toUpperCase();
-  
+
   if (code.length < 5) {
     alert("El código de invitación debe tener al menos 5 caracteres.");
     return;
   }
-  
+
   if (state.myBands && state.myBands.includes(code)) {
     alert("Ya perteneces a este grupo.");
     return;
   }
-  
+
   if (!state.currentUser || !window.supabaseClient) {
     alert("Inicia sesión para unirte a un grupo.");
     return;
   }
-  
+
   try {
     // 1. Validar que la banda existe
     const { data: bandDoc, error: bandError } = await window.supabaseClient
@@ -6369,11 +6369,11 @@ async function joinBandByCode() {
       alert("Este código de grupo no existe. Verifica con tu administrador.");
       return;
     }
-    
+
     // 2. Unirse a la banda en la tabla members
     const email = state.currentUser.email;
     const userName = state.currentUser.user_metadata.nombre || email.split("@")[0];
-    
+
     const { error: memberError } = await window.supabaseClient
       .from('members')
       .insert({
@@ -6385,7 +6385,7 @@ async function joinBandByCode() {
       });
 
     if (memberError) throw memberError;
-    
+
     // 3. Actualizar la banda activa en users
     const { error: userError } = await window.supabaseClient
       .from('users')
@@ -6395,10 +6395,10 @@ async function joinBandByCode() {
       .eq('id', state.currentUser.id);
 
     if (userError) throw userError;
-    
+
     alert(`¡Te has unido con éxito al grupo "${bandDoc.name || code}"!`);
     joinInput.value = "";
-    document.getElementById("modal-band-settings").classList.remove("open");
+    const mBand = document.getElementById("modal-band-settings"); if (mBand) mBand.classList.remove("open");
   } catch (err) {
     console.error("Error al unirse al grupo por código:", err);
     alert("Error al intentar unirse: " + err.message);
@@ -6413,16 +6413,16 @@ async function createNewBandFlow() {
 
   const proposedName = prompt("Ingresa el nombre del nuevo grupo:");
   if (!proposedName || !proposedName.trim()) return;
-  
+
   if (!state.currentUser || !window.supabaseClient) {
     alert("Debes iniciar sesión con tu cuenta para crear un grupo.");
     return;
   }
-  
+
   const cleanName = proposedName.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
   const randNum = Math.floor(1000 + Math.random() * 9000);
   const bandIdCode = `${cleanName}-${randNum}`;
-  
+
   try {
     // 1. Crear registro en la tabla bands
     const { error: bandError } = await window.supabaseClient
@@ -6433,7 +6433,7 @@ async function createNewBandFlow() {
         created_by: state.currentUser.id
       });
     if (bandError) throw bandError;
-    
+
     // 2. Crear miembro creador como Administrador
     const email = state.currentUser.email;
     const creatorName = state.currentUser.user_metadata.nombre || email.split("@")[0];
@@ -6447,7 +6447,7 @@ async function createNewBandFlow() {
         role: "Administrador"
       });
     if (memberError) throw memberError;
-    
+
     // 3. Establecer la banda activa en users
     const { error: userError } = await window.supabaseClient
       .from('users')
@@ -6456,7 +6456,7 @@ async function createNewBandFlow() {
       })
       .eq('id', state.currentUser.id);
     if (userError) throw userError;
-    
+
     // 4. Crear estructura básica de acordes favoritos
     await window.supabaseClient
       .from('fav_chords')
@@ -6471,12 +6471,12 @@ async function createNewBandFlow() {
     if (!state.myBands.includes(bandIdCode)) {
       state.myBands.push(bandIdCode);
     }
-    
+
     await loadSongsFromDB();
     await loadMembersFromDB();
-    
+
     alert("¡Grupo creado con éxito!\nCódigo de Invitación: " + bandIdCode);
-    document.getElementById("modal-band-settings").classList.remove("open");
+    const mBand = document.getElementById("modal-band-settings"); if (mBand) mBand.classList.remove("open");
     renderApp();
   } catch (e) {
     console.error("Error al crear grupo:", e);
@@ -6495,9 +6495,9 @@ async function switchActiveGroup(bandId) {
       .eq('id', state.currentUser.id);
 
     if (error) throw error;
-    
-    document.getElementById("modal-band-settings").classList.remove("open");
-  } catch(e) {
+
+    const mBand = document.getElementById("modal-band-settings"); if (mBand) mBand.classList.remove("open");
+  } catch (e) {
     alert("Error al cambiar de grupo: " + e.message);
   }
 }
@@ -6511,7 +6511,7 @@ async function regenerateBandInviteCode() {
 
   if (confirm("¿Estás seguro de que deseas regenerar el código de invitación? El código anterior dejará de ser válido.")) {
     try {
-      const cleanName = (state.bandMetadata.name||"").trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      const cleanName = (state.bandMetadata.name || "").trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
       const randNum = Math.floor(1000 + Math.random() * 9000);
       const nuevoCodigo = `${cleanName}-${randNum}`;
 
@@ -6573,14 +6573,14 @@ async function regenerateBandInviteCode() {
       // 6. Actualizar la banda activa para los usuarios en la tabla users
       if (membersList && membersList.length > 0) {
         const memberUserIds = membersList.map(m => m.user_id);
-        
+
         // Actualizar todos los usuarios que tenían de activa esta banda al nuevo código
         const { error: updateActiveError } = await window.supabaseClient
           .from('users')
           .update({ current_band_id: nuevoCodigo })
           .eq('current_band_id', state.currentBandId)
           .in('id', memberUserIds);
-        
+
         if (updateActiveError) throw updateActiveError;
       }
 
@@ -6592,9 +6592,9 @@ async function regenerateBandInviteCode() {
       const antiguoCodigo = state.currentBandId;
       state.currentBandId = nuevoCodigo;
       state.myBands = state.myBands.map(b => b === antiguoCodigo ? nuevoCodigo : b);
-      
+
       alert("¡Código de invitación regenerado con éxito!\nNuevo Código: " + nuevoCodigo);
-      document.getElementById("modal-band-settings").classList.remove("open");
+      const mBand = document.getElementById("modal-band-settings"); if (mBand) mBand.classList.remove("open");
     } catch (err) {
       console.error("Error regenerando código en Supabase:", err);
       alert("Error al regenerar código: " + err.message);
@@ -6610,13 +6610,13 @@ async function onboardingCreateBand() {
     alert("Ingresa un nombre para tu banda.");
     return;
   }
-  
+
   if (!state.currentUser || !window.supabaseClient) return;
-  
+
   const cleanName = proposedName.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
   const randNum = Math.floor(1000 + Math.random() * 9000);
   const bandIdCode = `${cleanName}-${randNum}`;
-  
+
   try {
     const { error: bandError } = await window.supabaseClient
       .from('bands')
@@ -6626,7 +6626,7 @@ async function onboardingCreateBand() {
         created_by: state.currentUser.id
       });
     if (bandError) throw bandError;
-    
+
     const email = state.currentUser.email;
     const creatorName = state.currentUser.user_metadata.nombre || email.split("@")[0];
     const { error: memberError } = await window.supabaseClient
@@ -6639,14 +6639,14 @@ async function onboardingCreateBand() {
         role: "Administrador"
       });
     if (memberError) throw memberError;
-    
+
     await window.supabaseClient
       .from('users')
       .update({
         current_band_id: bandIdCode
       })
       .eq('id', state.currentUser.id);
-    
+
     document.getElementById("modal-onboarding").style.display = "none";
   } catch (e) {
     console.error("Error al crear grupo en onboarding:", e);
@@ -6661,9 +6661,9 @@ async function onboardingJoinBand() {
     alert("Ingresa un código válido.");
     return;
   }
-  
+
   if (!state.currentUser || !window.supabaseClient) return;
-  
+
   try {
     const { data: bandDoc, error: bandError } = await window.supabaseClient
       .from('bands')
@@ -6676,10 +6676,10 @@ async function onboardingJoinBand() {
       alert("Este código de grupo no existe.");
       return;
     }
-    
+
     const email = state.currentUser.email;
     const userName = state.currentUser.user_metadata.nombre || email.split("@")[0];
-    
+
     const { error: memberError } = await window.supabaseClient
       .from('members')
       .insert({
@@ -6700,9 +6700,9 @@ async function onboardingJoinBand() {
         current_band_id: code
       })
       .eq('id', state.currentUser.id);
-    
+
     document.getElementById("modal-onboarding").style.display = "none";
-  } catch(e) {
+  } catch (e) {
     console.error("Error uniendo al grupo:", e);
     alert("Error al intentar unirse: " + e.message);
   }
@@ -6717,13 +6717,13 @@ let draggedBadge = null;
 function makeChordBadgesDraggable() {
   const editor = document.getElementById("editor-rich-lyrics");
   if (!editor) return;
-  
+
   editor.addEventListener("mousedown", handleDragStart);
   editor.addEventListener("touchstart", handleDragStart, { passive: false });
-  
+
   document.addEventListener("mousemove", handleDragMove);
   document.addEventListener("touchmove", handleDragMove, { passive: false });
-  
+
   document.addEventListener("mouseup", handleDragEnd);
   document.addEventListener("touchend", handleDragEnd);
 }
@@ -6731,25 +6731,25 @@ function makeChordBadgesDraggable() {
 function handleDragStart(e) {
   const badge = e.target.closest(".editor-chord-badge");
   if (!badge) return;
-  
+
   draggedBadge = badge;
   badge.classList.add("dragging");
-  
+
   // Retroalimentación visual
   badge.style.opacity = "0.5";
   badge.style.border = "1px dashed var(--neon-cyan)";
-  
+
   // Evitar selección nativa al arrastrar
   e.preventDefault();
 }
 
 function handleDragMove(e) {
   if (!draggedBadge) return;
-  
+
   const x = e.clientX || (e.touches && e.touches[0].clientX);
   const y = e.clientY || (e.touches && e.touches[0].clientY);
   if (!x || !y) return;
-  
+
   let range;
   if (document.caretRangeFromPoint) {
     range = document.caretRangeFromPoint(x, y);
@@ -6761,42 +6761,42 @@ function handleDragMove(e) {
       range.setEnd(pos.offsetNode, pos.offset);
     }
   }
-  
+
   if (range && range.startContainer) {
     const container = range.startContainer;
-    
+
     // Evitar auto-inserción
     if (draggedBadge.contains(container)) return;
-    
+
     const editor = document.getElementById("editor-rich-lyrics");
     if (editor && editor.contains(container)) {
       // Encontrar la línea (DIV) de origen y destino
       const targetLine = container.nodeType === Node.TEXT_NODE ? container.parentNode.closest("div") : container.closest("div");
       const sourceLine = draggedBadge.parentNode.closest("div");
-      
+
       // Restringir el arrastre horizontal a la misma línea
       if (targetLine && sourceLine && targetLine === sourceLine) {
         range.insertNode(draggedBadge);
       }
     }
   }
-  
+
   e.preventDefault();
 }
 
 function handleDragEnd(e) {
   if (!draggedBadge) return;
-  
+
   draggedBadge.classList.remove("dragging");
   draggedBadge.style.opacity = "";
   draggedBadge.style.border = "";
   draggedBadge = null;
-  
+
   // Normalizar los nodos de texto de la línea para evitar fragmentaciones
   const editor = document.getElementById("editor-rich-lyrics");
   if (editor) {
     editor.normalize();
-    
+
     // Sincronizar el campo de texto textarea oculto
     const rawInput = document.getElementById("song-lyrics");
     if (rawInput) {
@@ -6809,33 +6809,33 @@ function handleDragEnd(e) {
 function insertChordAtCaret(chordName = "C") {
   const editor = document.getElementById("editor-rich-lyrics");
   if (!editor) return;
-  
+
   editor.focus();
-  
+
   const selection = window.getSelection();
   if (!selection.rangeCount) return;
-  
+
   const range = selection.getRangeAt(0);
   if (!editor.contains(range.commonAncestorContainer)) return;
-  
+
   // Crear el elemento de badge de acorde
   const badge = document.createElement("span");
   badge.className = "editor-chord-badge";
   badge.setAttribute("contenteditable", "false");
   badge.setAttribute("data-chord", chordName);
   badge.textContent = `[${chordName}]`;
-  
+
   range.insertNode(badge);
-  
+
   // Mover el cursor (caret) justo después del acorde insertado
   range.setStartAfter(badge);
   range.setEndAfter(badge);
   selection.removeAllRanges();
   selection.addRange(range);
-  
+
   // Vincular eventos (clic derecho / long press y drag-and-drop)
   bindChordBadgeEvents();
-  
+
   // Sincronizar con el textarea oculto
   const rawInput = document.getElementById("song-lyrics");
   if (rawInput) {
@@ -6847,12 +6847,12 @@ function insertChordAtCaret(chordName = "C") {
 function initQuickChordInsertion() {
   const editor = document.getElementById("editor-rich-lyrics");
   if (!editor) return;
-  
+
   // Manejador de doble clic para desktop
   editor.addEventListener("dblclick", (e) => {
     // Evitar si ya se hizo clic sobre un acorde
     if (e.target.closest(".editor-chord-badge")) return;
-    
+
     let range;
     if (document.caretRangeFromPoint) {
       range = document.caretRangeFromPoint(e.clientX, e.clientY);
@@ -6864,62 +6864,62 @@ function initQuickChordInsertion() {
         range.setEnd(pos.offsetNode, pos.offset);
       }
     }
-    
+
     if (range && range.startContainer) {
       const container = range.startContainer;
       if (editor.contains(container)) {
         e.preventDefault(); // Evitar selección de palabra nativa
-        
+
         const badge = document.createElement("span");
         badge.className = "editor-chord-badge";
         badge.setAttribute("contenteditable", "false");
         badge.setAttribute("data-chord", "C");
         badge.textContent = "[C]";
-        
+
         range.insertNode(badge);
-        
+
         // Limpiar selección
         window.getSelection().removeAllRanges();
-        
+
         // Vincular eventos del nuevo acorde (clic derecho/drag)
         bindChordBadgeEvents();
-        
+
         // Sincronizar
         const rawInput = document.getElementById("song-lyrics");
         if (rawInput) rawInput.value = serializeRichLyrics();
       }
     }
   });
-  
+
   // Manejador de doble toque para mobile (evita zoom y selecciona el carácter)
   let lastTapTime = 0;
   editor// Permite a un usuario cancelar su solicitud de acceso pendiente
-async function cancelPendingRequest() {
-  state.requestedBandId = null;
-  state.currentBandId = "KAWSAY";
-  try { localStorage.setItem("coop_current_band_id", "KAWSAY"); } catch(e) {}
-  await loadSongsFromDB();
-  await loadMembersFromDB();
-  renderApp();
-}
+  async function cancelPendingRequest() {
+    state.requestedBandId = null;
+    state.currentBandId = "KAWSAY";
+    try { localStorage.setItem("coop_current_band_id", "KAWSAY"); } catch (e) { }
+    await loadSongsFromDB();
+    await loadMembersFromDB();
+    renderApp();
+  }
 
-// Renderiza solicitudes pendientes (mockeado para Supabase)
-async function renderPendingRequests() {
-  const requestsList = document.getElementById("requests-list");
-  if (!requestsList) return;
-  requestsList.innerHTML = `<p style="color:var(--text-muted); font-size:12px; text-align:center; padding:10px;">No hay solicitudes pendientes.</p>`;
-}
+  // Renderiza solicitudes pendientes (mockeado para Supabase)
+  async function renderPendingRequests() {
+    const requestsList = document.getElementById("requests-list");
+    if (!requestsList) return;
+    requestsList.innerHTML = `<p style="color:var(--text-muted); font-size:12px; text-align:center; padding:10px;">No hay solicitudes pendientes.</p>`;
+  }
 
-async function approveRequest(reqUid, email, name) {
-  // Las uniones son directas en esta versión
-}
+  async function approveRequest(reqUid, email, name) {
+    // Las uniones son directas en esta versión
+  }
 
 }
 
 
 
 // Función global para colapsar/expandir el sidebar en PC
-window.toggleSidebarPC = function() {
+window.toggleSidebarPC = function () {
   const sidebar = document.querySelector(".sidebar");
   const expandBtn = document.getElementById("btn-expand-sidebar");
   if (sidebar && expandBtn) {
@@ -6927,20 +6927,20 @@ window.toggleSidebarPC = function() {
     expandBtn.style.display = isCollapsed ? "flex" : "none";
     try {
       localStorage.setItem("sidebarCollapsedPC", isCollapsed ? "true" : "false");
-    } catch (e) {}
+    } catch (e) { }
   }
 };
 
 
 // Lógica de Pantalla Completa para la sala de ensayo (mobile y PC)
-window.toggleFullscreenRehearsal = async function() {
+window.toggleFullscreenRehearsal = async function () {
   state.isFullscreenRehearsal = !state.isFullscreenRehearsal;
-  
+
   const roomContent = document.getElementById("rehearsal-room-content");
   if (roomContent) {
     if (state.isFullscreenRehearsal) {
       roomContent.classList.add("fullscreen-rehearsal");
-      
+
       // Forzar pantalla completa del navegador si es movil
       try {
         const docEl = document.documentElement;
@@ -6949,7 +6949,7 @@ window.toggleFullscreenRehearsal = async function() {
         } else if (docEl.webkitRequestFullscreen) {
           await docEl.webkitRequestFullscreen();
         }
-        
+
         // Intentar forzar orientacion horizontal (landscape)
         if (screen.orientation && screen.orientation.lock) {
           await screen.orientation.lock("landscape").catch(err => {
@@ -6961,7 +6961,7 @@ window.toggleFullscreenRehearsal = async function() {
       }
     } else {
       roomContent.classList.remove("fullscreen-rehearsal");
-      
+
       // Salir de pantalla completa
       try {
         if (document.exitFullscreen) {
@@ -6969,7 +6969,7 @@ window.toggleFullscreenRehearsal = async function() {
         } else if (document.webkitExitFullscreen) {
           await document.webkitExitFullscreen();
         }
-        
+
         // Desbloquear orientacion
         if (screen.orientation && screen.orientation.unlock) {
           screen.orientation.unlock();
@@ -6979,7 +6979,7 @@ window.toggleFullscreenRehearsal = async function() {
       }
     }
   }
-  
+
   // Re-renderizar la sala de ensayo para aplicar los cambios de botones y layouts
   renderRehearsalRoom();
 };
@@ -6997,23 +6997,23 @@ document.addEventListener("fullscreenchange", () => {
 
 
 // Alterna la participación de un intérprete en el verso/línea activa
-window.toggleLinePerformer = function(performerId) {
+window.toggleLinePerformer = function (performerId) {
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (!song) return;
   if (!song.linePerformers) song.linePerformers = {};
-  
+
   let targetIndices = [];
   if (state.selectedLineIndices && state.selectedLineIndices.length > 0) {
     targetIndices = [...state.selectedLineIndices];
   } else {
     targetIndices = [state.lineaActivaIndex || 0];
   }
-  
+
   // Determinar si todos ya lo tienen asignado
-  const allHaveIt = targetIndices.every(idx => 
+  const allHaveIt = targetIndices.every(idx =>
     song.linePerformers[idx] && song.linePerformers[idx].includes(performerId)
   );
-  
+
   targetIndices.forEach(idx => {
     if (!song.linePerformers[idx]) {
       song.linePerformers[idx] = [];
@@ -7029,21 +7029,21 @@ window.toggleLinePerformer = function(performerId) {
       }
     }
   });
-  
+
   saveLocalStorage();
   if (window.SongsService) {
     window.SongsService.saveSong(song).catch(err => {
       console.error("Error al guardar asignaciones de línea:", err);
     });
   }
-  
+
   renderRehearsalRoom();
 };;
 
 
 // --- VISTAS Y HELPERS PARA PESTAÑAS DE NOTAS Y AUDIO ---
 
-window.setEnsayoTab = function(tabName) {
+window.setEnsayoTab = function (tabName) {
   state.ensayoActiveTab = tabName;
   renderRehearsalRoom();
 };
@@ -7076,9 +7076,9 @@ function renderNotesPane(song, lines) {
         </div>
         <div style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 8px;">
           ${lines.map((line, idx) => {
-            const note = song.lineNotes && song.lineNotes[idx] ? song.lineNotes[idx] : "";
-            if (!note.trim()) return "";
-            return `
+    const note = song.lineNotes && song.lineNotes[idx] ? song.lineNotes[idx] : "";
+    if (!note.trim()) return "";
+    return `
               <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-soft); border-radius: 8px; gap: 15px;">
                 <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
                   <span style="font-size: 10px; font-weight: 700; color: var(--neon-cyan); text-transform: uppercase;">Línea ${idx + 1} (${line.texto.slice(0, 40)}${line.texto.length > 40 ? '...' : ''})</span>
@@ -7087,7 +7087,7 @@ function renderNotesPane(song, lines) {
                 <button class="btn-small" onclick="selectAndGoToLine(${idx})" style="padding: 4px 8px; font-size: 10px; cursor: pointer;">Ver en Letra</button>
               </div>
             `;
-          }).filter(Boolean).join("") || `<p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">No hay notas asignadas a ninguna línea de verso aún. Selecciona un verso en la pestaña de Acordes &amp; Letra para agregar notas específicas.</p>`}
+  }).filter(Boolean).join("") || `<p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">No hay notas asignadas a ninguna línea de verso aún. Selecciona un verso en la pestaña de Acordes &amp; Letra para agregar notas específicas.</p>`}
         </div>
       </div>
     </div>
@@ -7151,11 +7151,11 @@ function renderAudioPane(song, lines) {
         </div>
         <div style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto;">
           ${Object.keys(song.lineAudios || {}).map(lineKey => {
-            const idx = parseInt(lineKey);
-            const line = lines[idx];
-            const auds = song.lineAudios[idx] || [];
-            if (auds.length === 0 || !line) return "";
-            return auds.map((aud, audIdx) => `
+    const idx = parseInt(lineKey);
+    const line = lines[idx];
+    const auds = song.lineAudios[idx] || [];
+    if (auds.length === 0 || !line) return "";
+    return auds.map((aud, audIdx) => `
               <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-soft); border-radius: 8px;">
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                   <span style="font-size: 10px; font-weight: 700; color: var(--neon-magenta); text-transform: uppercase;">Línea ${idx + 1} (${line.texto.slice(0, 30)}...)</span>
@@ -7168,7 +7168,7 @@ function renderAudioPane(song, lines) {
                 </div>
               </div>
             `).join("");
-          }).filter(Boolean).join("") || `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">No hay notas de audio asociadas a ningún verso aún. Graba ideas de arreglo en la barra lateral derecha mientras ensayas.</p>`}
+  }).filter(Boolean).join("") || `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">No hay notas de audio asociadas a ningún verso aún. Graba ideas de arreglo en la barra lateral derecha mientras ensayas.</p>`}
         </div>
       </div>
       
@@ -7192,10 +7192,10 @@ let isRecordingRehearsal = false;
 let isRecordingLineAudio = false;
 let recordingLineIndex = null;
 
-window.toggleRehearsalRecording = async function() {
+window.toggleRehearsalRecording = async function () {
   const btn = document.getElementById("btn-record-rehearsal");
   if (!btn) return;
-  
+
   if (isRecordingRehearsal) {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
@@ -7211,7 +7211,7 @@ window.toggleRehearsalRecording = async function() {
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
         const audioUrl = URL.createObjectURL(audioBlob);
-        
+
         const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
         if (song) {
           if (!song.grabaciones_ensayo) song.grabaciones_ensayo = [];
@@ -7222,7 +7222,7 @@ window.toggleRehearsalRecording = async function() {
             url: audioUrl,
             date: now.toLocaleString()
           });
-          
+
           saveLocalStorage();
           if (window.SongsService) {
             window.SongsService.saveSong(song).catch(err => console.error("Error al guardar grabacion en Supabase:", err));
@@ -7231,7 +7231,7 @@ window.toggleRehearsalRecording = async function() {
         }
         isRecordingRehearsal = false;
       };
-      
+
       mediaRecorder.start();
       isRecordingRehearsal = true;
       btn.innerHTML = "⏹️ Detener";
@@ -7244,10 +7244,10 @@ window.toggleRehearsalRecording = async function() {
   }
 };
 
-window.toggleLineAudioRecording = async function(lineIdx) {
+window.toggleLineAudioRecording = async function (lineIdx) {
   const btn = document.getElementById("btn-record-line-audio");
   if (!btn) return;
-  
+
   if (isRecordingLineAudio) {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
@@ -7263,18 +7263,18 @@ window.toggleLineAudioRecording = async function(lineIdx) {
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
         const audioUrl = URL.createObjectURL(audioBlob);
-        
+
         const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
         if (song) {
           if (!song.lineAudios) song.lineAudios = {};
           if (!song.lineAudios[lineIdx]) song.lineAudios[lineIdx] = [];
-          
+
           const count = song.lineAudios[lineIdx].length + 1;
           song.lineAudios[lineIdx].push({
             name: `Idea de Arreglo ${count}`,
             url: audioUrl
           });
-          
+
           saveLocalStorage();
           if (window.SongsService) {
             window.SongsService.saveSong(song).catch(err => console.error("Error al guardar idea de audio en Supabase:", err));
@@ -7284,7 +7284,7 @@ window.toggleLineAudioRecording = async function(lineIdx) {
         isRecordingLineAudio = false;
         recordingLineIndex = null;
       };
-      
+
       mediaRecorder.start();
       isRecordingLineAudio = true;
       recordingLineIndex = lineIdx;
@@ -7298,11 +7298,11 @@ window.toggleLineAudioRecording = async function(lineIdx) {
   }
 };
 
-window.playAudioUrl = function(url, name) {
+window.playAudioUrl = function (url, name) {
   const container = document.getElementById("ensayo-audio-player-container");
   const title = document.getElementById("audio-player-title");
   const player = document.getElementById("ensayo-global-audio-element");
-  
+
   if (container && title && player) {
     title.textContent = name;
     player.src = url;
@@ -7320,7 +7320,7 @@ window.playAudioUrl = function(url, name) {
   }
 };
 
-window.closeEnsayoAudioPlayer = function() {
+window.closeEnsayoAudioPlayer = function () {
   const container = document.getElementById("ensayo-audio-player-container");
   const player = document.getElementById("ensayo-global-audio-element");
   if (player) {
@@ -7332,12 +7332,12 @@ window.closeEnsayoAudioPlayer = function() {
   }
 };
 
-window.addReferenceAudioPrompt = function() {
+window.addReferenceAudioPrompt = function () {
   const name = prompt("Escribe el nombre del tema de referencia (Ej: Boyz II Men - Yesterday):");
   if (!name) return;
   const url = prompt("Pega el enlace o URL del audio (Ej: YouTube, Spotify, o archivo online):");
   if (!url) return;
-  
+
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (song) {
     if (!song.audios) song.audios = [];
@@ -7350,7 +7350,7 @@ window.addReferenceAudioPrompt = function() {
   }
 };
 
-window.deleteReferenceAudio = function(index) {
+window.deleteReferenceAudio = function (index) {
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (song && song.audios) {
     song.audios.splice(index, 1);
@@ -7362,7 +7362,7 @@ window.deleteReferenceAudio = function(index) {
   }
 };
 
-window.deleteRehearsalRecording = function(index) {
+window.deleteRehearsalRecording = function (index) {
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (song && song.grabaciones_ensayo) {
     song.grabaciones_ensayo.splice(index, 1);
@@ -7374,7 +7374,7 @@ window.deleteRehearsalRecording = function(index) {
   }
 };
 
-window.deleteLineAudio = function(lineIdx, audIdx) {
+window.deleteLineAudio = function (lineIdx, audIdx) {
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
   if (song && song.lineAudios && song.lineAudios[lineIdx]) {
     song.lineAudios[lineIdx].splice(audIdx, 1);
@@ -7389,7 +7389,7 @@ window.deleteLineAudio = function(lineIdx, audIdx) {
   }
 };
 
-window.selectAndGoToLine = function(idx) {
+window.selectAndGoToLine = function (idx) {
   state.ensayoActiveTab = "chords";
   state.lineaActivaIndex = idx;
   renderRehearsalRoom();
@@ -7399,19 +7399,19 @@ window.selectAndGoToLine = function(idx) {
 
 // --- MENÚ DE 3 PUNTOS EN LÍNEAS DE ENSAYO ---
 
-window.toggleLineMenu = function(event, idx) {
+window.toggleLineMenu = function (event, idx) {
   event.stopPropagation();
   const dropdown = document.getElementById(`line-dropdown-${idx}`);
   const isCurrentlyOpen = dropdown && dropdown.style.display === "block";
-  
+
   closeAllLineMenus();
-  
+
   if (dropdown && !isCurrentlyOpen) {
     dropdown.style.display = "block";
   }
 };
 
-window.closeAllLineMenus = function() {
+window.closeAllLineMenus = function () {
   document.querySelectorAll(".line-dropdown-menu").forEach(menu => {
     menu.style.display = "none";
   });
@@ -7423,21 +7423,21 @@ document.addEventListener("click", () => {
 
 
 // --- LIMPIAR SELECCIÓN MASIVA DE INTÉRPRETES ---
-window.clearMassiveSelection = function() {
+window.clearMassiveSelection = function () {
   state.selectedLineIndices = [];
   renderRehearsalRoom();
 };
 
 
 // --- CONTROLADOR DE SUB-PESTAÑAS DE GRUPO ---
-window.switchGroupSubtab = function(subtabId) {
+window.switchGroupSubtab = function (subtabId) {
   state.groupActiveSubtab = subtabId;
-  
+
   // Mostrar/ocultar contenidos
   document.querySelectorAll(".group-subtab-content").forEach(el => {
     el.style.display = el.id === `group-subtab-${subtabId}` ? "block" : "none";
   });
-  
+
   // Activar botón en cabecera
   const headerContainer = document.getElementById("group-subtab-headers");
   if (headerContainer) {
@@ -7453,17 +7453,17 @@ window.switchGroupSubtab = function(subtabId) {
 };
 
 // --- PLANIFICACIÓN DE ENSAYOS ---
-window.renderRehearsalsSchedule = function() {
+window.renderRehearsalsSchedule = function () {
   const list = document.getElementById("rehearsals-schedule-list");
   if (!list) return;
-  
+
   if (!state.rehearsals) {
     state.rehearsals = [
       { id: "r_1", date: "2026-07-15", time: "19:00", location: "Sala A - Nyx", songs: "Yesterday, Creep", notes: "Revisar coros de Yesterday." },
       { id: "r_2", date: "2026-07-22", time: "18:30", location: "Sala B - Nyx", songs: "Música Ligera, Lamento Boliviano", notes: "Repasar solos." }
     ];
   }
-  
+
   list.innerHTML = state.rehearsals.map((r) => `
     <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:16px; background:rgba(255,255,255,0.03); border:1px solid var(--border-soft); border-radius:10px; gap:15px; position:relative;">
       <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
@@ -7479,16 +7479,16 @@ window.renderRehearsalsSchedule = function() {
   `).join("") || `<p style="font-size:12px; color:var(--text-muted); text-align:center; padding:20px;">No hay ensayos programados. ¡Haz clic en Nuevo Ensayo para agendar uno!</p>`;
 };
 
-window.addRehearsalPrompt = function() {
+window.addRehearsalPrompt = function () {
   const date = prompt("Fecha del ensayo (Ej: YYYY-MM-DD o DD/MM):");
   if (!date) return;
   const time = prompt("Hora (Ej: 19:00):", "19:00");
   if (!time) return;
-  const location = prompt("Lugar (Ej: Sala A, Casa de Henry):", "Estudio");
+  const location = prompt("Lugar (Ej: Sala A, Casa de Javier):", "Estudio");
   if (!location) return;
   const songs = prompt("Temas a ensayar (Ej: Yesterday, Creep):");
   const notes = prompt("Notas o indicaciones especiales:");
-  
+
   if (!state.rehearsals) state.rehearsals = [];
   state.rehearsals.push({
     id: "r_" + Date.now(),
@@ -7498,7 +7498,7 @@ window.addRehearsalPrompt = function() {
   renderRehearsalsSchedule();
 };
 
-window.deleteRehearsal = function(id) {
+window.deleteRehearsal = function (id) {
   if (!state.rehearsals) return;
   state.rehearsals = state.rehearsals.filter(r => String(r.id) !== String(id));
   saveLocalStorage();
@@ -7506,16 +7506,16 @@ window.deleteRehearsal = function(id) {
 };
 
 // --- PLANIFICACIÓN DE PRESENTACIONES / SHOWS ---
-window.renderGigsSchedule = function() {
+window.renderGigsSchedule = function () {
   const list = document.getElementById("gigs-schedule-list");
   if (!list) return;
-  
+
   if (!state.gigs) {
     state.gigs = [
       { id: "g_1", date: "2026-07-30", time: "21:00", location: "Bar Woodstock", payment: "$300 USD", notes: "Llegar 1 hora antes para el soundcheck." }
     ];
   }
-  
+
   list.innerHTML = state.gigs.map((g) => `
     <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:16px; background:rgba(255,255,255,0.03); border:1px solid var(--border-soft); border-radius:10px; gap:15px; position:relative;">
       <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
@@ -7531,7 +7531,7 @@ window.renderGigsSchedule = function() {
   `).join("") || `<p style="font-size:12px; color:var(--text-muted); text-align:center; padding:20px;">No hay presentaciones programadas. ¡Haz clic en Nuevo Evento para agendar un show!</p>`;
 };
 
-window.addGigPrompt = function() {
+window.addGigPrompt = function () {
   const date = prompt("Fecha de la presentación (Ej: YYYY-MM-DD o DD/MM):");
   if (!date) return;
   const time = prompt("Hora (Ej: 21:00):", "21:00");
@@ -7540,7 +7540,7 @@ window.addGigPrompt = function() {
   if (!location) return;
   const payment = prompt("Monto de pago (opcional, Ej: $300):");
   const notes = prompt("Notas o indicaciones especiales:");
-  
+
   if (!state.gigs) state.gigs = [];
   state.gigs.push({
     id: "g_" + Date.now(),
@@ -7550,7 +7550,7 @@ window.addGigPrompt = function() {
   renderGigsSchedule();
 };
 
-window.deleteGig = function(id) {
+window.deleteGig = function (id) {
   if (!state.gigs) return;
   state.gigs = state.gigs.filter(g => String(g.id) !== String(id));
   saveLocalStorage();

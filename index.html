@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -7,36 +8,57 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>NYX Band-Pro - Repertorio Colaborativo</title>
-  
+
   <!-- CSS Global -->
   <link rel="stylesheet" href="index.css?v=7.5">
   <!-- Tabler Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.36.0/tabler-icons.min.css">
-  
+
   <style>
     /* Estilos base para resetear y estructurar la App Móvil */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     #auth-guard-overlay {
-      position: fixed; inset: 0; z-index: 99999;
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
       background: #0A0A14;
-      display: flex; align-items: center; justify-content: center;
-      flex-direction: column; gap: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
       font-family: 'Inter', sans-serif;
     }
+
     #auth-guard-overlay .logo-text {
-      font-size: 24px; font-weight: 700; color: #FF3EA5;
-      text-shadow: 0 0 20px rgba(255,62,165,0.5);
+      font-size: 24px;
+      font-weight: 700;
+      color: #FF3EA5;
+      text-shadow: 0 0 20px rgba(255, 62, 165, 0.5);
     }
+
     #auth-guard-overlay .spinner {
-      width: 36px; height: 36px;
-      border: 3px solid rgba(255,62,165,0.2);
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(255, 62, 165, 0.2);
       border-top-color: #FF3EA5;
       border-radius: 50%;
       animation: spin-auth 0.8s linear infinite;
     }
-    @keyframes spin-auth { to { transform: rotate(360deg); } }
+
+    @keyframes spin-auth {
+      to {
+        transform: rotate(360deg);
+      }
+    }
   </style>
 </head>
+
 <body>
   <!-- AUTH GUARD: Oculta la app hasta que Firebase verifique el usuario -->
   <div id="auth-guard-overlay">
@@ -60,7 +82,8 @@
 
   <div class="app-container">
     <!-- Botón flotante para restaurar/expandir barra lateral en PC -->
-    <button id="btn-expand-sidebar" class="sidebar-toggle-floating-btn" onclick="toggleSidebarPC()" style="display: none;" title="Mostrar barra lateral">
+    <button id="btn-expand-sidebar" class="sidebar-toggle-floating-btn" onclick="toggleSidebarPC()"
+      style="display: none;" title="Mostrar barra lateral">
       <i class="ti ti-chevron-right"></i>
     </button>
 
@@ -73,11 +96,12 @@
           <span class="brand-subtitle">Sesión Activa</span>
         </div>
         <!-- Botón para ocultar/colapsar barra lateral -->
-        <button id="btn-collapse-sidebar" class="sidebar-collapse-btn" onclick="toggleSidebarPC()" title="Ocultar barra lateral">
+        <button id="btn-collapse-sidebar" class="sidebar-collapse-btn" onclick="toggleSidebarPC()"
+          title="Ocultar barra lateral">
           <i class="ti ti-chevron-left"></i>
         </button>
       </div>
-      
+
       <nav class="sidebar-nav">
         <button class="nav-pill active" data-tab="repertorio">
           <i class="ti ti-music nav-icon-neon" style="color: var(--neon-lime);"></i> REPERTORIO
@@ -88,15 +112,17 @@
         <button class="nav-pill" data-tab="dictionary">
           <i class="ti ti-book nav-icon-neon" style="color: var(--amber);"></i> DICCIONARIO
         </button>
-        <button class="nav-pill disabled-nav" onclick="alert('Set List — Próximamente')" style="opacity: 0.45; cursor: not-allowed;">
+        <button class="nav-pill disabled-nav" onclick="alert('Set List — Próximamente')"
+          style="opacity: 0.45; cursor: not-allowed;">
           <i class="ti ti-playlist nav-icon-neon" style="color: var(--text-muted);"></i> SET LIST
         </button>
         <button class="nav-pill" data-tab="grupo">
           <i class="ti ti-users nav-icon-neon" style="color: var(--neon-cyan);"></i> GRUPO
         </button>
       </nav>
-      
-      <div class="sidebar-footer" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.15);">
+
+      <div class="sidebar-footer"
+        style="padding: 16px; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.15);">
         <!-- Tema abierto actual -->
         <div class="active-song-indicator" id="nav-active-song" style="display: none; margin-bottom: 8px;">
           <span class="dot"></span>
@@ -109,11 +135,15 @@
         <!-- Botones de Configuración Integrados (Glass Style) -->
         <div class="sidebar-actions" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
           <!-- User Profile Badge -->
-          <div class="user-profile-badge glass" id="user-profile-btn" style="cursor: pointer; width: 100%; display: flex; align-items: center; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);" onclick="handleProfileClick()">
+          <div class="user-profile-badge glass" id="user-profile-btn"
+            style="cursor: pointer; width: 100%; display: flex; align-items: center; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);"
+            onclick="handleProfileClick()">
             <div class="user-avatar" id="current-user-avatar" style="font-size: 18px; margin-right: 10px;">👤</div>
             <div class="user-info" style="display: flex; flex-direction: column; text-align: left;">
-              <span class="user-name" id="current-user-name" style="font-size: 13px; font-weight: 700; color: #fff;">Invitado</span>
-              <span class="user-role" id="current-user-role" style="font-size: 10px; color: var(--text-secondary);">Haz clic para entrar</span>
+              <span class="user-name" id="current-user-name"
+                style="font-size: 13px; font-weight: 700; color: #fff;">Invitado</span>
+              <span class="user-role" id="current-user-role" style="font-size: 10px; color: var(--text-secondary);">Haz
+                clic para entrar</span>
             </div>
           </div>
 
@@ -129,9 +159,12 @@
         <div class="setlist-layout">
           <div class="setlist-main-content">
             <div class="page-header">
-              <div class="page-title-area" style="display:flex; flex-direction:column; align-items:flex-start; gap: 8px;">
-                <img id="header-band-logo" src="" style="display:none; height: 52px; object-fit: contain;" alt="Logo del Grupo">
-                <h1 id="header-band-title" style="margin: 0; font-size: 28px; font-weight: 800; color: #fff;">Cargando...</h1>
+              <div class="page-title-area"
+                style="display:flex; flex-direction:column; align-items:flex-start; gap: 8px;">
+                <img id="header-band-logo" src="" style="display:none; height: 52px; object-fit: contain;"
+                  alt="Logo del Grupo">
+                <h1 id="header-band-title" style="margin: 0; font-size: 28px; font-weight: 800; color: #fff;">
+                  Cargando...</h1>
                 <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Organiza temas y ensayos</p>
               </div>
               <div class="page-actions">
@@ -140,7 +173,7 @@
                 </button>
               </div>
             </div>
-            
+
             <!-- Banner de bienvenida para la demo de KAWSAY -->
             <div id="band-welcome-banner" style="display:none; margin-bottom: 20px;"></div>
 
@@ -150,13 +183,14 @@
                 <span class="search-icon">🔍</span>
                 <input type="text" id="search-songs" placeholder="Buscar por título o artista...">
               </div>
-              
+
               <div class="filter-group">
                 <button class="filter-btn active" data-filter="all">Todos</button>
                 <button class="filter-btn" data-filter="ready">Listos</button>
                 <button class="filter-btn" data-filter="practicing">En Ensayo</button>
                 <button class="filter-btn" data-filter="todo">Por Aprender</button>
-                <button class="filter-btn dummy-filter" style="margin-left: 20px;"><span class="icon">💿</span> Álbum</button>
+                <button class="filter-btn dummy-filter" style="margin-left: 20px;"><span class="icon">💿</span>
+                  Álbum</button>
                 <button class="filter-btn dummy-filter"><span class="icon">📅</span> Fecha</button>
               </div>
             </section>
@@ -212,7 +246,8 @@
             <div id="dict-chords-selectors">
               <div class="panel-card glass">
                 <div class="panel-title">Nota Raíz</div>
-                <div class="filter-group root-notes-grid" id="dict-chord-root-filters" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                <div class="filter-group root-notes-grid" id="dict-chord-root-filters"
+                  style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
                   <button class="filter-btn active" onclick="filterChordRoot('C')">C</button>
                   <button class="filter-btn" onclick="filterChordRoot('C#')">C#</button>
                   <button class="filter-btn" onclick="filterChordRoot('D')">D</button>
@@ -230,7 +265,8 @@
 
               <div class="panel-card glass" style="margin-top: 20px;">
                 <div class="panel-title">Tipo de Acorde</div>
-                <div class="chord-types-grid" id="dict-chord-type-filters" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                <div class="chord-types-grid" id="dict-chord-type-filters"
+                  style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
                   <button class="filter-btn active" onclick="filterChordType('')">Mayor</button>
                   <button class="filter-btn" onclick="filterChordType('m')">Menor</button>
                   <button class="filter-btn" onclick="filterChordType('maj7')">maj7</button>
@@ -263,7 +299,7 @@
                   <option value="11">B (Si)</option>
                 </select>
               </div>
-              
+
               <div class="panel-card glass">
                 <div class="panel-title">Tipo de Escala</div>
                 <select id="scale-type-select" onchange="onScaleChange()" style="font-size: 13px;">
@@ -315,15 +351,20 @@
             </div>
 
             <div class="chord-info-details" style="margin-top: 20px;">
-              <h4 id="notes-list-label" style="font-size:11px; text-transform:uppercase; color:var(--text-secondary); margin-bottom:8px;">Notas que lo componen</h4>
+              <h4 id="notes-list-label"
+                style="font-size:11px; text-transform:uppercase; color:var(--text-secondary); margin-bottom:8px;">Notas
+                que lo componen</h4>
               <div class="notes-display-list" id="chord-notes-list" style="margin-bottom: 16px;">
                 <!-- Dinámico -->
               </div>
 
-              <div class="tips-panel glass" style="padding: 16px; border-color: rgba(255, 255, 255, 0.04); background: rgba(2, 6, 23, 0.2);">
-                <h4 style="color:var(--text-primary); margin-bottom: 6px; font-size:12px;" id="tips-panel-title">Tips de Práctica</h4>
+              <div class="tips-panel glass"
+                style="padding: 16px; border-color: rgba(255, 255, 255, 0.04); background: rgba(2, 6, 23, 0.2);">
+                <h4 style="color:var(--text-primary); margin-bottom: 6px; font-size:12px;" id="tips-panel-title">Tips de
+                  Práctica</h4>
                 <p style="font-size:12px; color:var(--text-secondary); line-height: 1.5;" id="tips-panel-desc">
-                  Asegúrate de presionar las cuerdas cerca de los trastes metálicos sin tocarlos para evitar el trasteo. Mantén los dedos arqueados para no mutear cuerdas adyacentes.
+                  Asegúrate de presionar las cuerdas cerca de los trastes metálicos sin tocarlos para evitar el trasteo.
+                  Mantén los dedos arqueados para no mutear cuerdas adyacentes.
                 </p>
               </div>
             </div>
@@ -346,107 +387,149 @@
             <h1>Configuración del Grupo</h1>
             <p>Gestiona el perfil de la banda, integrantes, ensayos y shows.</p>
           </div>
-          
+
           <!-- Sub-pestañas internas de Grupo -->
           <div class="page-actions">
             <div class="instrument-select-btns" id="group-subtab-headers">
-              <button class="active" onclick="switchGroupSubtab('perfil')">⚙️ Grupo</button>
-              <button onclick="switchGroupSubtab('miembros')">👥 Miembros</button>
-              <button onclick="switchGroupSubtab('ensayos')">📅 Ensayos</button>
-              <button onclick="switchGroupSubtab('shows')">🎸 Presentaciones</button>
+              <button class="active" onclick="switchGroupSubtab('perfil')"><i class="ti ti-settings" style="font-size: 13px; margin-right: 4px;"></i> Grupo</button>
+              <button onclick="switchGroupSubtab('miembros')"><i class="ti ti-users" style="font-size: 13px; margin-right: 4px;"></i> Miembros</button>
+              <button onclick="switchGroupSubtab('ensayos')"><i class="ti ti-calendar" style="font-size: 13px; margin-right: 4px;"></i> Ensayos</button>
+              <button onclick="switchGroupSubtab('shows')"><i class="ti ti-device-speaker" style="font-size: 13px; margin-right: 4px;"></i> Presentaciones</button>
             </div>
           </div>
         </div>
 
         <div class="group-container" style="display: flex; flex-direction: column; gap: 20px;">
           <!-- Sub-tab 1: Perfil del Grupo (⚙️ Grupo) -->
-          <div id="group-subtab-perfil" class="group-subtab-content glass" style="padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
+          <div id="group-subtab-perfil" class="group-subtab-content glass"
+            style="padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
             <div style="margin-bottom: 24px;">
-              <h4 style="color: var(--neon-cyan); margin-bottom: 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Información Principal</h4>
-              
-              <div id="band-settings-permissions-warning" style="display:none; margin-bottom: 16px; padding: 10px 14px; background: rgba(255, 179, 0, 0.15); border: 1px solid rgba(255, 179, 0, 0.3); border-radius: 8px; color: #ffb300; font-size: 12px; font-weight: 500;">
+              <h4
+                style="color: var(--neon-cyan); margin-bottom: 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+                Información Principal</h4>
+
+              <div id="band-settings-permissions-warning"
+                style="display:none; margin-bottom: 16px; padding: 10px 14px; background: rgba(255, 179, 0, 0.15); border: 1px solid rgba(255, 179, 0, 0.3); border-radius: 8px; color: #ffb300; font-size: 12px; font-weight: 500;">
                 ⚠️ Solo los Administradores de este grupo pueden modificar el nombre o el logo.
               </div>
 
               <div style="display:flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px;">
                 <div style="flex: 1; min-width: 200px;">
-                  <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Nombre del Grupo</label>
-                  <input type="text" id="band-settings-name" style="width:100%; padding: 10px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:14px; outline:none;">
+                  <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Nombre
+                    del Grupo</label>
+                  <input type="text" id="band-settings-name"
+                    style="width:100%; padding: 10px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:14px; outline:none;">
                 </div>
                 <div>
-                  <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Logo (Opcional)</label>
-                  <input type="file" id="band-settings-logo-upload" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
-                  <button type="button" id="btn-band-settings-upload-logo" class="btn btn-secondary" onclick="document.getElementById('band-settings-logo-upload').click()" style="padding: 10px 16px; border-radius: 8px;">🖼️ Subir Logo</button>
+                  <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Logo
+                    (Opcional)</label>
+                  <input type="file" id="band-settings-logo-upload" accept="image/*" style="display:none;"
+                    onchange="handleLogoUpload(event)">
+                  <button type="button" id="btn-band-settings-upload-logo" class="btn btn-secondary"
+                    onclick="document.getElementById('band-settings-logo-upload').click()"
+                    style="padding: 10px 16px; border-radius: 8px;">🖼️ Subir Logo</button>
                 </div>
               </div>
-              <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted); margin-bottom: 20px;" id="band-settings-logo-status"></div>
+              <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted); margin-bottom: 20px;"
+                id="band-settings-logo-status"></div>
 
               <!-- Visor de Logo PNG con transparencia de tablero de ajedrez -->
-              <div id="band-settings-logo-preview-container" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.15); background-image: linear-gradient(45deg, #181818 25%, transparent 25%), linear-gradient(-45deg, #181818 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #181818 75%), linear-gradient(-45deg, transparent 75%, #181818 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; background-color: #0b0b0b; justify-content: center; align-items: center; min-height: 80px;">
-                <img id="band-settings-logo-preview" style="max-height: 80px; object-fit: contain;" alt="Vista previa del logo">
+              <div id="band-settings-logo-preview-container"
+                style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.15); background-image: linear-gradient(45deg, #181818 25%, transparent 25%), linear-gradient(-45deg, #181818 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #181818 75%), linear-gradient(-45deg, transparent 75%, #181818 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; background-color: #0b0b0b; justify-content: center; align-items: center; min-height: 80px;">
+                <img id="band-settings-logo-preview" style="max-height: 80px; object-fit: contain;"
+                  alt="Vista previa del logo">
               </div>
             </div>
 
             <!-- Código de Invitación -->
             <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-soft);">
-              <h4 style="color: var(--neon-cyan); margin-bottom: 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Código de Invitación</h4>
-              <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px;">Comparte este código para que otros músicos soliciten unirse a tu banda.</p>
-              
+              <h4
+                style="color: var(--neon-cyan); margin-bottom: 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+                Código de Invitación</h4>
+              <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px;">Comparte este código para que
+                otros músicos soliciten unirse a tu banda.</p>
+
               <div style="display: flex; gap: 10px; align-items: center; max-width: 380px;">
-                <input type="text" id="band-settings-id" readonly style="flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--text-secondary); font-family: var(--font-mono); font-size: 14px;" value="...">
-                <button type="button" class="btn btn-secondary" onclick="copyBandIdCode()" style="padding: 10px 14px; border-radius: 8px; min-width:80px;">📋 Copiar</button>
-                <button type="button" id="btn-regenerate-code" class="btn btn-secondary" onclick="regenerateBandInviteCode()" style="padding: 10px 12px; min-width: 100px; border-color: var(--neon-magenta); color: var(--neon-magenta); display: none;">🔄 Regenerar</button>
+                <input type="text" id="band-settings-id" readonly
+                  style="flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--text-secondary); font-family: var(--font-mono); font-size: 14px;"
+                  value="...">
+                <button type="button" class="btn btn-secondary" onclick="copyBandIdCode()"
+                  style="padding: 10px 14px; border-radius: 8px; min-width:80px;">📋 Copiar</button>
+                <button type="button" id="btn-regenerate-code" class="btn btn-secondary"
+                  onclick="regenerateBandInviteCode()"
+                  style="padding: 10px 12px; min-width: 100px; border-color: var(--neon-magenta); color: var(--neon-magenta); display: none;">🔄
+                  Regenerar</button>
               </div>
             </div>
 
             <!-- Mis Grupos (Multi-tenant) -->
             <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-soft);">
-              <h4 style="color: var(--neon-magenta); margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Mis Grupos</h4>
-              
-              <div id="band-settings-groups-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+              <h4
+                style="color: var(--neon-magenta); margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+                Mis Grupos</h4>
+
+              <div id="band-settings-groups-list"
+                style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
                 <!-- Cargado dinámicamente con JS -->
               </div>
 
               <div style="display:flex; gap: 8px; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 200px; display: flex; gap: 8px;">
-                  <input type="text" id="band-join-code" placeholder="Ingresar Código de Banda" style="flex: 1; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px; outline:none;">
-                  <button type="button" class="btn btn-secondary" onclick="joinBandByCode()" style="padding: 10px 16px; border: 1px solid rgba(0,229,255,0.3); color: var(--neon-cyan);">Unirse</button>
+                  <input type="text" id="band-join-code" placeholder="Ingresar Código de Banda"
+                    style="flex: 1; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px; outline:none;">
+                  <button type="button" class="btn btn-secondary" onclick="joinBandByCode()"
+                    style="padding: 10px 16px; border: 1px solid rgba(0,229,255,0.3); color: var(--neon-cyan);">Unirse</button>
                 </div>
-                <button type="button" class="btn btn-secondary" onclick="createNewBandFlow()" style="padding: 10px 16px; border: 1px solid rgba(255,0,127,0.3); color: var(--neon-magenta);">+ Crear Nuevo Grupo</button>
+                <button type="button" class="btn btn-secondary" onclick="createNewBandFlow()"
+                  style="padding: 10px 16px; border: 1px solid rgba(255,0,127,0.3); color: var(--neon-magenta);">+ Crear
+                  Nuevo Grupo</button>
               </div>
             </div>
 
             <!-- Solicitudes Pendientes (Admin) -->
-            <div id="admin-requests-section" style="display:none; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-soft);">
-              <h4 style="font-size:13px; font-weight:700; color:var(--neon-cyan); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+            <div id="admin-requests-section"
+              style="display:none; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-soft);">
+              <h4
+                style="font-size:13px; font-weight:700; color:var(--neon-cyan); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
                 <span>⏳</span> Solicitudes de Acceso Pendientes
               </h4>
               <div id="requests-list" style="display:flex; flex-direction:column; gap:8px;">
                 <!-- Renderizado dinámico de solicitudes -->
               </div>
             </div>
-            
+
             <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
-              <button type="button" id="btn-band-settings-save" class="btn btn-primary" onclick="saveBandSettings()" style="padding: 10px 24px; border-radius: 8px;">Guardar Cambios de Grupo</button>
+              <button type="button" id="btn-band-settings-save" class="btn btn-primary" onclick="saveBandSettings()"
+                style="padding: 10px 24px; border-radius: 8px;">Guardar Cambios de Grupo</button>
             </div>
           </div>
 
           <!-- Sub-tab 2: Miembros / Músicos (👥 Músicos) -->
-          <div id="group-subtab-miembros" class="group-subtab-content glass" style="display: none; padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
-            <h4 style="color: var(--neon-cyan); margin-bottom: 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Registrar Nuevo Integrante</h4>
+          <div id="group-subtab-miembros" class="group-subtab-content glass"
+            style="display: none; padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
+            <h4
+              style="color: var(--neon-cyan); margin-bottom: 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+              Registrar Nuevo Integrante</h4>
             <!-- Formulario para agregar integrante -->
-            <div class="member-add-form" style="display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; align-items: flex-end;">
+            <div class="member-add-form"
+              style="display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; align-items: flex-end;">
               <div style="flex:1; min-width: 120px;">
-                <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Nombre / Usuario</label>
-                <input type="text" id="new-member-name" placeholder="Ej: Henry" style="width:100%; padding: 10px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px; outline:none;">
+                <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Nombre /
+                  Usuario</label>
+                <input type="text" id="new-member-name" placeholder="Ej: Nombre"
+                  style="width:100%; padding: 10px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px; outline:none;">
               </div>
               <div style="flex:1; min-width: 120px;">
-                <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Instrumentos</label>
-                <input type="text" id="new-member-instruments" placeholder="Ej: Guitarra, Teclado" style="width:100%; padding: 10px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px; outline:none;">
+                <label
+                  style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Instrumentos</label>
+                <input type="text" id="new-member-instruments" placeholder="Ej: Guitarra, Teclado"
+                  style="width:100%; padding: 10px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px; outline:none;">
               </div>
               <div style="flex:1; min-width: 120px;">
-                <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Voces / Tipo</label>
-                <select id="new-member-vocals" style="width:100%; padding: 10px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px; outline:none;">
+                <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Voces /
+                  Tipo</label>
+                <select id="new-member-vocals"
+                  style="width:100%; padding: 10px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px; outline:none;">
                   <option value="Ninguna">Ninguna</option>
                   <option value="Voz Principal">Voz Principal</option>
                   <option value="Coros">Coros</option>
@@ -461,17 +544,21 @@
                 </select>
               </div>
               <div style="flex:1; min-width: 120px;">
-                <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Rol (Permiso)</label>
-                <select id="new-member-role" style="width:100%; padding: 10px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px; outline:none;">
+                <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Rol
+                  (Permiso)</label>
+                <select id="new-member-role"
+                  style="width:100%; padding: 10px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size:13px; outline:none;">
                   <option value="Integrante">Integrante</option>
                   <option value="Administrador">Administrador</option>
                   <option value="Invitado">Invitado</option>
                 </select>
               </div>
               <div>
-                <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Color Neón</label>
+                <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Color
+                  Neón</label>
                 <div id="member-color-picker" style="display:flex; gap:6px; flex-wrap:wrap; padding-bottom: 6px;">
-                  <button type="button" class="color-swatch active" data-color="#00e5ff" style="background:#00e5ff; box-shadow: 0 0 8px #00e5ff;"></button>
+                  <button type="button" class="color-swatch active" data-color="#00e5ff"
+                    style="background:#00e5ff; box-shadow: 0 0 8px #00e5ff;"></button>
                   <button type="button" class="color-swatch" data-color="#00ff66" style="background:#00ff66;"></button>
                   <button type="button" class="color-swatch" data-color="#ff6d00" style="background:#ff6d00;"></button>
                   <button type="button" class="color-swatch" data-color="#ff007f" style="background:#ff007f;"></button>
@@ -481,39 +568,54 @@
                   <button type="button" class="color-swatch" data-color="#ffffff" style="background:#ffffff;"></button>
                 </div>
               </div>
-              <button type="button" class="btn btn-primary" onclick="addBandMember()" style="padding: 10px 20px; white-space: nowrap; border-radius: 8px;">+ Agregar</button>
+              <button type="button" class="btn btn-primary" onclick="addBandMember()"
+                style="padding: 10px 20px; white-space: nowrap; border-radius: 8px;">+ Agregar</button>
             </div>
 
             <!-- Lista de integrantes -->
-            <h4 style="color: var(--neon-cyan); margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Miembros Registrados</h4>
-            <div id="members-list" style="display:flex; flex-direction:column; gap:8px; max-height:350px; overflow-y:auto; padding-right: 6px;">
+            <h4
+              style="color: var(--neon-cyan); margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+              Miembros Registrados</h4>
+            <div id="members-list"
+              style="display:flex; flex-direction:column; gap:8px; max-height:350px; overflow-y:auto; padding-right: 6px;">
               <!-- Renderizado dinámico -->
             </div>
-            
-            <div style="margin-top:20px; padding: 12px; background: rgba(255,235,59,0.05); border: 1px solid rgba(255,235,59,0.15); border-radius:8px;">
-              <p style="font-size:11px; color:var(--text-secondary); margin:0;">🎤 <strong style="color:#ffeb3b;">Coro / Todos:</strong> Color amarillo neón <span style="color:#ffeb3b;">█</span> — Se aplica automáticamente para el coro en la hoja de ensayo.</p>
+
+            <div
+              style="margin-top:20px; padding: 12px; background: rgba(255,235,59,0.05); border: 1px solid rgba(255,235,59,0.15); border-radius:8px;">
+              <p style="font-size:11px; color:var(--text-secondary); margin:0;">🎤 <strong style="color:#ffeb3b;">Coro /
+                  Todos:</strong> Color amarillo neón <span style="color:#ffeb3b;">█</span> — Se aplica automáticamente
+                para el coro en la hoja de ensayo.</p>
             </div>
           </div>
 
           <!-- Sub-tab 3: Ensayos (📅 Ensayos) -->
-          <div id="group-subtab-ensayos" class="group-subtab-content glass" style="display: none; padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
+          <div id="group-subtab-ensayos" class="group-subtab-content glass"
+            style="display: none; padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h4 style="color: var(--neon-cyan); margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Organización de Próximos Ensayos</h4>
-              <button class="btn btn-primary" onclick="addRehearsalPrompt()" style="padding: 6px 12px; font-size: 12px; border-radius: 6px;">+ Nuevo Ensayo</button>
+              <h4
+                style="color: var(--neon-cyan); margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+                Organización de Próximos Ensayos</h4>
+              <button class="btn btn-primary" onclick="addRehearsalPrompt()"
+                style="padding: 6px 12px; font-size: 12px; border-radius: 6px;">+ Nuevo Ensayo</button>
             </div>
-            
+
             <div id="rehearsals-schedule-list" style="display: flex; flex-direction: column; gap: 10px;">
               <!-- Cargado dinámicamente -->
             </div>
           </div>
 
           <!-- Sub-tab 4: Presentaciones / Gigs (🎸 Shows) -->
-          <div id="group-subtab-shows" class="group-subtab-content glass" style="display: none; padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
+          <div id="group-subtab-shows" class="group-subtab-content glass"
+            style="display: none; padding: 24px; border-radius: 12px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-soft);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h4 style="color: var(--neon-cyan); margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Agenda de Eventos y Presentaciones</h4>
-              <button class="btn btn-primary" onclick="addGigPrompt()" style="padding: 6px 12px; font-size: 12px; border-radius: 6px;">+ Nuevo Evento</button>
+              <h4
+                style="color: var(--neon-cyan); margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+                Agenda de Eventos y Presentaciones</h4>
+              <button class="btn btn-primary" onclick="addGigPrompt()"
+                style="padding: 6px 12px; font-size: 12px; border-radius: 6px;">+ Nuevo Evento</button>
             </div>
-            
+
             <div id="gigs-schedule-list" style="display: flex; flex-direction: column; gap: 10px;">
               <!-- Cargado dinámicamente -->
             </div>
@@ -527,10 +629,10 @@
       <div class="modal-content glass">
         <div class="modal-header">
           <h3 class="modal-title" id="modal-song-title">Agregar Nuevo Tema</h3>
-          
+
           <button class="close-modal-btn">×</button>
         </div>
-        
+
         <form id="song-form">
           <input type="hidden" id="form-song-id">
           <!-- Hidden standard form fields to preserve compatibility -->
@@ -541,23 +643,28 @@
           <input type="hidden" id="song-timesig" value="4/4">
           <input type="hidden" id="song-status" value="todo">
           <input type="hidden" id="song-image" value="">
-          
+
           <!-- FICHA TÉCNICA DE INFORMACIÓN COMPACTA Y SIN CUADROS (Inline-Editing) -->
           <div class="song-meta-panel glass">
             <div class="meta-field-group">
-              <span id="meta-title" class="meta-inline-edit title-field" data-field="title" contenteditable="false" placeholder="Título del Tema">Yesterday</span>
+              <span id="meta-title" class="meta-inline-edit title-field" data-field="title" contenteditable="false"
+                placeholder="Título del Tema">Yesterday</span>
               <span class="meta-by-separator">de</span>
-              <span id="meta-artist" class="meta-inline-edit artist-field" data-field="artist" contenteditable="false" placeholder="Artista o Banda">Boyz II Men</span>
+              <span id="meta-artist" class="meta-inline-edit artist-field" data-field="artist" contenteditable="false"
+                placeholder="Artista o Banda">Boyz II Men</span>
             </div>
-            
+
             <div class="meta-badges-group">
               <div class="meta-badge-inline" style="grid-column: span 2; min-width: 140px;">
                 <span class="meta-label">FOTO (URL)</span>
-                <span id="meta-image" class="meta-inline-edit value-field" data-field="image" contenteditable="false" placeholder="Pega URL de imagen..." style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; display: inline-block;"></span>
+                <span id="meta-image" class="meta-inline-edit value-field" data-field="image" contenteditable="false"
+                  placeholder="Pega URL de imagen..."
+                  style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; display: inline-block;"></span>
               </div>
               <div class="meta-badge-inline">
                 <span class="meta-label">BPM</span>
-                <span id="meta-bpm" class="meta-inline-edit value-field" data-field="bpm" contenteditable="false">120</span>
+                <span id="meta-bpm" class="meta-inline-edit value-field" data-field="bpm"
+                  contenteditable="false">120</span>
               </div>
               <div class="meta-badge-inline">
                 <span class="meta-label">TONO</span>
@@ -576,24 +683,32 @@
 
           <div class="form-group form-group-lyrics">
             <label for="song-lyrics" style="display: none;">Letra y Acordes *</label>
-            
+
             <!-- CONTROLES DE IMPORTACIÓN Y CONVERSIÓN -->
-            <div class="lyrics-import-controls" style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center;">
+            <div class="lyrics-import-controls"
+              style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center;">
               <input type="file" id="lyrics-file-input" accept=".txt,.chordpro,.pro" style="display: none;">
-              <button type="button" class="btn btn-secondary" onclick="document.getElementById('lyrics-file-input').click()" style="padding: 6px 12px; font-size: 11px;">
+              <button type="button" class="btn btn-secondary"
+                onclick="document.getElementById('lyrics-file-input').click()"
+                style="padding: 6px 12px; font-size: 11px;">
                 📂 Importar
               </button>
-              <button type="button" id="btn-convert-lyrics" class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px;">
+              <button type="button" id="btn-convert-lyrics" class="btn btn-secondary"
+                style="padding: 6px 12px; font-size: 11px;">
                 ⚡ Auto-Convertir
               </button>
-              <button type="button" class="btn btn-secondary" onclick="insertChordAtCaret('C')" style="padding: 6px 12px; font-size: 11px; color: var(--neon-magenta); border: 1px solid rgba(255,0,127,0.3); background: rgba(255,0,127,0.05); border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+              <button type="button" class="btn btn-secondary" onclick="insertChordAtCaret('C')"
+                style="padding: 6px 12px; font-size: 11px; color: var(--neon-magenta); border: 1px solid rgba(255,0,127,0.3); background: rgba(255,0,127,0.05); border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 4px;">
                 🎵 Insertar Acorde
               </button>
-              <div class="editor-mode-toggle" style="margin-left: auto; display: flex; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 9999px; padding: 3px;">
-                <button type="button" id="btn-editor-mode-chords" class="editor-mode-btn active" onclick="setEditorMode('chords')">
+              <div class="editor-mode-toggle"
+                style="margin-left: auto; display: flex; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 9999px; padding: 3px;">
+                <button type="button" id="btn-editor-mode-chords" class="editor-mode-btn active"
+                  onclick="setEditorMode('chords')">
                   🎵 Acordes
                 </button>
-                <button type="button" id="btn-editor-mode-instrumental" class="editor-mode-btn" onclick="setEditorMode('instrumental')">
+                <button type="button" id="btn-editor-mode-instrumental" class="editor-mode-btn"
+                  onclick="setEditorMode('instrumental')">
                   🎸 Instrumental
                 </button>
               </div>
@@ -603,20 +718,26 @@
               Escribe con corchetes (ej: [C]Letra). Clic derecho (PC) o 3s (móvil) en acordes para editarlos.
             </p>
             <textarea id="song-lyrics" style="display: none;" required></textarea>
-            <div id="editor-rich-lyrics" contenteditable="true" class="editor-rich-lyrics" placeholder="[Bm] Escribe la letra de tu tema aquí con acordes..."></div>
+            <div id="editor-rich-lyrics" contenteditable="true" class="editor-rich-lyrics"
+              placeholder="[Bm] Escribe la letra de tu tema aquí con acordes..."></div>
 
             <!-- SECCIÓN: INTEGRANTES DEL TEMA -->
-            <div class="song-performers-panel glass" style="margin-top: 14px; padding: 14px; border-radius: 12px; border: 1px solid var(--border-soft); background: rgba(0,0,0,0.15);">
-              <div style="font-size: 13px; font-weight: 700; color: var(--neon-lime); margin-bottom: 8px; text-shadow: 0 0 6px rgba(0, 255, 102, 0.25);">
+            <div class="song-performers-panel glass"
+              style="margin-top: 14px; padding: 14px; border-radius: 12px; border: 1px solid var(--border-soft); background: rgba(0,0,0,0.15);">
+              <div
+                style="font-size: 13px; font-weight: 700; color: var(--neon-lime); margin-bottom: 8px; text-shadow: 0 0 6px rgba(0, 255, 102, 0.25);">
                 👥 Integrantes del Tema (Selecciona quiénes participan)
               </div>
-              <div id="editor-song-performers-list" style="display: flex; flex-wrap: wrap; gap: 8px; max-height: 100px; overflow-y: auto; padding: 4px;">
+              <div id="editor-song-performers-list"
+                style="display: flex; flex-wrap: wrap; gap: 8px; max-height: 100px; overflow-y: auto; padding: 4px;">
                 <!-- Se inyecta dinámicamente con JS -->
               </div>
             </div>
 
             <!-- PANEL DE VISTA PREVIA DE ESTRUCTURA -->
-            <div id="structure-preview-panel" style="display:none; margin-top:12px; padding:12px 14px; background:rgba(0,0,0,0.25); border:1px solid var(--border-soft); border-radius:10px;"></div>
+            <div id="structure-preview-panel"
+              style="display:none; margin-top:12px; padding:12px 14px; background:rgba(0,0,0,0.25); border:1px solid var(--border-soft); border-radius:10px;">
+            </div>
           </div>
 
           <div style="display:flex; justify-content: flex-end; gap: 12px; margin-top:24px">
@@ -632,7 +753,8 @@
   <div id="chord-picker-popup" class="popover-picker glass" style="display: none;">
     <div class="popover-header">
       <span>Editar Acorde</span>
-      <button type="button" class="close-popover-btn" onclick="document.getElementById('chord-picker-popup').style.display='none'">×</button>
+      <button type="button" class="close-popover-btn"
+        onclick="document.getElementById('chord-picker-popup').style.display='none'">×</button>
     </div>
     <div class="popover-body">
       <div class="popover-section-title">Nota Raíz</div>
@@ -666,7 +788,8 @@
         <input type="text" id="picker-custom-val" placeholder="Custom (ej: C#m9)">
         <button type="button" id="btn-picker-confirm" class="btn btn-primary">Aplicar</button>
       </div>
-      <button type="button" id="btn-picker-delete" class="btn btn-secondary" style="width:100%; margin-top:10px; background:rgba(255,0,127,0.08); border:1px solid rgba(255,0,127,0.3); color:#ff007f; padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer; text-shadow: 0 0 6px rgba(255,0,127,0.5);">
+      <button type="button" id="btn-picker-delete" class="btn btn-secondary"
+        style="width:100%; margin-top:10px; background:rgba(255,0,127,0.08); border:1px solid rgba(255,0,127,0.3); color:#ff007f; padding:6px; font-size:11px; border-radius:6px; font-weight:bold; cursor:pointer; text-shadow: 0 0 6px rgba(255,0,127,0.5);">
         ❌ Eliminar Acorde
       </button>
     </div>
@@ -676,48 +799,62 @@
   <div id="meta-selector-popup" class="popover-picker glass" style="display: none;">
     <div class="popover-header">
       <span id="meta-popup-title">Seleccionar</span>
-      <button type="button" class="close-popover-btn" onclick="document.getElementById('meta-selector-popup').style.display='none'">×</button>
+      <button type="button" class="close-popover-btn"
+        onclick="document.getElementById('meta-selector-popup').style.display='none'">×</button>
     </div>
     <div id="meta-popup-options" class="popover-body popover-grid">
       <!-- Se inyecta dinámicamente según el campo -->
     </div>
   </div>
 
-  
 
-  
+
+
 
   <!-- BOTÓN FLOTANTE SUPERIOR DERECHA: EDICIÓN EN PANTALLA COMPLETA -->
-  <button id="rehearsal-fullscreen-edit-btn" class="fullscreen-floating-edit-btn" onclick="editActiveSong()" title="Editar Letra y Acordes">✏️</button>
+  <button id="rehearsal-fullscreen-edit-btn" class="fullscreen-floating-edit-btn" onclick="editActiveSong()"
+    title="Editar Letra y Acordes">✏️</button>
 
-  
+
 
   <!-- MODAL DE ONBOARDING OBLIGATORIO -->
-  <div id="modal-onboarding" class="modal-backdrop" style="display: none; z-index: 2000; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);">
+  <div id="modal-onboarding" class="modal-backdrop"
+    style="display: none; z-index: 2000; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);">
     <div class="modal-content glass" style="max-width: 500px; text-align: center; padding: 40px 20px;">
       <h2 style="font-size: 24px; color: #fff; margin-bottom: 12px;">¡Bienvenido a NYX Band-Pro! 🎸</h2>
       <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; line-height: 1.6;">
-        Para empezar a gestionar tu repertorio, necesitas pertenecer a un grupo. 
+        Para empezar a gestionar tu repertorio, necesitas pertenecer a un grupo.
         Puedes crear uno nuevo y ser el Administrador, o unirte a uno existente.
       </p>
-      
+
       <div style="display: flex; flex-direction: column; gap: 24px;">
-        <div class="glass" style="padding: 20px; border-radius: 12px; background: rgba(255,0,127,0.05); border: 1px solid rgba(255,0,127,0.2);">
+        <div class="glass"
+          style="padding: 20px; border-radius: 12px; background: rgba(255,0,127,0.05); border: 1px solid rgba(255,0,127,0.2);">
           <h3 style="color: var(--neon-magenta); font-size: 16px; margin-bottom: 12px;">Crear un Grupo Nuevo</h3>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Serás el Administrador y podrás invitar a los demás integrantes.</p>
-          <input type="text" id="onboarding-new-band-name" placeholder="Nombre de tu Banda..." style="width:100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; margin-bottom: 12px; font-size: 14px;">
-          <button class="btn btn-primary" style="width:100%; padding: 12px;" onclick="onboardingCreateBand()">Crear Mi Grupo</button>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Serás el Administrador y podrás
+            invitar a los demás integrantes.</p>
+          <input type="text" id="onboarding-new-band-name" placeholder="Nombre de tu Banda..."
+            style="width:100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; margin-bottom: 12px; font-size: 14px;">
+          <button class="btn btn-primary" style="width:100%; padding: 12px;" onclick="onboardingCreateBand()">Crear Mi
+            Grupo</button>
         </div>
 
-        <div class="glass" style="padding: 20px; border-radius: 12px; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.2);">
+        <div class="glass"
+          style="padding: 20px; border-radius: 12px; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.2);">
           <h3 style="color: var(--neon-cyan); font-size: 16px; margin-bottom: 12px;">Unirse a un Grupo</h3>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Ingresa el código que te compartió el Administrador de tu banda.</p>
-          <input type="text" id="onboarding-join-code" placeholder="Código (ej. KAW-1234)" style="width:100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; margin-bottom: 12px; font-size: 14px; text-transform: uppercase;">
-          <button class="btn btn-secondary" style="width:100%; padding: 12px; border-color: var(--neon-cyan); color: var(--neon-cyan);" onclick="onboardingJoinBand()">Solicitar Unirme</button>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Ingresa el código que te compartió
+            el Administrador de tu banda.</p>
+          <input type="text" id="onboarding-join-code" placeholder="Código (ej. KAW-1234)"
+            style="width:100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; margin-bottom: 12px; font-size: 14px; text-transform: uppercase;">
+          <button class="btn btn-secondary"
+            style="width:100%; padding: 12px; border-color: var(--neon-cyan); color: var(--neon-cyan);"
+            onclick="onboardingJoinBand()">Solicitar Unirme</button>
         </div>
       </div>
       <div style="margin-top: 24px;">
-        <button class="btn-link" onclick="handleLogout()" style="color: var(--text-muted); font-size: 12px; background: none; border: none; cursor: pointer; text-decoration: underline;">Cerrar Sesión</button>
+        <button class="btn-link" onclick="handleLogout()"
+          style="color: var(--text-muted); font-size: 12px; background: none; border: none; cursor: pointer; text-decoration: underline;">Cerrar
+          Sesión</button>
       </div>
     </div>
   </div>
@@ -755,4 +892,5 @@
   <script src="songsService.js?v=3.0"></script>
   <script src="app.js?v=3.0"></script>
 </body>
+
 </html>
