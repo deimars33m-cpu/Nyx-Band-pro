@@ -518,7 +518,7 @@ function renderMembersList() {
       const swatchesHtml = colors.map(c => {
         const borderStyle = m.color === c ? 'border: 2px solid #fff; transform: scale(1.25);' : 'border: 1px solid rgba(255,255,255,0.25);';
         const shadowStyle = m.color === c ? `box-shadow: 0 0 8px ${c};` : '';
-        return `<button type="button" class="color-swatch" data-color="dots" onclick="setEditingMemberColor(${i}, 'dots')" style="background:dots; ${borderStyle} ${shadowStyle} width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; transition:all 0.2s; outline:none;"></button>`.replace(/\dots/g, c);
+        return `<button type="button" class="color-swatch" data-color="${c}" onclick="setEditingMemberColor(${i}, '${c}')" style="background:${c}; ${borderStyle} ${shadowStyle} width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; transition:all 0.2s; outline:none;"></button>`;
       }).join("");
 
       return `
