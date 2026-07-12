@@ -278,6 +278,7 @@ async function loadMembersFromDB() {
 
       // Adaptar el formato de la base de datos relacional al estado local de la app
       state.members = (data || []).filter(m => m && m.name).map(m => ({
+        dbId: m.id,
         name: m.name || "Sin nombre",
         role: m.role || "Integrante",
         instruments: m.instruments || "",
@@ -314,22 +315,33 @@ async function loadFavoriteChordsFromDB() {
 
 function saveMembersToDB() {
   if (window.supabaseClient && state.currentBandId) {
-    const records = state.members.map(m => ({
-      band_id: state.currentBandId,
-      user_id: m.linkedUid,
-      name: m.name,
-      email: m.email || "",
-      role: m.role || "Integrante",
-      instruments: m.instruments || "",
-      vocals: m.vocals || "Ninguna",
-      color: m.color || "#00e5ff"
-    }));
+    const records = state.members.map(m => {
+      const rec = {
+        band_id: state.currentBandId,
+        user_id: m.linkedUid || null,
+        name: m.name,
+        email: m.email || "",
+        role: m.role || "Integrante",
+        instruments: m.instruments || "",
+        vocals: m.vocals || "Ninguna",
+        color: m.color || "#00e5ff"
+      };
+      if (m.dbId) {
+        rec.id = m.dbId;
+      }
+      return rec;
+    });
 
     window.supabaseClient
       .from('members')
-      .upsert(records, { onConflict: 'band_id,user_id' })
+      .upsert(records, { onConflict: 'id' })
       .then(({ error }) => {
-        if (error) console.error("Error al guardar integrantes en Supabase:", error);
+        if (error) {
+          console.error("Error al guardar integrantes en Supabase:", error);
+        } else {
+          // Recargar para obtener los ids de Supabase
+          loadMembersFromDB();
+        }
       });
   }
 }
@@ -425,21 +437,73 @@ function renderMembersList() {
     return;
   }
 
-  const isAdmin = state.currentUser && (
-    state.members.some(m => m.linkedUid === state.currentUser.uid && m.role === "Administrador") ||
-    state.members.some(m => m.name && m.name.toLowerCase() === (state.currentUser.email || "").split("@")[0].toLowerCase() && m.role === "Administrador")
-  );
-
   list.innerHTML = state.members.map((m, i) => {
+    const isEditing = (state.editingMemberIndex === i);
     const isLinked = m.linkedUid ? true : false;
     const statusTag = isLinked
       ? `<span style="color:var(--neon-green); font-size:10px; font-weight:bold; margin-left:6px;">● Activo</span>`
       : `<span style="color:var(--text-muted); font-size:10px; margin-left:6px;">○ Creado</span>`;
 
-    const removeBtn = isAdmin ? `<button onclick="removeBandMember(${i})" style="background:rgba(255,51,75,0.12); border:1px solid rgba(255,51,75,0.3); color:#ff334b; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:11px;">✕</button>` : '';
+    if (isEditing) {
+      const vocalOptions = ["Ninguna", "Voz Principal", "Coros", "Voz Gutural", "Soprano", "Mezzosoprano", "Contralto", "Tenor 1", "Tenor 2", "Barítono", "Bajo"];
+      const vocalOptionsHtml = vocalOptions.map(v => `<option value="${v}" ${m.vocals === v ? 'selected' : ''}>${v}</option>`).join("");
+
+      const roleOptions = ["Integrante", "Administrador", "Invitado"];
+      const roleOptionsHtml = roleOptions.map(r => `<option value="${r}" ${m.role === r ? 'selected' : ''}>${r}</option>`).join("");
+
+      const colors = ["#00e5ff", "#00ff66", "#ff6d00", "#ff007f", "#ffeb3b", "#bd00ff", "#ff334b", "#ffffff"];
+      const swatchesHtml = colors.map(c => {
+        const active = m.color === c ? 'active' : '';
+        const shadowStyle = m.color === c ? `box-shadow: 0 0 8px ${c};` : '';
+        return `<button type="button" class="color-swatch ${active}" data-color="${c}" onclick="setEditingMemberColor(${i}, '${c}')" style="background:dots; ${shadowStyle} width:16px; height:16px; border-radius:50%; border:none; cursor:pointer; padding:0;"></button>`.replace(/\dots/g, c);
+      }).join("");
+
+      return `
+        <div style="display:flex; flex-direction:column; gap:12px; padding:16px; background: rgba(255,255,255,0.06); border: 1px solid var(--neon-cyan); border-radius:10px; width:100%;">
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:140px;">
+              <label style="font-size:10px; color:var(--text-secondary); display:block; margin-bottom:4px;">Nombre</label>
+              <input type="text" id="edit-member-name-dots" value="${m.name}" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
+            </div>
+            <div style="flex:1; min-width:140px;">
+              <label style="font-size:10px; color:var(--text-secondary); display:block; margin-bottom:4px;">Instrumentos</label>
+              <input type="text" id="edit-member-instruments-dots" value="${m.instruments || ''}" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
+            </div>
+            <div style="flex:1; min-width:110px;">
+              <label style="font-size:10px; color:var(--text-secondary); display:block; margin-bottom:4px;">Voces / Tipo</label>
+              <select id="edit-member-vocals-dots" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
+                ${vocalOptionsHtml}
+              </select>
+            </div>
+            <div style="flex:1; min-width:110px;">
+              <label style="font-size:10px; color:var(--text-secondary); display:block; margin-bottom:4px;">Rol</label>
+              <select id="edit-member-role-dots" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
+                ${roleOptionsHtml}
+              </select>
+            </div>
+          </div>
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:10px; color:var(--text-secondary);">Color Neón:</span>
+              <div style="display:flex; gap:6px;">
+                ${swatchesHtml}
+              </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button onclick="saveEditingMember(dots)" class="btn btn-primary" style="padding:6px 12px; font-size:11px; border-radius:6px; background:var(--neon-cyan); border-color:var(--neon-cyan); color:#000; cursor:pointer;">Guardar</button>
+              <button onclick="cancelEditingMember()" class="btn btn-secondary" style="padding:6px 12px; font-size:11px; border-radius:6px; cursor:pointer;">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      `.replace(/\dots/g, i);
+    }
+
+    const removeBtn = `<button onclick="removeBandMember(${i})" class="btn btn-secondary" style="padding:6px 12px; cursor:pointer; font-size:11px; border-radius:6px; border-color:rgba(255,51,75,0.4); color:#ff334b; background:rgba(255,51,75,0.05); display:inline-flex; align-items:center; gap:4px;"><i class="ti ti-trash"></i> Eliminar</button>`;
+    const editBtn = `<button onclick="startEditingMember(${i})" class="btn btn-secondary" style="padding:6px 12px; cursor:pointer; font-size:11px; border-radius:6px; border-color:var(--neon-cyan); color:var(--neon-cyan); background:rgba(0,229,255,0.05); display:inline-flex; align-items:center; gap:4px;"><i class="ti ti-settings"></i> Configurar</button>`;
 
     return `
-      <div style="display:flex; align-items:center; gap:12px; padding:10px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius:10px; flex-wrap: wrap;">
+      <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius:12px; flex-wrap: wrap; width:100%;">
         <div style="width:16px; height:16px; border-radius:50%; background:${m.color}; box-shadow:0 0 8px ${m.color}; flex-shrink:0;"></div>
         <div style="flex:1; min-width: 150px;">
           <span style="font-weight:700; color:${m.color}; text-shadow:0 0 6px ${m.color}; font-size:14px;">${m.name}</span>
@@ -450,21 +514,13 @@ function renderMembersList() {
           ${m.instruments ? `<span style="background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.3); color: var(--neon-cyan); padding: 2px 6px; border-radius: 4px;">🎸 ${m.instruments}</span>` : ''}
           ${m.vocals && m.vocals !== 'Ninguna' ? `<span style="background: rgba(255,0,127,0.1); border: 1px solid rgba(255,0,127,0.3); color: var(--neon-magenta); padding: 2px 6px; border-radius: 4px;">🎤 ${m.vocals}</span>` : ''}
         </div>
-        ${removeBtn}
+        <div style="display:flex; gap:8px;">
+          ${editBtn}
+          ${removeBtn}
+        </div>
       </div>
     `;
   }).join("");
-
-  // Alternar sección de administración (Solicitudes pendientes)
-  const reqSection = document.getElementById("admin-requests-section");
-  if (reqSection) {
-    if (isAdmin) {
-      reqSection.style.display = "block";
-      renderPendingRequests();
-    } else {
-      reqSection.style.display = "none";
-    }
-  }
 }
 
 // Agregar un integrante
@@ -500,9 +556,23 @@ function addBandMember() {
 
 // Eliminar un integrante
 function removeBandMember(index) {
-  state.members.splice(index, 1);
-  saveMembers();
-  renderMembersList();
+  const member = state.members[index];
+  if (!member) return;
+  
+  if (confirm(`¿Estás seguro de que deseas eliminar a ${member.name} de este grupo?`)) {
+    if (member.dbId && window.supabaseClient) {
+      window.supabaseClient
+        .from('members')
+        .delete()
+        .eq('id', member.dbId)
+        .then(({ error }) => {
+          if (error) console.error("Error al eliminar integrante de Supabase:", error);
+        });
+    }
+    state.members.splice(index, 1);
+    saveMembers();
+    renderMembersList();
+  }
 }
 
 // ============================================================
@@ -7555,4 +7625,55 @@ window.deleteGig = function (id) {
   state.gigs = state.gigs.filter(g => String(g.id) !== String(id));
   saveLocalStorage();
   renderGigsSchedule();
+};
+
+
+// --- SOPORTE DE EDICIÓN DE MIEMBROS ---
+window.startEditingMember = function(index) {
+  state.editingMemberIndex = index;
+  renderMembersList();
+};
+
+window.cancelEditingMember = function() {
+  state.editingMemberIndex = null;
+  renderMembersList();
+};
+
+window.setEditingMemberColor = function(index, color) {
+  if (state.members[index]) {
+    state.members[index].color = color;
+    renderMembersList();
+  }
+};
+
+window.saveEditingMember = function(index) {
+  const member = state.members[index];
+  if (!member) return;
+
+  const nameInput = document.getElementById(`edit-member-name-${index}`);
+  const instInput = document.getElementById(`edit-member-instruments-${index}`);
+  const vocInput = document.getElementById(`edit-member-vocals-${index}`);
+  const roleInput = document.getElementById(`edit-member-role-${index}`);
+
+  const name = nameInput ? nameInput.value.trim() : "";
+  if (!name) {
+    alert("El nombre no puede estar vacío.");
+    return;
+  }
+
+  // Verificar duplicados
+  const duplicate = state.members.find((m, idx) => m.name && m.name.toLowerCase() === name.toLowerCase() && idx !== index);
+  if (duplicate) {
+    alert("Ya existe otro integrante con ese nombre.");
+    return;
+  }
+
+  member.name = name;
+  member.instruments = instInput ? instInput.value.trim() : "";
+  member.vocals = vocInput ? vocInput.value : "Ninguna";
+  member.role = roleInput ? roleInput.value : "Integrante";
+
+  state.editingMemberIndex = null;
+  saveMembers();
+  renderMembersList();
 };
