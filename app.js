@@ -1,7 +1,7 @@
 // Lógica principal de la aplicación Repertorio Co-op
 
 // Regex para validar si un token luce como un acorde
-const CHORD_TOKEN_REGEX = /^[A-G][#b]?(m|min|maj|dim|aug|sus|add|maj7|m7|7|9|11|13|m7b5|dim7)?(\d)?(\/[A-G][#b]?)?$/i;
+const CHORD_TOKEN_REGEX = /^([A-G]|DO|RE|MI|FA|SOL|LA|SI)[#b]?(m|min|maj|dim|aug|sus|add|maj7|m7|7|9|11|13|m7b5|dim7)?(\d)?(\/([A-G]|DO|RE|MI|FA|SOL|LA|SI)[#b]?)?$/i;
 
 // Detectar si una línea representa una cabecera de sección (ej: [VERSO 1], [CORO])
 function isSectionHeader(line) {
@@ -4774,6 +4774,8 @@ function autoTagStanzas(rawText) {
 
 // Convierte acordes arriba de la letra en formato de corchetes de manera coordinada libre de desalineamientos
 function convertTraditionalToBracket(text) {
+  // Normalizar retornos de carro y espacios irrompibles para una conversión más precisa
+  text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\xA0/g, " ");
   const lines = text.split("\n");
   const result = [];
 
