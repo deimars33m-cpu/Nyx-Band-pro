@@ -253,7 +253,7 @@ async function loadSongsFromDB() {
     try {
       const fbSongs = await window.SongsService.getAllSongs();
       if (fbSongs !== null && fbSongs !== undefined) {
-        state.songs = fbSongs;
+        state.songs = fbSongs.filter(s => s.title !== "__BAND_ROSTER__");
 
         // Re-renderizar la UI
         renderApp();
@@ -270,14 +270,14 @@ async function loadSongsFromDB() {
 async function loadMembersFromDB() {
   if (window.supabaseClient && state.currentBandId) {
     try {
-      const { data, error } = await window.supabaseClient
+      // 1. Cargar miembros vinculados a cuentas reales
+      const { data: realData, error: realErr } = await window.supabaseClient
         .from('members')
         .select('*')
         .eq('band_id', state.currentBandId);
-      if (error) throw error;
-
-      // Adaptar el formato de la base de datos relacional al estado local de la app
-      state.members = (data || []).filter(m => m && m.name).map(m => ({
+      if (realErr) throw realErr;
+      
+      const realMembers = (realData || []).filter(m => m && m.name).map(m => ({
         dbId: m.id,
         name: m.name || "Sin nombre",
         role: m.role || "Integrante",
@@ -288,6 +288,34 @@ async function loadMembersFromDB() {
         email: m.email || "",
         unidoEn: m.joined_at
       }));
+
+      // 2. Cargar miembros invitados sin cuenta desde la canción de metadatos del roster
+      let guestMembers = [];
+      const { data: rosterData, error: rosterErr } = await window.supabaseClient
+        .from('songs')
+        .select('*')
+        .eq('id', 'band-roster-' + state.currentBandId)
+        .maybeSingle();
+
+      if (!rosterErr && rosterData && rosterData.chords) {
+        try {
+          const parsed = JSON.parse(rosterData.chords);
+          if (parsed && Array.isArray(parsed.members)) {
+            guestMembers = parsed.members.map(m => ({
+              name: m.name || "Invitado",
+              role: m.role || "Integrante",
+              instruments: m.instruments || "",
+              vocals: m.vocals || "Ninguna",
+              color: m.color || "#00e5ff",
+              linkedUid: null
+            }));
+          }
+        } catch (e) {
+          console.error("Error al parsear roster de invitados:", e);
+        }
+      }
+
+      state.members = [...realMembers, ...guestMembers];
       renderMembersList();
     } catch (e) {
       console.error("Error al cargar integrantes de Supabase:", e);
@@ -315,10 +343,15 @@ async function loadFavoriteChordsFromDB() {
 
 function saveMembersToDB() {
   if (window.supabaseClient && state.currentBandId) {
-    const records = state.members.map(m => {
+    // Miembros reales (tienen linkedUid)
+    const realMembers = state.members.filter(m => m.linkedUid !== null && m.linkedUid !== undefined);
+    // Miembros invitados (linkedUid es null/undefined)
+    const guestMembers = state.members.filter(m => m.linkedUid === null || m.linkedUid === undefined);
+
+    const records = realMembers.map(m => {
       const rec = {
         band_id: state.currentBandId,
-        user_id: m.linkedUid || null,
+        user_id: m.linkedUid,
         name: m.name,
         email: m.email || "",
         role: m.role || "Integrante",
@@ -332,17 +365,45 @@ function saveMembersToDB() {
       return rec;
     });
 
-    window.supabaseClient
-      .from('members')
-      .upsert(records, { onConflict: 'id' })
-      .then(({ error }) => {
-        if (error) {
-          console.error("Error al guardar integrantes en Supabase:", error);
-        } else {
-          // Recargar para obtener los ids de Supabase
-          loadMembersFromDB();
+    (async () => {
+      try {
+        // 1. Guardar miembros reales en la tabla 'members'
+        if (records.length > 0) {
+          const { error: realErr } = await window.supabaseClient
+            .from('members')
+            .upsert(records, { onConflict: 'id' });
+          if (realErr) console.error("Error al upsertar miembros reales:", realErr);
         }
-      });
+
+        // 2. Guardar miembros invitados en la tabla 'songs' como metadatos en un registro especial
+        const rosterSong = {
+          id: 'band-roster-' + state.currentBandId,
+          band_id: state.currentBandId,
+          title: '__BAND_ROSTER__',
+          artist: 'SYSTEM',
+          bpm: 120,
+          status: 'todo',
+          chords: JSON.stringify({
+            members: guestMembers.map(m => ({
+              name: m.name,
+              role: m.role || "Integrante",
+              instruments: m.instruments || "",
+              vocals: m.vocals || "Ninguna",
+              color: m.color || "#00e5ff"
+            }))
+          }),
+          lyrics: ''
+        };
+
+        const { error: guestErr } = await window.supabaseClient
+          .from('songs')
+          .upsert(rosterSong, { onConflict: 'id' });
+        if (guestErr) console.error("Error al guardar roster de invitados en Supabase:", guestErr);
+
+      } catch (err) {
+        console.error("Error en saveMembersToDB:", err);
+      }
+    })();
   }
 }
 
@@ -453,9 +514,9 @@ function renderMembersList() {
 
       const colors = ["#00e5ff", "#00ff66", "#ff6d00", "#ff007f", "#ffeb3b", "#bd00ff", "#ff334b", "#ffffff"];
       const swatchesHtml = colors.map(c => {
-        const active = m.color === c ? 'active' : '';
+        const borderStyle = m.color === c ? 'border: 2px solid #fff; transform: scale(1.25);' : 'border: 1px solid rgba(255,255,255,0.25);';
         const shadowStyle = m.color === c ? `box-shadow: 0 0 8px ${c};` : '';
-        return `<button type="button" class="color-swatch ${active}" data-color="${c}" onclick="setEditingMemberColor(${i}, '${c}')" style="background:dots; ${shadowStyle} width:16px; height:16px; border-radius:50%; border:none; cursor:pointer; padding:0;"></button>`.replace(/\dots/g, c);
+        return `<button type="button" class="color-swatch" data-color="${c}" onclick="setEditingMemberColor(${i}, '${c}')" style="background:dots; ${borderStyle} ${shadowStyle} width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; transition:all 0.2s; outline:none;"></button>`.replace(/\dots/g, c);
       }).join("");
 
       return `
@@ -463,11 +524,11 @@ function renderMembersList() {
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <div style="flex:1; min-width:140px;">
               <label style="font-size:10px; color:var(--text-secondary); display:block; margin-bottom:4px;">Nombre</label>
-              <input type="text" id="edit-member-name-dots" value="${m.name}" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
+              <input type="text" id="edit-member-name-${i}" value="${m.name}" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
             </div>
             <div style="flex:1; min-width:140px;">
               <label style="font-size:10px; color:var(--text-secondary); display:block; margin-bottom:4px;">Instrumentos</label>
-              <input type="text" id="edit-member-instruments-dots" value="${m.instruments || ''}" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
+              <input type="text" id="edit-member-instruments-${i}" value="${m.instruments || ''}" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
             </div>
             <div style="flex:1; min-width:110px;">
               <label style="font-size:10px; color:var(--text-secondary); display:block; margin-bottom:4px;">Voces / Tipo</label>
@@ -486,7 +547,7 @@ function renderMembersList() {
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-size:10px; color:var(--text-secondary);">Color Neón:</span>
-              <div style="display:flex; gap:6px;">
+              <div style="display:flex; gap:6px; align-items:center;">
                 ${swatchesHtml}
               </div>
             </div>
