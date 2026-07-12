@@ -6311,7 +6311,7 @@ function initGroupTab() {
   // Renderizar listas e inicializar swatches
   renderPendingRequests();
   renderMembersList();
-  setTimeout(() => initColorSwatches(), 50);
+  // init color swatches removed
 
   renderRehearsalsSchedule();
   renderGigsSchedule();
@@ -7890,4 +7890,22 @@ window.tryJoinByPersonalInviteCode = async function(code) {
     alert("Ocurrió un error al enlazar el código: " + err.message);
     return true;
   }
+};
+
+
+// --- COMPORTAMIENTO DE COLOR SWATCH PARA REGISTRO ---
+window.selectRegisterMemberColor = function(buttonEl) {
+  const swatches = document.querySelectorAll("#member-color-picker .color-swatch");
+  swatches.forEach(s => {
+    s.classList.remove("active");
+    s.style.border = "1px solid rgba(255,255,255,0.25)";
+    s.style.boxShadow = "none";
+    s.style.transform = "none";
+  });
+  
+  buttonEl.classList.add("active");
+  buttonEl.style.border = "2px solid #fff";
+  buttonEl.style.transform = "scale(1.25)";
+  const color = buttonEl.getAttribute("data-color");
+  buttonEl.style.boxShadow = "0 0 8px " + color;
 };

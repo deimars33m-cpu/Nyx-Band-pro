@@ -103,22 +103,11 @@
       </div>
 
       <nav class="sidebar-nav">
-        <button class="nav-pill active" data-tab="repertorio">
-          <i class="ti ti-music nav-icon-neon" style="color: var(--neon-lime);"></i> REPERTORIO
-        </button>
-        <button class="nav-pill" data-tab="rehearsal">
-          <i class="ti ti-microphone nav-icon-neon" style="color: var(--magenta);"></i> ENSAYO
-        </button>
-        <button class="nav-pill" data-tab="dictionary">
-          <i class="ti ti-book nav-icon-neon" style="color: var(--amber);"></i> DICCIONARIO
-        </button>
-        <button class="nav-pill disabled-nav" onclick="alert('Set List — Próximamente')"
-          style="opacity: 0.45; cursor: not-allowed;">
-          <i class="ti ti-playlist nav-icon-neon" style="color: var(--text-muted);"></i> SET LIST
-        </button>
-        <button class="nav-pill" data-tab="grupo">
-          <i class="ti ti-users nav-icon-neon" style="color: var(--neon-cyan);"></i> GRUPO
-        </button>
+        <button class="nav-pill active" data-tab="repertorio">REPERTORIO</button>
+        <button class="nav-pill" data-tab="rehearsal">ENSAYO</button>
+        <button class="nav-pill" data-tab="dictionary">DICCIONARIO</button>
+        <button class="nav-pill disabled-nav" onclick="alert('Set List — Próximamente')" style="opacity: 0.45; cursor: not-allowed;">SET LIST</button>
+        <button class="nav-pill" data-tab="grupo">GRUPO</button>
       </nav>
 
       <div class="sidebar-footer"
@@ -391,14 +380,10 @@
           <!-- Sub-pestañas internas de Grupo -->
           <div class="page-actions">
             <div class="instrument-select-btns" id="group-subtab-headers">
-              <button class="active" onclick="switchGroupSubtab('perfil')"><i class="ti ti-settings"
-                  style="font-size: 13px; margin-right: 4px;"></i> Grupo</button>
-              <button onclick="switchGroupSubtab('miembros')"><i class="ti ti-users"
-                  style="font-size: 13px; margin-right: 4px;"></i> Miembros</button>
-              <button onclick="switchGroupSubtab('ensayos')"><i class="ti ti-calendar"
-                  style="font-size: 13px; margin-right: 4px;"></i> Ensayos</button>
-              <button onclick="switchGroupSubtab('shows')"><i class="ti ti-device-speaker"
-                  style="font-size: 13px; margin-right: 4px;"></i> Presentaciones</button>
+              <button class="active" onclick="switchGroupSubtab('perfil')">Grupo</button>
+              <button onclick="switchGroupSubtab('miembros')">Miembros</button>
+              <button onclick="switchGroupSubtab('ensayos')">Ensayos</button>
+              <button onclick="switchGroupSubtab('shows')">Presentaciones</button>
             </div>
           </div>
         </div>
@@ -561,15 +546,22 @@
                 <label style="font-size:11px; color:var(--text-secondary); display:block; margin-bottom:6px;">Color
                   Neón</label>
                 <div id="member-color-picker" style="display:flex; gap:6px; flex-wrap:wrap; padding-bottom: 6px;">
-                  <button type="button" class="color-swatch active" data-color="#00e5ff"
-                    style="background:#00e5ff; box-shadow: 0 0 8px #00e5ff;"></button>
-                  <button type="button" class="color-swatch" data-color="#00ff66" style="background:#00ff66;"></button>
-                  <button type="button" class="color-swatch" data-color="#ff6d00" style="background:#ff6d00;"></button>
-                  <button type="button" class="color-swatch" data-color="#ff007f" style="background:#ff007f;"></button>
-                  <button type="button" class="color-swatch" data-color="#ffeb3b" style="background:#ffeb3b;"></button>
-                  <button type="button" class="color-swatch" data-color="#bd00ff" style="background:#bd00ff;"></button>
-                  <button type="button" class="color-swatch" data-color="#ff334b" style="background:#ff334b;"></button>
-                  <button type="button" class="color-swatch" data-color="#ffffff" style="background:#ffffff;"></button>
+                  <button type="button" class="color-swatch active" data-color="#00e5ff" onclick="selectRegisterMemberColor(this)"
+                    style="background:#00e5ff; box-shadow: 0 0 8px #00e5ff; border: 2px solid #fff; transform: scale(1.25); width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; outline:none; transition:all 0.2s;"></button>
+                  <button type="button" class="color-swatch" data-color="#00ff66" onclick="selectRegisterMemberColor(this)"
+                    style="background:#00ff66; border: 1px solid rgba(255,255,255,0.25); width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; outline:none; transition:all 0.2s;"></button>
+                  <button type="button" class="color-swatch" data-color="#ff6d00" onclick="selectRegisterMemberColor(this)"
+                    style="background:#ff6d00; border: 1px solid rgba(255,255,255,0.25); width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; outline:none; transition:all 0.2s;"></button>
+                  <button type="button" class="color-swatch" data-color="#ff007f" onclick="selectRegisterMemberColor(this)"
+                    style="background:#ff007f; border: 1px solid rgba(255,255,255,0.25); width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; outline:none; transition:all 0.2s;"></button>
+                  <button type="button" class="color-swatch" data-color="#ffeb3b" onclick="selectRegisterMemberColor(this)"
+                    style="background:#ffeb3b; border: 1px solid rgba(255,255,255,0.25); width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; outline:none; transition:all 0.2s;"></button>
+                  <button type="button" class="color-swatch" data-color="#bd00ff" onclick="selectRegisterMemberColor(this)"
+                    style="background:#bd00ff; border: 1px solid rgba(255,255,255,0.25); width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; outline:none; transition:all 0.2s;"></button>
+                  <button type="button" class="color-swatch" data-color="#ff334b" onclick="selectRegisterMemberColor(this)"
+                    style="background:#ff334b; border: 1px solid rgba(255,255,255,0.25); width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; outline:none; transition:all 0.2s;"></button>
+                  <button type="button" class="color-swatch" data-color="#ffffff" onclick="selectRegisterMemberColor(this)"
+                    style="background:#ffffff; border: 1px solid rgba(255,255,255,0.25); width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; outline:none; transition:all 0.2s;"></button>
                 </div>
               </div>
               <button type="button" class="btn btn-primary" onclick="addBandMember()"
