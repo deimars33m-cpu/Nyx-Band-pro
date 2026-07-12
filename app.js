@@ -965,8 +965,8 @@ async function loadUserProfile(user) {
     .maybeSingle();
 
   state.bandMetadata = bandDoc
-    ? { name: bandDoc.name, logoUrl: bandDoc.logo_url }
-    : { name: state.currentBandId, logoUrl: null };
+    ? { name: bandDoc.name, logoUrl: bandDoc.logo_url, createdBy: bandDoc.created_by }
+    : { name: state.currentBandId, logoUrl: null, createdBy: null };
 
   await loadSongsFromDB();
   await loadMembersFromDB();
@@ -6438,16 +6438,15 @@ async function saveBandSettings() {
       if (error) throw error;
 
       updateBandUI();
-      const mBand = document.getElementById("modal-band-settings"); if (mBand) mBand.classList.remove("open");
+      alert("¡Configuración del grupo guardada con éxito!");
+      initGroupTab();
     } catch (e) {
       console.error("Error guardando settings en Supabase:", e);
-      alert("Guardado localmente. Hubo un problema al sincronizar con Supabase.");
-      updateBandUI();
-      const mBand = document.getElementById("modal-band-settings"); if (mBand) mBand.classList.remove("open");
+      alert("Hubo un problema al guardar en la base de datos: " + e.message);
     }
   } else {
     updateBandUI();
-    const mBand = document.getElementById("modal-band-settings"); if (mBand) mBand.classList.remove("open");
+    alert("Guardado localmente.");
   }
 }
 
