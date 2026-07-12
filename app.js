@@ -307,7 +307,8 @@ async function loadMembersFromDB() {
               instruments: m.instruments || "",
               vocals: m.vocals || "Ninguna",
               color: m.color || "#00e5ff",
-              linkedUid: null
+              linkedUid: null,
+              inviteCode: m.inviteCode || ("MEM-" + Math.floor(100000 + Math.random() * 900000))
             }));
           }
         } catch (e) {
@@ -389,7 +390,8 @@ function saveMembersToDB() {
               role: m.role || "Integrante",
               instruments: m.instruments || "",
               vocals: m.vocals || "Ninguna",
-              color: m.color || "#00e5ff"
+              color: m.color || "#00e5ff",
+              inviteCode: m.inviteCode || ("MEM-" + Math.floor(100000 + Math.random() * 900000))
             }))
           }),
           lyrics: ''
@@ -516,7 +518,7 @@ function renderMembersList() {
       const swatchesHtml = colors.map(c => {
         const borderStyle = m.color === c ? 'border: 2px solid #fff; transform: scale(1.25);' : 'border: 1px solid rgba(255,255,255,0.25);';
         const shadowStyle = m.color === c ? `box-shadow: 0 0 8px ${c};` : '';
-        return `<button type="button" class="color-swatch" data-color="${c}" onclick="setEditingMemberColor(${i}, '${c}')" style="background:dots; ${borderStyle} ${shadowStyle} width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; transition:all 0.2s; outline:none;"></button>`.replace(/\dots/g, c);
+        return `<button type="button" class="color-swatch" data-color="dots" onclick="setEditingMemberColor(${i}, 'dots')" style="background:dots; ${borderStyle} ${shadowStyle} width:18px; height:18px; border-radius:50%; cursor:pointer; padding:0; transition:all 0.2s; outline:none;"></button>`.replace(/\dots/g, c);
       }).join("");
 
       return `
@@ -532,13 +534,13 @@ function renderMembersList() {
             </div>
             <div style="flex:1; min-width:110px;">
               <label style="font-size:10px; color:var(--text-secondary); display:block; margin-bottom:4px;">Voces / Tipo</label>
-              <select id="edit-member-vocals-dots" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
+              <select id="edit-member-vocals-${i}" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
                 ${vocalOptionsHtml}
               </select>
             </div>
             <div style="flex:1; min-width:110px;">
               <label style="font-size:10px; color:var(--text-secondary); display:block; margin-bottom:4px;">Rol</label>
-              <select id="edit-member-role-dots" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
+              <select id="edit-member-role-${i}" style="width:100%; padding:6px 10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; font-size:12px; outline:none;">
                 ${roleOptionsHtml}
               </select>
             </div>
@@ -552,28 +554,39 @@ function renderMembersList() {
               </div>
             </div>
             <div style="display:flex; gap:8px;">
-              <button onclick="saveEditingMember(dots)" class="btn btn-primary" style="padding:6px 12px; font-size:11px; border-radius:6px; background:var(--neon-cyan); border-color:var(--neon-cyan); color:#000; cursor:pointer;">Guardar</button>
+              <button onclick="saveEditingMember(${i})" class="btn btn-primary" style="padding:6px 12px; font-size:11px; border-radius:6px; background:var(--neon-cyan); border-color:var(--neon-cyan); color:#000; cursor:pointer;">Guardar</button>
               <button onclick="cancelEditingMember()" class="btn btn-secondary" style="padding:6px 12px; font-size:11px; border-radius:6px; cursor:pointer;">Cancelar</button>
             </div>
           </div>
         </div>
-      `.replace(/\dots/g, i);
+      `;
     }
 
     const removeBtn = `<button onclick="removeBandMember(${i})" class="btn btn-secondary" style="padding:6px 12px; cursor:pointer; font-size:11px; border-radius:6px; border-color:rgba(255,51,75,0.4); color:#ff334b; background:rgba(255,51,75,0.05); display:inline-flex; align-items:center; gap:4px;"><i class="ti ti-trash"></i> Eliminar</button>`;
     const editBtn = `<button onclick="startEditingMember(${i})" class="btn btn-secondary" style="padding:6px 12px; cursor:pointer; font-size:11px; border-radius:6px; border-color:var(--neon-cyan); color:var(--neon-cyan); background:rgba(0,229,255,0.05); display:inline-flex; align-items:center; gap:4px;"><i class="ti ti-settings"></i> Configurar</button>`;
 
+    const inviteBadge = !isLinked
+      ? `<div style="font-size:10px; color:var(--text-dim); display:flex; align-items:center; gap:4px;">
+           <span>Enlace:</span>
+           <span style="font-family:monospace; font-weight:bold; color:var(--neon-cyan); background:rgba(0,229,255,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(0,229,255,0.15);">${m.inviteCode || ''}</span>
+           <button onclick="copyMemberInviteCode('${m.inviteCode || ''}')" style="background:none; border:none; color:var(--neon-cyan); cursor:pointer; padding:0 2px; font-size:10px; outline:none; display:inline-flex; align-items:center;" title="Copiar código de enlace"><i class="ti ti-copy"></i></button>
+         </div>`
+      : `<span style="font-size:10px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:130px; display:inline-block;" title="${m.email}">${m.email}</span>`;
+
     return `
       <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius:12px; flex-wrap: wrap; width:100%;">
         <div style="width:16px; height:16px; border-radius:50%; background:${m.color}; box-shadow:0 0 8px ${m.color}; flex-shrink:0;"></div>
-        <div style="flex:1; min-width: 150px;">
+        <div style="flex:1; min-width: 150px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span style="font-weight:700; color:${m.color}; text-shadow:0 0 6px ${m.color}; font-size:14px;">${m.name}</span>
-          <span style="display:inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.1); font-size:10px; color:var(--text-secondary);">${m.role || "Integrante"}</span>
+          <span style="display:inline-block; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.1); font-size:10px; color:var(--text-secondary);​">${m.role || "Integrante"}</span>
           ${statusTag}
         </div>
-        <div style="flex: 2; min-width: 200px; font-size: 11px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center;">
+        <div style="flex: 1.5; min-width: 150px; font-size: 11px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center; flex-wrap:wrap;">
           ${m.instruments ? `<span style="background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.3); color: var(--neon-cyan); padding: 2px 6px; border-radius: 4px;">🎸 ${m.instruments}</span>` : ''}
           ${m.vocals && m.vocals !== 'Ninguna' ? `<span style="background: rgba(255,0,127,0.1); border: 1px solid rgba(255,0,127,0.3); color: var(--neon-magenta); padding: 2px 6px; border-radius: 4px;">🎤 ${m.vocals}</span>` : ''}
+        </div>
+        <div style="flex: 1; min-width: 120px; display:flex; align-items:center; justify-content:flex-start;">
+          ${inviteBadge}
         </div>
         <div style="display:flex; gap:8px;">
           ${editBtn}
@@ -604,7 +617,9 @@ function addBandMember() {
   const instruments = instInput ? instInput.value.trim() : "";
   const vocals = vocInput ? vocInput.value : "Ninguna";
 
-  state.members.push({ name, role, instruments, vocals, color, linkedUid: null });
+  const rand = Math.floor(100000 + Math.random() * 900000);
+  const inviteCode = "MEM-" + rand;
+  state.members.push({ name, role, instruments, vocals, color, linkedUid: null, inviteCode });
   saveMembers();
 
   if (nameInput) nameInput.value = "";
@@ -6472,6 +6487,13 @@ async function joinBandByCode() {
 
   const code = joinInput.value.trim().toUpperCase();
 
+  // Intentar unirse por código de enlace de miembro personal primero
+  const isPersonal = await tryJoinByPersonalInviteCode(code);
+  if (isPersonal) {
+    joinInput.value = "";
+    return;
+  }
+
   if (code.length < 5) {
     alert("El código de invitación debe tener al menos 5 caracteres.");
     return;
@@ -6794,6 +6816,13 @@ async function onboardingJoinBand() {
   }
 
   if (!state.currentUser || !window.supabaseClient) return;
+
+  // Intentar unirse por código de enlace de miembro personal primero
+  const isPersonal = await tryJoinByPersonalInviteCode(code);
+  if (isPersonal) {
+    if (input) input.value = "";
+    return;
+  }
 
   try {
     const { data: bandDoc, error: bandError } = await window.supabaseClient
@@ -7737,4 +7766,128 @@ window.saveEditingMember = function(index) {
   state.editingMemberIndex = null;
   saveMembers();
   renderMembersList();
+};
+
+
+// --- ENLACE Y CONTROL DE INVITACIONES PERSONALES ---
+window.copyMemberInviteCode = function(code) {
+  if (!code) return;
+  try {
+    navigator.clipboard.writeText(code);
+    alert("Código de enlace personal copiado al portapapeles: " + code);
+  } catch (err) {
+    alert("Código de enlace personal: " + code);
+  }
+};
+
+window.tryJoinByPersonalInviteCode = async function(code) {
+  if (!code.startsWith("MEM-")) return false;
+  
+  if (!state.currentUser || !window.supabaseClient) {
+    alert("Inicia sesión para poder enlazar tu cuenta.");
+    return true; // Frena el flujo de unión genérico
+  }
+
+  try {
+    // 1. Buscar en los rosters de invitados de todas las bandas
+    const { data: rosters, error: rErr } = await window.supabaseClient
+      .from('songs')
+      .select('*')
+      .eq('title', '__BAND_ROSTER__');
+
+    if (rErr) throw rErr;
+    
+    let targetRoster = null;
+    let guestMember = null;
+    let guestMemberIndex = -1;
+
+    for (const r of (rosters || [])) {
+      try {
+        const parsed = JSON.parse(r.chords);
+        if (parsed && Array.isArray(parsed.members)) {
+          const idx = parsed.members.findIndex(m => m.inviteCode === code);
+          if (idx > -1) {
+            targetRoster = r;
+            guestMember = parsed.members[idx];
+            guestMemberIndex = idx;
+            break;
+          }
+        }
+      } catch(e) {}
+    }
+
+    if (!guestMember) {
+      alert("El código de enlace personal no es válido o ya ha sido reclamado.");
+      return true;
+    }
+
+    // 2. Obtener metadatos de la banda
+    const { data: bandDoc } = await window.supabaseClient
+      .from('bands')
+      .select('name')
+      .eq('id', targetRoster.band_id)
+      .maybeSingle();
+
+    const bandName = bandDoc ? bandDoc.name : targetRoster.band_id;
+
+    // 3. Crear el integrante vinculado en 'members'
+    const { error: insError } = await window.supabaseClient
+      .from('members')
+      .insert({
+        band_id: targetRoster.band_id,
+        user_id: state.currentUser.id,
+        name: guestMember.name,
+        email: state.currentUser.email,
+        role: guestMember.role || "Integrante",
+        instruments: guestMember.instruments || "",
+        vocals: guestMember.vocals || "Ninguna",
+        color: guestMember.color || "#00e5ff"
+      });
+
+    if (insError) {
+      if (insError.code === '23505') {
+        alert(`Ya eres miembro registrado de este grupo (${bandName}).`);
+      } else {
+        throw insError;
+      }
+    } else {
+      // 4. Remover el miembro del roster de invitados
+      const parsedChords = JSON.parse(targetRoster.chords);
+      parsedChords.members.splice(guestMemberIndex, 1);
+      
+      const { error: updRosterErr } = await window.supabaseClient
+        .from('songs')
+        .update({
+          chords: JSON.stringify(parsedChords)
+        })
+        .eq('id', targetRoster.id);
+      if (updRosterErr) console.error("Error al actualizar metadatos del roster:", updRosterErr);
+    }
+
+    // 5. Establecer esta banda como activa para el usuario en 'users'
+    const { error: updUserErr } = await window.supabaseClient
+      .from('users')
+      .update({ current_band_id: targetRoster.band_id })
+      .eq('id', state.currentUser.id);
+    if (updUserErr) throw updUserErr;
+
+    alert(`¡Código enlazado con éxito!\nTe has unido al grupo "${bandName}" reclamando el puesto de "${guestMember.name}". Heredaste tus instrumentos (${guestMember.instruments || 'Ninguno'}), voces y colores asignados.`);
+    
+    // Ocultar onboarding si está presente
+    const onboardingModal = document.getElementById("modal-onboarding");
+    if (onboardingModal) onboardingModal.style.display = "none";
+    
+    // Actualizar estado local y recargar perfil completo
+    state.currentBandId = targetRoster.band_id;
+    if (state.myBands && !state.myBands.includes(targetRoster.band_id)) {
+      state.myBands.push(targetRoster.band_id);
+    }
+    
+    await loadUserProfile(state.currentUser);
+    return true;
+  } catch (err) {
+    console.error("Error al reclamar código personal:", err);
+    alert("Ocurrió un error al enlazar el código: " + err.message);
+    return true;
+  }
 };
