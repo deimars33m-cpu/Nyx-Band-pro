@@ -4892,3 +4892,33 @@ textarea {
 .line-dropdown-menu button:hover {
   background: rgba(255, 255, 255, 0.05) !important;
 }
+
+/* Clases responsivas para pestañas de notas y audio */
+.notes-editor-pane, .audio-editor-pane {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: calc(100% - 40px);
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+}
+.notes-audio-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 767px) {
+  .pane-responsive-padding {
+    padding: 12px !important;
+    gap: 15px !important;
+    height: auto !important;
+  }
+  .notes-audio-grid {
+    grid-template-columns: 1fr !important;
+    gap: 15px !important;
+  }
+}

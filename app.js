@@ -6974,8 +6974,8 @@ window.setEnsayoTab = function(tabName) {
 
 function renderNotesPane(song, lines) {
   return `
-    <div class="notes-editor-pane" style="padding: 20px; display: flex; flex-direction: column; gap: 20px; height: calc(100% - 40px); overflow-y: auto; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border-soft);">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="notes-editor-pane pane-responsive-padding">
+      <div class="notes-audio-grid">
         <!-- Avances y Notas Generales -->
         <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.15);">
           <div style="font-size: 14px; font-weight: 700; color: var(--neon-cyan); display: flex; align-items: center; gap: 8px;">
@@ -7020,9 +7020,9 @@ function renderNotesPane(song, lines) {
 
 function renderAudioPane(song, lines) {
   return `
-    <div class="audio-editor-pane" style="padding: 20px; display: flex; flex-direction: column; gap: 20px; height: calc(100% - 40px); overflow-y: auto; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--border-soft);">
+    <div class="audio-editor-pane pane-responsive-padding">
       
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <div class="notes-audio-grid">
         <!-- 1. Audio Importado / Referencias -->
         <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.15);">
           <div style="font-size: 14px; font-weight: 700; color: var(--neon-cyan); display: flex; align-items: center; justify-content: space-between;">
@@ -7088,7 +7088,7 @@ function renderAudioPane(song, lines) {
                 <div style="display: flex; gap: 6px;">
                   <button class="btn-small" onclick="playAudioUrl('${aud.url}', '${aud.name}')" style="padding: 3px 6px; font-size: 9px; cursor: pointer;"><i class="ti ti-player-play"></i></button>
                   <button class="btn-small btn-danger" onclick="deleteLineAudio(${idx}, ${audIdx})" style="padding: 3px 6px; font-size: 9px; background: rgba(255,0,0,0.2); cursor: pointer;"><i class="ti ti-trash"></i></button>
-                  <button class="btn-small" onclick="selectAndGoToLine(dots)" style="padding: 3px 6px; font-size: 9px; cursor: pointer;">Ir al Verso</button>
+                  <button class="btn-small" onclick="selectAndGoToLine(${idx})" style="padding: 3px 6px; font-size: 9px; cursor: pointer;">Ir al Verso</button>
                 </div>
               </div>
             `).join("");
