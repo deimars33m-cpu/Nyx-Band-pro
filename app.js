@@ -1381,9 +1381,16 @@ function renderSetlist() {
       <div class="song-card" onclick="openSongInRehearsal(event, '${song.id}')">
         <div class="song-card-bg" style="background-image: url('${song.image}')"></div>
         <span class="song-status-badge ${statusClass}">${statusText}</span>
-        <button class="btn-delete-song" data-id="${song.id}" title="Eliminar tema" style="position: absolute; top: 15px; left: 15px; z-index: 10; color: var(--text-dim); background: rgba(17, 18, 21, 0.7); border: 1px solid var(--border-soft); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; outline: none; padding: 0;">
-          <i class="ti ti-trash" style="font-size: 13px;"></i>
-        </button>
+        <div class="song-card-menu-container" style="position: absolute; top: 15px; left: 15px; z-index: 10;">
+          <button class="btn-song-card-menu" onclick="toggleSongCardMenu(event, '${song.id}')" style="color: var(--text-dim); background: rgba(17, 18, 21, 0.75); border: 1px solid var(--border-soft); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; outline: none; transition: all 0.2s; padding: 0;">
+            <i class="ti ti-dots-vertical" style="font-size: 13px;"></i>
+          </button>
+          <div class="song-card-dropdown" id="song-card-dropdown-${song.id}" style="display: none; position: absolute; left: 0; top: 32px; background: var(--bg-panel); border: 1px solid var(--border-soft); border-radius: 8px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5); width: 140px; padding: 4px 0;">
+            <button onclick="event.stopPropagation(); changeSongImage('${song.id}');" style="width: 100%; text-align: left; background: none; border: none; color: var(--neon-cyan); padding: 8px 12px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 6px; outline: none;"><i class="ti ti-photo"></i> Editar Imagen</button>
+            <button onclick="event.stopPropagation(); duplicateSong('${song.id}');" style="width: 100%; text-align: left; background: none; border: none; color: var(--text-main); padding: 8px 12px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 6px; outline: none;"><i class="ti ti-copy"></i> Duplicar</button>
+            <button onclick="event.stopPropagation(); deleteSongClick('${song.id}');" style="width: 100%; text-align: left; background: none; border: none; color: #E24B4A; padding: 8px 12px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 6px; outline: none;"><i class="ti ti-trash"></i> Eliminar</button>
+          </div>
+        </div>
         
         <div class="song-card-content">
           <div class="card-top">
@@ -1434,7 +1441,7 @@ function openSongInRehearsal(eventOrId, optionalSongId) {
       songId = optionalSongId;
     }
 
-    if (event && event.target && event.target.closest(".btn-delete-song")) {
+    if (event && event.target && (event.target.closest(".btn-delete-song") || event.target.closest(".btn-song-card-menu") || event.target.closest(".song-card-dropdown"))) {
       return;
     }
 
@@ -6194,13 +6201,13 @@ function isCurrentUserAdmin() {
   if (state.currentBandId === "KAWSAY") return false;
 
   // 1. Si es el creador de la banda registrado en la metadata
-  if (state.bandMetadata && state.bandMetadata.createdBy === state.currentUser.uid) {
+  if (state.bandMetadata && state.bandMetadata.createdBy === state.currentUser.id) {
     return true;
   }
 
   // 2. Si está en la lista de miembros como Administrador
   if (state.members && state.members.length > 0) {
-    const isMemberAdmin = state.members.some(m => m.linkedUid === state.currentUser.uid && m.role === "Administrador") ||
+    const isMemberAdmin = state.members.some(m => m.linkedUid === state.currentUser.id && m.role === "Administrador") ||
       state.members.some(m => m.name && m.name.toLowerCase() === (state.currentUser.email || "").split("@")[0].toLowerCase() && m.role === "Administrador");
     if (isMemberAdmin) return true;
   }
@@ -6208,7 +6215,7 @@ function isCurrentUserAdmin() {
   // 3. Fallback: Si es el único integrante del grupo, consideramos que es el administrador
   if (state.members && state.members.length === 1) {
     const singleMember = state.members[0];
-    if (singleMember.linkedUid === state.currentUser.uid ||
+    if (singleMember.linkedUid === state.currentUser.id ||
       singleMember.email === state.currentUser.email ||
       singleMember.name && singleMember.name.toLowerCase() === (state.currentUser.email || "").split("@")[0].toLowerCase()) {
       return true;
@@ -7942,3 +7949,123 @@ window.selectRegisterMemberColor = function(buttonEl) {
   const color = buttonEl.getAttribute("data-color");
   buttonEl.style.boxShadow = "0 0 8px " + color;
 };
+
+
+// --- SOPORTE DE ACCIONES DE TARJETA DE CANCIÓN (REPERTORIO) ---
+window.toggleSongCardMenu = function(event, songId) {
+  event.stopPropagation();
+  
+  // Ocultar todos los otros dropdowns de tarjetas de canción
+  document.querySelectorAll(".song-card-dropdown").forEach(d => {
+    if (d.id !== `song-card-dropdown-${songId}`) {
+      d.style.display = "none";
+    }
+  });
+
+  const dropdown = document.getElementById(`song-card-dropdown-${songId}`);
+  if (dropdown) {
+    const isHidden = dropdown.style.display === "none";
+    dropdown.style.display = isHidden ? "block" : "none";
+  }
+};
+
+window.duplicateSong = async function(songId) {
+  const song = state.songs.find(s => String(s.id) === String(songId));
+  if (!song) return;
+
+  const newSong = {
+    ...song,
+    id: "song-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5),
+    title: song.title + " (Copia)",
+    created_at: new Date().toISOString()
+  };
+
+  state.songs.push(newSong);
+  if (window.SongsService) {
+    try {
+      await window.SongsService.saveSong(newSong);
+    } catch(e) {
+      console.error("Error al duplicar tema en Supabase:", e);
+    }
+  }
+  renderSetlist();
+};
+
+window.deleteSongClick = function(songId) {
+  const song = state.songs.find(s => String(s.id) === String(songId));
+  if (!song) return;
+  if (confirm(`¿Estás seguro de que deseas eliminar la canción "${song.title}"?`)) {
+    deleteSongFromRepertorio(songId);
+  }
+};
+
+window.changeSongImage = function(songId) {
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "image/*";
+  fileInput.onchange = async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(evt) {
+      const img = new Image();
+      img.onload = async function() {
+        // Comprimir la imagen usando canvas
+        const canvas = document.createElement("canvas");
+        const MAX_HEIGHT = 160;
+        const MAX_WIDTH = 260;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+        if (height > MAX_HEIGHT) {
+          width = Math.round((width * MAX_HEIGHT) / height);
+          height = MAX_HEIGHT;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+        
+        const song = state.songs.find(s => String(s.id) === String(songId));
+        if (song) {
+          song.image = compressedBase64;
+          if (window.SongsService) {
+            try {
+              await window.SongsService.saveSong(song);
+            } catch(err) {
+              console.error("Error al guardar imagen de tema en Supabase:", err);
+            }
+          }
+          renderSetlist();
+        }
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  fileInput.click();
+};
+
+// Cerrar menús de cartas de canción al hacer clic afuera
+document.addEventListener("click", () => {
+  document.querySelectorAll(".song-card-dropdown").forEach(d => {
+    d.style.display = "none";
+  });
+});
+
+// --- REGISTRO DEL SERVICE WORKER (PWA) ---
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('Service Worker registrado con éxito. Scope:', reg.scope))
+      .catch(err => console.error('Error al registrar el Service Worker:', err));
+  });
+}

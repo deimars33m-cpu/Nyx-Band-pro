@@ -45,6 +45,7 @@ const SongsService = {
           notas_globales: metadata.notas_globales || null,
           tareas_ensayo: metadata.tareas_ensayo || null,
           audios: metadata.audios || null,
+          image: metadata.image || "",
           // mantenemos la referencia por si se necesita
           chords: song.chords
         };
@@ -82,7 +83,8 @@ const SongsService = {
           lineAudios: song.lineAudios || null,
           notas_globales: song.notas_globales || null,
           tareas_ensayo: song.tareas_ensayo || null,
-          audios: song.audios || null
+          audios: song.audios || null,
+          image: song.image || ""
         }),
         bpm: song.bpm || 120,
         status: song.status || "pendiente"

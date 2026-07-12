@@ -1,0 +1,17 @@
+{
+  "name": "NYX Band-Pro",
+  "short_name": "NYX Band-Pro",
+  "description": "Gestión premium y colaborativa de repertorios y salas de ensayo para bandas.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0b0c",
+  "theme_color": "#0b0b0c",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
