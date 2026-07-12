@@ -390,22 +390,14 @@ function getMemberByName(name) {
   return state.members.find(m => m.name && m.name.toLowerCase() === name.toLowerCase()) || null;
 }
 
-// Abrir el modal de integrantes
+// Redireccionar apertura de integrantes a la pestaña Grupo
 function openMembersModal() {
   closeMobileDrawers();
-  const modal = document.getElementById("modal-members");
-  if (!modal) return;
-  modal.classList.add("open");
-  renderMembersList();
-  // Small delay so DOM is painted before attaching swatch events
-  setTimeout(() => initColorSwatches(), 50);
+  switchTab('grupo');
+  switchGroupSubtab('miembros');
 }
-
-// Cerrar el modal de integrantes
 function closeMembersModal() {
-  const modal = document.getElementById("modal-members");
-  if (!modal) return;
-  modal.classList.remove("open");
+  // No-op
 }
 
 // Inicializar interacción de color swatches
@@ -6049,6 +6041,12 @@ function isCurrentUserAdmin() {
 
 function openBandSettingsModal() {
   closeMobileDrawers();
+  switchTab('grupo');
+  switchGroupSubtab('perfil');
+}
+
+function initGroupTab() {
+  closeMobileDrawers();
   const nameInput = document.getElementById("band-settings-name");
   const logoStatus = document.getElementById("band-settings-logo-status");
   const idInput = document.getElementById("band-settings-id");
@@ -6157,7 +6155,22 @@ function openBandSettingsModal() {
     }
   }
   
-  document.getElementById("modal-band-settings").classList.add("open");
+  
+  
+  // Inicializar sub-pestañas internas de grupo
+  if (!state.groupActiveSubtab) {
+    state.groupActiveSubtab = "perfil";
+  }
+  
+  // Renderizar listas e inicializar swatches
+  renderPendingRequests();
+  renderMembersList();
+  setTimeout(() => initColorSwatches(), 50);
+  
+  renderRehearsalsSchedule();
+  renderGigsSchedule();
+  
+  switchGroupSubtab(state.groupActiveSubtab);
 }
 
 function handleLogoUpload(event) {
@@ -7413,4 +7426,133 @@ document.addEventListener("click", () => {
 window.clearMassiveSelection = function() {
   state.selectedLineIndices = [];
   renderRehearsalRoom();
+};
+
+
+// --- CONTROLADOR DE SUB-PESTAÑAS DE GRUPO ---
+window.switchGroupSubtab = function(subtabId) {
+  state.groupActiveSubtab = subtabId;
+  
+  // Mostrar/ocultar contenidos
+  document.querySelectorAll(".group-subtab-content").forEach(el => {
+    el.style.display = el.id === `group-subtab-${subtabId}` ? "block" : "none";
+  });
+  
+  // Activar botón en cabecera
+  const headerContainer = document.getElementById("group-subtab-headers");
+  if (headerContainer) {
+    headerContainer.querySelectorAll("button").forEach(btn => {
+      const onclickText = btn.getAttribute("onclick") || "";
+      if (onclickText.includes(`'${subtabId}'`)) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+  }
+};
+
+// --- PLANIFICACIÓN DE ENSAYOS ---
+window.renderRehearsalsSchedule = function() {
+  const list = document.getElementById("rehearsals-schedule-list");
+  if (!list) return;
+  
+  if (!state.rehearsals) {
+    state.rehearsals = [
+      { id: "r_1", date: "2026-07-15", time: "19:00", location: "Sala A - Nyx", songs: "Yesterday, Creep", notes: "Revisar coros de Yesterday." },
+      { id: "r_2", date: "2026-07-22", time: "18:30", location: "Sala B - Nyx", songs: "Música Ligera, Lamento Boliviano", notes: "Repasar solos." }
+    ];
+  }
+  
+  list.innerHTML = state.rehearsals.map((r) => `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:16px; background:rgba(255,255,255,0.03); border:1px solid var(--border-soft); border-radius:10px; gap:15px; position:relative;">
+      <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:13px; font-weight:bold; color:white;">📅 ${r.date} a las ${r.time}</span>
+          <span style="font-size:10px; padding:2px 6px; background:rgba(0,229,255,0.15); color:var(--neon-cyan); border-radius:4px; font-weight:bold;">${r.location}</span>
+        </div>
+        <div style="font-size:12px; color:var(--text-main);"><strong style="color:var(--neon-lime);">Temas:</strong> ${r.songs || "Sin temas asignados"}</div>
+        ${r.notes ? `<div style="font-size:11px; color:var(--text-dim); font-style:italic;">💡 Nota: ${r.notes}</div>` : ""}
+      </div>
+      <button class="btn-small btn-danger" onclick="deleteRehearsal('${r.id}')" style="padding:4px 8px; font-size:10px; cursor:pointer;"><i class="ti ti-trash"></i> Borrar</button>
+    </div>
+  `).join("") || `<p style="font-size:12px; color:var(--text-muted); text-align:center; padding:20px;">No hay ensayos programados. ¡Haz clic en Nuevo Ensayo para agendar uno!</p>`;
+};
+
+window.addRehearsalPrompt = function() {
+  const date = prompt("Fecha del ensayo (Ej: YYYY-MM-DD o DD/MM):");
+  if (!date) return;
+  const time = prompt("Hora (Ej: 19:00):", "19:00");
+  if (!time) return;
+  const location = prompt("Lugar (Ej: Sala A, Casa de Henry):", "Estudio");
+  if (!location) return;
+  const songs = prompt("Temas a ensayar (Ej: Yesterday, Creep):");
+  const notes = prompt("Notas o indicaciones especiales:");
+  
+  if (!state.rehearsals) state.rehearsals = [];
+  state.rehearsals.push({
+    id: "r_" + Date.now(),
+    date, time, location, songs, notes
+  });
+  saveLocalStorage();
+  renderRehearsalsSchedule();
+};
+
+window.deleteRehearsal = function(id) {
+  if (!state.rehearsals) return;
+  state.rehearsals = state.rehearsals.filter(r => String(r.id) !== String(id));
+  saveLocalStorage();
+  renderRehearsalsSchedule();
+};
+
+// --- PLANIFICACIÓN DE PRESENTACIONES / SHOWS ---
+window.renderGigsSchedule = function() {
+  const list = document.getElementById("gigs-schedule-list");
+  if (!list) return;
+  
+  if (!state.gigs) {
+    state.gigs = [
+      { id: "g_1", date: "2026-07-30", time: "21:00", location: "Bar Woodstock", payment: "$300 USD", notes: "Llegar 1 hora antes para el soundcheck." }
+    ];
+  }
+  
+  list.innerHTML = state.gigs.map((g) => `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:16px; background:rgba(255,255,255,0.03); border:1px solid var(--border-soft); border-radius:10px; gap:15px; position:relative;">
+      <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:13px; font-weight:bold; color:white;">🎸 ${g.date} a las ${g.time}</span>
+          <span style="font-size:10px; padding:2px 6px; background:rgba(255,0,127,0.15); color:var(--neon-magenta); border-radius:4px; font-weight:bold;">${g.location}</span>
+        </div>
+        ${g.payment ? `<div style="font-size:12px; color:var(--text-main);"><strong style="color:var(--neon-lime);">Pago/Presupuesto:</strong> ${g.payment}</div>` : ""}
+        ${g.notes ? `<div style="font-size:11px; color:var(--text-dim); font-style:italic;">💡 Nota: ${g.notes}</div>` : ""}
+      </div>
+      <button class="btn-small btn-danger" onclick="deleteGig('${g.id}')" style="padding:4px 8px; font-size:10px; cursor:pointer;"><i class="ti ti-trash"></i> Borrar</button>
+    </div>
+  `).join("") || `<p style="font-size:12px; color:var(--text-muted); text-align:center; padding:20px;">No hay presentaciones programadas. ¡Haz clic en Nuevo Evento para agendar un show!</p>`;
+};
+
+window.addGigPrompt = function() {
+  const date = prompt("Fecha de la presentación (Ej: YYYY-MM-DD o DD/MM):");
+  if (!date) return;
+  const time = prompt("Hora (Ej: 21:00):", "21:00");
+  if (!time) return;
+  const location = prompt("Lugar (Ej: Bar Woodstock, Teatro Local):");
+  if (!location) return;
+  const payment = prompt("Monto de pago (opcional, Ej: $300):");
+  const notes = prompt("Notas o indicaciones especiales:");
+  
+  if (!state.gigs) state.gigs = [];
+  state.gigs.push({
+    id: "g_" + Date.now(),
+    date, time, location, payment, notes
+  });
+  saveLocalStorage();
+  renderGigsSchedule();
+};
+
+window.deleteGig = function(id) {
+  if (!state.gigs) return;
+  state.gigs = state.gigs.filter(g => String(g.id) !== String(id));
+  saveLocalStorage();
+  renderGigsSchedule();
 };
