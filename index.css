@@ -5028,3 +5028,21 @@ textarea {
     margin-bottom: 12px;
   }
 }
+
+/* Limit visualizer size on PC to prevent overlapping */
+.chord-visualizer-card-wrapper {
+  max-width: 320px !important;
+  margin: 0 auto !important;
+}
+.chord-visualizer-card {
+  max-width: 240px !important;
+  max-height: 280px !important;
+  margin: 0 auto !important;
+}
+.chord-visualizer-card svg {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 220px !important;
+  max-height: 260px !important;
+}
+
