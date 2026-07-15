@@ -4328,6 +4328,23 @@ textarea {
     box-sizing: border-box;
   }
   
+  .chord-visualizer-card {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px !important;
+    padding: 0 !important;
+  }
+  .chord-visualizer-card svg {
+    max-width: 200px;
+    max-height: 240px;
+    width: 100%;
+    height: auto;
+  }
+  .voicing-dots .dot {
+  }
+  
   .mobile-menu-btn {
     background: transparent;
     border: none;
