@@ -1,571 +1,4878 @@
-// Diccionario de acordes ampliado y base de datos de escalas exóticas / modernas
 const CHORD_DATABASE = {
-  // --- DO (C) ---
-  "C": {
-    notes: ["C", "E", "G"],
-    guitar: { frets: [-1, 3, 2, 0, 1, 0], fingers: [0, 3, 2, 0, 1, 0] },
-    piano: { keys: [0, 4, 7] }
+  "C5": {
+    "notes": [
+      "C",
+      "G"
+    ],
+    "guitar": "x355xx",
+    "piano": {
+      "keys": [
+        0,
+        7
+      ]
+    }
   },
-  "Cm": {
-    notes: ["C", "Eb", "G"],
-    guitar: { frets: [-1, 3, 5, 5, 4, 3], fingers: [0, 1, 3, 4, 2, 1], barre: 3 },
-    piano: { keys: [0, 3, 7] }
+  "C6": {
+    "notes": [
+      "C",
+      "E",
+      "G",
+      "A"
+    ],
+    "guitar": "x35555",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        7,
+        9
+      ]
+    }
   },
   "C7": {
-    notes: ["C", "E", "G", "Bb"],
-    guitar: { frets: [-1, 3, 2, 3, 1, 0], fingers: [0, 3, 2, 4, 1, 0] },
-    piano: { keys: [0, 4, 7, 10] }
-  },
-  "Cmaj7": {
-    notes: ["C", "E", "G", "B"],
-    guitar: { frets: [-1, 3, 2, 0, 0, 0], fingers: [0, 3, 2, 0, 0, 0] },
-    piano: { keys: [0, 4, 7, 11] }
-  },
-  "Cm7": {
-    notes: ["C", "Eb", "G", "Bb"],
-    guitar: { frets: [-1, 3, 5, 3, 4, 3], fingers: [0, 1, 3, 1, 2, 1], barre: 3 },
-    piano: { keys: [0, 3, 7, 10] }
-  },
-  "Csus4": {
-    notes: ["C", "F", "G"],
-    guitar: { frets: [-1, 3, 3, 0, 1, 1], fingers: [0, 3, 4, 0, 1, 1] },
-    piano: { keys: [0, 5, 7] }
+    "notes": [
+      "C",
+      "E",
+      "G",
+      "Bb"
+    ],
+    "guitar": "x35353",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        7,
+        10
+      ]
+    }
   },
   "C9": {
-    notes: ["C", "E", "Bb", "D"],
-    guitar: { frets: [-1, 3, 2, 3, 3, 3], fingers: [0, 2, 1, 3, 3, 3], barre: 3 },
-    piano: { keys: [0, 4, 10, 14] }
+    "notes": [
+      "C",
+      "E",
+      "G",
+      "Bb",
+      "D"
+    ],
+    "guitar": "x35756",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        7,
+        10,
+        14
+      ]
+    }
   },
-  "Cm7b5": {
-    notes: ["C", "Eb", "Gb", "Bb"],
-    guitar: { frets: [-1, 3, 4, 3, 4, -1], fingers: [0, 1, 3, 2, 4, 0] },
-    piano: { keys: [0, 3, 6, 10] }
+  "C11": {
+    "notes": [
+      "C",
+      "E",
+      "G",
+      "Bb",
+      "D",
+      "F"
+    ],
+    "guitar": "x38888",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        7,
+        10,
+        14,
+        17
+      ]
+    }
+  },
+  "C13": {
+    "notes": [
+      "C",
+      "E",
+      "G",
+      "Bb",
+      "D",
+      "A"
+    ],
+    "guitar": "x35755",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        7,
+        10,
+        14,
+        21
+      ]
+    }
+  },
+  "C": {
+    "notes": [
+      "C",
+      "E",
+      "G"
+    ],
+    "guitar": "x35553",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        7
+      ]
+    }
+  },
+  "Cm": {
+    "notes": [
+      "C",
+      "Eb",
+      "G"
+    ],
+    "guitar": "x35543",
+    "piano": {
+      "keys": [
+        0,
+        3,
+        7
+      ]
+    }
+  },
+  "Cm7": {
+    "notes": [
+      "C",
+      "Eb",
+      "G",
+      "Bb"
+    ],
+    "guitar": "x35343",
+    "piano": {
+      "keys": [
+        0,
+        3,
+        7,
+        10
+      ]
+    }
+  },
+  "Cmaj7": {
+    "notes": [
+      "C",
+      "E",
+      "G",
+      "B"
+    ],
+    "guitar": "x35453",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        7,
+        11
+      ]
+    }
+  },
+  "Caug": {
+    "notes": [
+      "C",
+      "E",
+      "Ab"
+    ],
+    "guitar": "x36554",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        8
+      ]
+    }
+  },
+  "Cdim": {
+    "notes": [
+      "C",
+      "Eb",
+      "F#"
+    ],
+    "guitar": "x34543",
+    "piano": {
+      "keys": [
+        0,
+        3,
+        6
+      ]
+    }
+  },
+  "Csus4": {
+    "notes": [
+      "C",
+      "F",
+      "G"
+    ],
+    "guitar": "x35563",
+    "piano": {
+      "keys": [
+        0,
+        5,
+        7
+      ]
+    }
+  },
+  "Csus": {
+    "notes": [
+      "C",
+      "F",
+      "G"
+    ],
+    "guitar": "x35563",
+    "piano": {
+      "keys": [
+        0,
+        5,
+        7
+      ]
+    }
+  },
+  "Cadd9": {
+    "notes": [
+      "C",
+      "E",
+      "G",
+      "D"
+    ],
+    "guitar": "x35753",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        7,
+        14
+      ]
+    }
+  },
+  "Cm6": {
+    "notes": [
+      "C",
+      "Eb",
+      "G",
+      "A"
+    ],
+    "guitar": "x35545",
+    "piano": {
+      "keys": [
+        0,
+        3,
+        7,
+        9
+      ]
+    }
+  },
+  "Cmmaj7": {
+    "notes": [
+      "C",
+      "Eb",
+      "G",
+      "B"
+    ],
+    "guitar": "x35443",
+    "piano": {
+      "keys": [
+        0,
+        3,
+        7,
+        11
+      ]
+    }
+  },
+  "Cm9": {
+    "notes": [
+      "C",
+      "Eb",
+      "G",
+      "Bb",
+      "D"
+    ],
+    "guitar": "x35746",
+    "piano": {
+      "keys": [
+        0,
+        3,
+        7,
+        10,
+        14
+      ]
+    }
+  },
+  "C7sus4": {
+    "notes": [
+      "C",
+      "F",
+      "G",
+      "Bb"
+    ],
+    "guitar": "x35363",
+    "piano": {
+      "keys": [
+        0,
+        5,
+        7,
+        10
+      ]
+    }
+  },
+  "C6add9": {
+    "notes": [
+      "C",
+      "E",
+      "G",
+      "A",
+      "D"
+    ],
+    "guitar": "x35535",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        7,
+        9,
+        14
+      ]
+    }
+  },
+  "C7maj5": {
+    "notes": [
+      "C",
+      "E",
+      "Ab",
+      "Bb"
+    ],
+    "guitar": "x36354",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        8,
+        10
+      ]
+    }
   },
   "Cdim7": {
-    notes: ["C", "Eb", "Gb", "A"],
-    guitar: { frets: [-1, 3, 4, 2, 4, -1], fingers: [0, 2, 3, 1, 4, 0] },
-    piano: { keys: [0, 3, 6, 9] }
+    "notes": [
+      "C",
+      "Eb",
+      "F#",
+      "A"
+    ],
+    "guitar": "x34543",
+    "piano": {
+      "keys": [
+        0,
+        3,
+        6,
+        9
+      ]
+    }
   },
-
-  // --- DO# / REb (C#) ---
-  "C#": {
-    notes: ["C#", "F", "G#"],
-    guitar: { frets: [-1, 4, 6, 6, 6, 4], fingers: [0, 1, 3, 4, 2, 1], barre: 4 },
-    piano: { keys: [1, 5, 8] }
+  "Cm7b5": {
+    "notes": [
+      "C",
+      "Eb",
+      "F#",
+      "Bb"
+    ],
+    "guitar": "x34545",
+    "piano": {
+      "keys": [
+        0,
+        3,
+        6,
+        10
+      ]
+    }
   },
-  "C#m": {
-    notes: ["C#", "E", "G#"],
-    guitar: { frets: [-1, 4, 6, 6, 5, 4], fingers: [0, 1, 3, 4, 2, 1], barre: 4 },
-    piano: { keys: [1, 4, 8] }
+  "CM7": {
+    "notes": [
+      "C",
+      "E",
+      "G",
+      "B"
+    ],
+    "guitar": "x35453",
+    "piano": {
+      "keys": [
+        0,
+        4,
+        7,
+        11
+      ]
+    }
+  },
+  "C#5": {
+    "notes": [
+      "C#",
+      "Ab"
+    ],
+    "guitar": "x466xx",
+    "piano": {
+      "keys": [
+        1,
+        8
+      ]
+    }
+  },
+  "C#6": {
+    "notes": [
+      "C#",
+      "F",
+      "Ab",
+      "Bb"
+    ],
+    "guitar": "x46666",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        8,
+        10
+      ]
+    }
   },
   "C#7": {
-    notes: ["C#", "F", "G#", "B"],
-    guitar: { frets: [-1, 4, 6, 4, 6, 4], fingers: [0, 1, 3, 1, 4, 1], barre: 4 },
-    piano: { keys: [1, 5, 8, 11] }
-  },
-  "C#maj7": {
-    notes: ["C#", "F", "G#", "C"],
-    guitar: { frets: [-1, 4, 6, 5, 6, 4], fingers: [0, 1, 3, 2, 4, 1], barre: 4 },
-    piano: { keys: [1, 5, 8, 12] }
-  },
-  "C#m7": {
-    notes: ["C#", "E", "G#", "B"],
-    guitar: { frets: [-1, 4, 6, 4, 5, 4], fingers: [0, 1, 3, 1, 2, 1], barre: 4 },
-    piano: { keys: [1, 4, 8, 11] }
-  },
-  "C#sus4": {
-    notes: ["C#", "F#", "G#"],
-    guitar: { frets: [-1, 4, 6, 6, 7, 4], fingers: [0, 1, 3, 4, 5, 1], barre: 4 },
-    piano: { keys: [1, 6, 8] }
+    "notes": [
+      "C#",
+      "F",
+      "Ab",
+      "B"
+    ],
+    "guitar": "x46464",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        8,
+        11
+      ]
+    }
   },
   "C#9": {
-    notes: ["C#", "F", "B", "D#"],
-    guitar: { frets: [-1, 4, 3, 4, 4, 4], fingers: [0, 2, 1, 3, 3, 3], barre: 4 },
-    piano: { keys: [1, 5, 11, 15] }
+    "notes": [
+      "C#",
+      "F",
+      "Ab",
+      "B",
+      "Eb"
+    ],
+    "guitar": "x46867",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        8,
+        11,
+        15
+      ]
+    }
   },
-  "C#m7b5": {
-    notes: ["C#", "E", "G", "B"],
-    guitar: { frets: [-1, 4, 5, 4, 5, -1], fingers: [0, 1, 3, 2, 4, 0] },
-    piano: { keys: [1, 4, 7, 11] }
+  "C#11": {
+    "notes": [
+      "C#",
+      "F",
+      "Ab",
+      "B",
+      "Eb",
+      "F#"
+    ],
+    "guitar": "x49999",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        8,
+        11,
+        15,
+        18
+      ]
+    }
+  },
+  "C#13": {
+    "notes": [
+      "C#",
+      "F",
+      "Ab",
+      "B",
+      "Eb",
+      "Bb"
+    ],
+    "guitar": "x46866",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        8,
+        11,
+        15,
+        22
+      ]
+    }
+  },
+  "C#": {
+    "notes": [
+      "C#",
+      "F",
+      "Ab"
+    ],
+    "guitar": "x46664",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        8
+      ]
+    }
+  },
+  "C#m": {
+    "notes": [
+      "C#",
+      "E",
+      "Ab"
+    ],
+    "guitar": "x46654",
+    "piano": {
+      "keys": [
+        1,
+        4,
+        8
+      ]
+    }
+  },
+  "C#m7": {
+    "notes": [
+      "C#",
+      "E",
+      "Ab",
+      "B"
+    ],
+    "guitar": "x46454",
+    "piano": {
+      "keys": [
+        1,
+        4,
+        8,
+        11
+      ]
+    }
+  },
+  "C#maj7": {
+    "notes": [
+      "C#",
+      "F",
+      "Ab",
+      "C"
+    ],
+    "guitar": "x46564",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        8,
+        12
+      ]
+    }
+  },
+  "C#aug": {
+    "notes": [
+      "C#",
+      "F",
+      "A"
+    ],
+    "guitar": "x47665",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        9
+      ]
+    }
+  },
+  "C#dim": {
+    "notes": [
+      "C#",
+      "E",
+      "G"
+    ],
+    "guitar": "x45654",
+    "piano": {
+      "keys": [
+        1,
+        4,
+        7
+      ]
+    }
+  },
+  "C#sus4": {
+    "notes": [
+      "C#",
+      "F#",
+      "Ab"
+    ],
+    "guitar": "x46674",
+    "piano": {
+      "keys": [
+        1,
+        6,
+        8
+      ]
+    }
+  },
+  "C#sus": {
+    "notes": [
+      "C#",
+      "F#",
+      "Ab"
+    ],
+    "guitar": "x46674",
+    "piano": {
+      "keys": [
+        1,
+        6,
+        8
+      ]
+    }
+  },
+  "C#add9": {
+    "notes": [
+      "C#",
+      "F",
+      "Ab",
+      "Eb"
+    ],
+    "guitar": "x46864",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        8,
+        15
+      ]
+    }
+  },
+  "C#m6": {
+    "notes": [
+      "C#",
+      "E",
+      "Ab",
+      "Bb"
+    ],
+    "guitar": "x46656",
+    "piano": {
+      "keys": [
+        1,
+        4,
+        8,
+        10
+      ]
+    }
+  },
+  "C#mmaj7": {
+    "notes": [
+      "C#",
+      "E",
+      "Ab",
+      "C"
+    ],
+    "guitar": "x46554",
+    "piano": {
+      "keys": [
+        1,
+        4,
+        8,
+        12
+      ]
+    }
+  },
+  "C#m9": {
+    "notes": [
+      "C#",
+      "E",
+      "Ab",
+      "B",
+      "Eb"
+    ],
+    "guitar": "x46857",
+    "piano": {
+      "keys": [
+        1,
+        4,
+        8,
+        11,
+        15
+      ]
+    }
+  },
+  "C#7sus4": {
+    "notes": [
+      "C#",
+      "F#",
+      "Ab",
+      "B"
+    ],
+    "guitar": "x46474",
+    "piano": {
+      "keys": [
+        1,
+        6,
+        8,
+        11
+      ]
+    }
+  },
+  "C#6add9": {
+    "notes": [
+      "C#",
+      "F",
+      "Ab",
+      "Bb",
+      "Eb"
+    ],
+    "guitar": "x46646",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        8,
+        10,
+        15
+      ]
+    }
+  },
+  "C#7maj5": {
+    "notes": [
+      "C#",
+      "F",
+      "A",
+      "B"
+    ],
+    "guitar": "x47465",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        9,
+        11
+      ]
+    }
   },
   "C#dim7": {
-    notes: ["C#", "E", "G", "Bb"],
-    guitar: { frets: [-1, 4, 5, 3, 5, -1], fingers: [0, 2, 3, 1, 4, 0] },
-    piano: { keys: [1, 4, 7, 10] }
+    "notes": [
+      "C#",
+      "E",
+      "G",
+      "Bb"
+    ],
+    "guitar": "x45654",
+    "piano": {
+      "keys": [
+        1,
+        4,
+        7,
+        10
+      ]
+    }
   },
-
-  // --- RE (D) ---
-  "D": {
-    notes: ["D", "F#", "A"],
-    guitar: { frets: [-1, -1, 0, 2, 3, 2], fingers: [0, 0, 0, 1, 3, 2] },
-    piano: { keys: [2, 6, 9] }
+  "C#m7b5": {
+    "notes": [
+      "C#",
+      "E",
+      "G",
+      "B"
+    ],
+    "guitar": "x45656",
+    "piano": {
+      "keys": [
+        1,
+        4,
+        7,
+        11
+      ]
+    }
   },
-  "Dm": {
-    notes: ["D", "F", "A"],
-    guitar: { frets: [-1, -1, 0, 2, 3, 1], fingers: [0, 0, 0, 2, 3, 1] },
-    piano: { keys: [2, 5, 9] }
+  "C#M7": {
+    "notes": [
+      "C#",
+      "F",
+      "Ab",
+      "C"
+    ],
+    "guitar": "x46564",
+    "piano": {
+      "keys": [
+        1,
+        5,
+        8,
+        12
+      ]
+    }
+  },
+  "D5": {
+    "notes": [
+      "D",
+      "A"
+    ],
+    "guitar": "x577xx",
+    "piano": {
+      "keys": [
+        2,
+        9
+      ]
+    }
+  },
+  "D6": {
+    "notes": [
+      "D",
+      "F#",
+      "A",
+      "B"
+    ],
+    "guitar": "x57777",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        9,
+        11
+      ]
+    }
   },
   "D7": {
-    notes: ["D", "F#", "A", "C"],
-    guitar: { frets: [-1, -1, 0, 2, 1, 2], fingers: [0, 0, 0, 2, 1, 3] },
-    piano: { keys: [2, 6, 9, 12] }
-  },
-  "Dmaj7": {
-    notes: ["D", "F#", "A", "C#"],
-    guitar: { frets: [-1, -1, 0, 2, 2, 2], fingers: [0, 0, 0, 1, 1, 1], barre: 2 },
-    piano: { keys: [2, 6, 9, 13] }
-  },
-  "Dm7": {
-    notes: ["D", "F", "A", "C"],
-    guitar: { frets: [-1, -1, 0, 2, 1, 1], fingers: [0, 0, 0, 2, 1, 1], barre: 1 },
-    piano: { keys: [2, 5, 9, 12] }
-  },
-  "Dsus4": {
-    notes: ["D", "G", "A"],
-    guitar: { frets: [-1, -1, 0, 2, 3, 3], fingers: [0, 0, 0, 1, 3, 4] },
-    piano: { keys: [2, 7, 9] }
+    "notes": [
+      "D",
+      "F#",
+      "A",
+      "C"
+    ],
+    "guitar": "x57575",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        9,
+        12
+      ]
+    }
   },
   "D9": {
-    notes: ["D", "F#", "C", "E"],
-    guitar: { frets: [-1, 5, 4, 5, 5, 5], fingers: [0, 2, 1, 3, 3, 3], barre: 5 },
-    piano: { keys: [2, 6, 12, 16] }
+    "notes": [
+      "D",
+      "F#",
+      "A",
+      "C",
+      "E"
+    ],
+    "guitar": "x57978",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        9,
+        12,
+        16
+      ]
+    }
   },
-  "Dm7b5": {
-    notes: ["D", "F", "Ab", "C"],
-    guitar: { frets: [-1, 5, 6, 5, 6, -1], fingers: [0, 1, 3, 2, 4, 0] },
-    piano: { keys: [2, 5, 8, 12] }
+  "D11": {
+    "notes": [
+      "D",
+      "F#",
+      "A",
+      "C",
+      "E",
+      "G"
+    ],
+    "guitar": "x510101010",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        9,
+        12,
+        16,
+        19
+      ]
+    }
+  },
+  "D13": {
+    "notes": [
+      "D",
+      "F#",
+      "A",
+      "C",
+      "E",
+      "B"
+    ],
+    "guitar": "x57977",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        9,
+        12,
+        16,
+        23
+      ]
+    }
+  },
+  "D": {
+    "notes": [
+      "D",
+      "F#",
+      "A"
+    ],
+    "guitar": "x57775",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        9
+      ]
+    }
+  },
+  "Dm": {
+    "notes": [
+      "D",
+      "F",
+      "A"
+    ],
+    "guitar": "x57765",
+    "piano": {
+      "keys": [
+        2,
+        5,
+        9
+      ]
+    }
+  },
+  "Dm7": {
+    "notes": [
+      "D",
+      "F",
+      "A",
+      "C"
+    ],
+    "guitar": "x57565",
+    "piano": {
+      "keys": [
+        2,
+        5,
+        9,
+        12
+      ]
+    }
+  },
+  "Dmaj7": {
+    "notes": [
+      "D",
+      "F#",
+      "A",
+      "C#"
+    ],
+    "guitar": "x57675",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        9,
+        13
+      ]
+    }
+  },
+  "Daug": {
+    "notes": [
+      "D",
+      "F#",
+      "Bb"
+    ],
+    "guitar": "x58776",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        10
+      ]
+    }
+  },
+  "Ddim": {
+    "notes": [
+      "D",
+      "F",
+      "Ab"
+    ],
+    "guitar": "x56765",
+    "piano": {
+      "keys": [
+        2,
+        5,
+        8
+      ]
+    }
+  },
+  "Dsus4": {
+    "notes": [
+      "D",
+      "G",
+      "A"
+    ],
+    "guitar": "x57785",
+    "piano": {
+      "keys": [
+        2,
+        7,
+        9
+      ]
+    }
+  },
+  "Dsus": {
+    "notes": [
+      "D",
+      "G",
+      "A"
+    ],
+    "guitar": "x57785",
+    "piano": {
+      "keys": [
+        2,
+        7,
+        9
+      ]
+    }
+  },
+  "Dadd9": {
+    "notes": [
+      "D",
+      "F#",
+      "A",
+      "E"
+    ],
+    "guitar": "x57975",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        9,
+        16
+      ]
+    }
+  },
+  "Dm6": {
+    "notes": [
+      "D",
+      "F",
+      "A",
+      "B"
+    ],
+    "guitar": "x57767",
+    "piano": {
+      "keys": [
+        2,
+        5,
+        9,
+        11
+      ]
+    }
+  },
+  "Dmmaj7": {
+    "notes": [
+      "D",
+      "F",
+      "A",
+      "C#"
+    ],
+    "guitar": "x57665",
+    "piano": {
+      "keys": [
+        2,
+        5,
+        9,
+        13
+      ]
+    }
+  },
+  "Dm9": {
+    "notes": [
+      "D",
+      "F",
+      "A",
+      "C",
+      "E"
+    ],
+    "guitar": "x57968",
+    "piano": {
+      "keys": [
+        2,
+        5,
+        9,
+        12,
+        16
+      ]
+    }
+  },
+  "D7sus4": {
+    "notes": [
+      "D",
+      "G",
+      "A",
+      "C"
+    ],
+    "guitar": "x57585",
+    "piano": {
+      "keys": [
+        2,
+        7,
+        9,
+        12
+      ]
+    }
+  },
+  "D6add9": {
+    "notes": [
+      "D",
+      "F#",
+      "A",
+      "B",
+      "E"
+    ],
+    "guitar": "x57757",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        9,
+        11,
+        16
+      ]
+    }
+  },
+  "D7maj5": {
+    "notes": [
+      "D",
+      "F#",
+      "Bb",
+      "C"
+    ],
+    "guitar": "x58576",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        10,
+        12
+      ]
+    }
   },
   "Ddim7": {
-    notes: ["D", "F", "Ab", "B"],
-    guitar: { frets: [-1, 5, 6, 4, 6, -1], fingers: [0, 2, 3, 1, 4, 0] },
-    piano: { keys: [2, 5, 8, 11] }
+    "notes": [
+      "D",
+      "F",
+      "Ab",
+      "B"
+    ],
+    "guitar": "x56765",
+    "piano": {
+      "keys": [
+        2,
+        5,
+        8,
+        11
+      ]
+    }
   },
-
-  // --- RE# / MIb (Eb) ---
-  "Eb": {
-    notes: ["Eb", "G", "Bb"],
-    guitar: { frets: [-1, 6, 8, 8, 8, 6], fingers: [0, 1, 2, 3, 4, 1], barre: 6 },
-    piano: { keys: [3, 7, 10] }
+  "Dm7b5": {
+    "notes": [
+      "D",
+      "F",
+      "Ab",
+      "C"
+    ],
+    "guitar": "x56767",
+    "piano": {
+      "keys": [
+        2,
+        5,
+        8,
+        12
+      ]
+    }
   },
-  "Ebm": {
-    notes: ["Eb", "Gb", "Bb"],
-    guitar: { frets: [-1, 6, 8, 8, 7, 6], fingers: [0, 1, 3, 4, 2, 1], barre: 6 },
-    piano: { keys: [3, 6, 10] }
+  "DM7": {
+    "notes": [
+      "D",
+      "F#",
+      "A",
+      "C#"
+    ],
+    "guitar": "x57675",
+    "piano": {
+      "keys": [
+        2,
+        6,
+        9,
+        13
+      ]
+    }
+  },
+  "Eb5": {
+    "notes": [
+      "Eb",
+      "Bb"
+    ],
+    "guitar": "x688xx",
+    "piano": {
+      "keys": [
+        3,
+        10
+      ]
+    }
+  },
+  "Eb6": {
+    "notes": [
+      "Eb",
+      "G",
+      "Bb",
+      "C"
+    ],
+    "guitar": "x68888",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        10,
+        12
+      ]
+    }
   },
   "Eb7": {
-    notes: ["Eb", "G", "Bb", "Db"],
-    guitar: { frets: [-1, 6, 8, 6, 8, 6], fingers: [0, 1, 3, 1, 4, 1], barre: 6 },
-    piano: { keys: [3, 7, 10, 13] }
-  },
-  "Ebmaj7": {
-    notes: ["Eb", "G", "Bb", "D"],
-    guitar: { frets: [-1, 6, 8, 7, 8, 6], fingers: [0, 1, 3, 2, 4, 1], barre: 6 },
-    piano: { keys: [3, 7, 10, 14] }
-  },
-  "Ebm7": {
-    notes: ["Eb", "Gb", "Bb", "Db"],
-    guitar: { frets: [-1, 6, 8, 6, 7, 6], fingers: [0, 1, 3, 1, 2, 1], barre: 6 },
-    piano: { keys: [3, 6, 10, 13] }
-  },
-  "Ebsus4": {
-    notes: ["Eb", "Ab", "Bb"],
-    guitar: { frets: [-1, 6, 8, 8, 9, 6], fingers: [0, 1, 3, 4, 5, 1], barre: 6 },
-    piano: { keys: [3, 8, 10] }
+    "notes": [
+      "Eb",
+      "G",
+      "Bb",
+      "C#"
+    ],
+    "guitar": "x68686",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        10,
+        13
+      ]
+    }
   },
   "Eb9": {
-    notes: ["Eb", "G", "Db", "F"],
-    guitar: { frets: [-1, 6, 5, 6, 6, 6], fingers: [0, 2, 1, 3, 3, 3], barre: 6 },
-    piano: { keys: [3, 7, 13, 17] }
+    "notes": [
+      "Eb",
+      "G",
+      "Bb",
+      "C#",
+      "F"
+    ],
+    "guitar": "x681089",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        10,
+        13,
+        17
+      ]
+    }
   },
-  "Ebm7b5": {
-    notes: ["Eb", "Gb", "A", "Db"],
-    guitar: { frets: [-1, 6, 7, 6, 7, -1], fingers: [0, 1, 3, 2, 4, 0] },
-    piano: { keys: [3, 6, 9, 13] }
+  "Eb11": {
+    "notes": [
+      "Eb",
+      "G",
+      "Bb",
+      "C#",
+      "F",
+      "Ab"
+    ],
+    "guitar": "x611111111",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        10,
+        13,
+        17,
+        20
+      ]
+    }
+  },
+  "Eb13": {
+    "notes": [
+      "Eb",
+      "G",
+      "Bb",
+      "C#",
+      "F",
+      "C"
+    ],
+    "guitar": "x681088",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        10,
+        13,
+        17,
+        24
+      ]
+    }
+  },
+  "Eb": {
+    "notes": [
+      "Eb",
+      "G",
+      "Bb"
+    ],
+    "guitar": "x68886",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        10
+      ]
+    }
+  },
+  "Ebm": {
+    "notes": [
+      "Eb",
+      "F#",
+      "Bb"
+    ],
+    "guitar": "x68876",
+    "piano": {
+      "keys": [
+        3,
+        6,
+        10
+      ]
+    }
+  },
+  "Ebm7": {
+    "notes": [
+      "Eb",
+      "F#",
+      "Bb",
+      "C#"
+    ],
+    "guitar": "x68676",
+    "piano": {
+      "keys": [
+        3,
+        6,
+        10,
+        13
+      ]
+    }
+  },
+  "Ebmaj7": {
+    "notes": [
+      "Eb",
+      "G",
+      "Bb",
+      "D"
+    ],
+    "guitar": "x68786",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        10,
+        14
+      ]
+    }
+  },
+  "Ebaug": {
+    "notes": [
+      "Eb",
+      "G",
+      "B"
+    ],
+    "guitar": "x69887",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        11
+      ]
+    }
+  },
+  "Ebdim": {
+    "notes": [
+      "Eb",
+      "F#",
+      "A"
+    ],
+    "guitar": "x67876",
+    "piano": {
+      "keys": [
+        3,
+        6,
+        9
+      ]
+    }
+  },
+  "Ebsus4": {
+    "notes": [
+      "Eb",
+      "Ab",
+      "Bb"
+    ],
+    "guitar": "x68896",
+    "piano": {
+      "keys": [
+        3,
+        8,
+        10
+      ]
+    }
+  },
+  "Ebsus": {
+    "notes": [
+      "Eb",
+      "Ab",
+      "Bb"
+    ],
+    "guitar": "x68896",
+    "piano": {
+      "keys": [
+        3,
+        8,
+        10
+      ]
+    }
+  },
+  "Ebadd9": {
+    "notes": [
+      "Eb",
+      "G",
+      "Bb",
+      "F"
+    ],
+    "guitar": "x681086",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        10,
+        17
+      ]
+    }
+  },
+  "Ebm6": {
+    "notes": [
+      "Eb",
+      "F#",
+      "Bb",
+      "C"
+    ],
+    "guitar": "x68878",
+    "piano": {
+      "keys": [
+        3,
+        6,
+        10,
+        12
+      ]
+    }
+  },
+  "Ebmmaj7": {
+    "notes": [
+      "Eb",
+      "F#",
+      "Bb",
+      "D"
+    ],
+    "guitar": "x68776",
+    "piano": {
+      "keys": [
+        3,
+        6,
+        10,
+        14
+      ]
+    }
+  },
+  "Ebm9": {
+    "notes": [
+      "Eb",
+      "F#",
+      "Bb",
+      "C#",
+      "F"
+    ],
+    "guitar": "x681079",
+    "piano": {
+      "keys": [
+        3,
+        6,
+        10,
+        13,
+        17
+      ]
+    }
+  },
+  "Eb7sus4": {
+    "notes": [
+      "Eb",
+      "Ab",
+      "Bb",
+      "C#"
+    ],
+    "guitar": "x68696",
+    "piano": {
+      "keys": [
+        3,
+        8,
+        10,
+        13
+      ]
+    }
+  },
+  "Eb6add9": {
+    "notes": [
+      "Eb",
+      "G",
+      "Bb",
+      "C",
+      "F"
+    ],
+    "guitar": "x68868",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        10,
+        12,
+        17
+      ]
+    }
+  },
+  "Eb7maj5": {
+    "notes": [
+      "Eb",
+      "G",
+      "B",
+      "C#"
+    ],
+    "guitar": "x69687",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        11,
+        13
+      ]
+    }
   },
   "Ebdim7": {
-    notes: ["Eb", "Gb", "A", "C"],
-    guitar: { frets: [-1, 6, 7, 5, 7, -1], fingers: [0, 2, 3, 1, 4, 0] },
-    piano: { keys: [3, 6, 9, 12] }
+    "notes": [
+      "Eb",
+      "F#",
+      "A",
+      "C"
+    ],
+    "guitar": "x67876",
+    "piano": {
+      "keys": [
+        3,
+        6,
+        9,
+        12
+      ]
+    }
   },
-
-  // --- MI (E) ---
-  "E": {
-    notes: ["E", "G#", "B"],
-    guitar: { frets: [0, 2, 2, 1, 0, 0], fingers: [0, 2, 3, 1, 0, 0] },
-    piano: { keys: [4, 8, 11] }
+  "Ebm7b5": {
+    "notes": [
+      "Eb",
+      "F#",
+      "A",
+      "C#"
+    ],
+    "guitar": "x67878",
+    "piano": {
+      "keys": [
+        3,
+        6,
+        9,
+        13
+      ]
+    }
   },
-  "Em": {
-    notes: ["E", "G", "B"],
-    guitar: { frets: [0, 2, 2, 0, 0, 0], fingers: [0, 2, 3, 0, 0, 0] },
-    piano: { keys: [4, 7, 11] }
+  "EbM7": {
+    "notes": [
+      "Eb",
+      "G",
+      "Bb",
+      "D"
+    ],
+    "guitar": "x68786",
+    "piano": {
+      "keys": [
+        3,
+        7,
+        10,
+        14
+      ]
+    }
+  },
+  "E5": {
+    "notes": [
+      "E",
+      "B"
+    ],
+    "guitar": "022xxx",
+    "piano": {
+      "keys": [
+        4,
+        11
+      ]
+    }
+  },
+  "E6": {
+    "notes": [
+      "E",
+      "Ab",
+      "B",
+      "C#"
+    ],
+    "guitar": "022120",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        11,
+        13
+      ]
+    }
   },
   "E7": {
-    notes: ["E", "G#", "B", "D"],
-    guitar: { frets: [0, 2, 0, 1, 0, 0], fingers: [0, 2, 0, 1, 0, 0] },
-    piano: { keys: [4, 8, 11, 14] }
-  },
-  "Emaj7": {
-    notes: ["E", "G#", "B", "D#"],
-    guitar: { frets: [0, 2, 1, 1, 0, 0], fingers: [0, 3, 1, 2, 0, 0] },
-    piano: { keys: [4, 8, 11, 15] }
-  },
-  "Em7": {
-    notes: ["E", "G", "B", "D"],
-    guitar: { frets: [0, 2, 0, 0, 0, 0], fingers: [0, 2, 0, 0, 0, 0] },
-    piano: { keys: [4, 7, 11, 14] }
-  },
-  "Esus4": {
-    notes: ["E", "A", "B"],
-    guitar: { frets: [0, 2, 2, 2, 0, 0], fingers: [0, 2, 3, 4, 0, 0] },
-    piano: { keys: [4, 9, 11] }
+    "notes": [
+      "E",
+      "Ab",
+      "B",
+      "D"
+    ],
+    "guitar": "020100",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        11,
+        14
+      ]
+    }
   },
   "E9": {
-    notes: ["E", "G#", "D", "F#"],
-    guitar: { frets: [0, 2, 0, 1, 0, 2], fingers: [0, 2, 0, 1, 0, 3] },
-    piano: { keys: [4, 8, 14, 18] }
+    "notes": [
+      "E",
+      "Ab",
+      "B",
+      "D",
+      "F#"
+    ],
+    "guitar": "020102",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        11,
+        14,
+        18
+      ]
+    }
   },
-  "Em7b5": {
-    notes: ["E", "G", "Bb", "D"],
-    guitar: { frets: [0, 1, 0, 0, 3, 3], fingers: [0, 1, 0, 0, 3, 4] },
-    piano: { keys: [4, 7, 10, 14] }
+  "E11": {
+    "notes": [
+      "E",
+      "Ab",
+      "B",
+      "D",
+      "F#",
+      "A"
+    ],
+    "guitar": "020210",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        11,
+        14,
+        18,
+        21
+      ]
+    }
+  },
+  "E13": {
+    "notes": [
+      "E",
+      "Ab",
+      "B",
+      "D",
+      "F#",
+      "C#"
+    ],
+    "guitar": "020120",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        11,
+        14,
+        18,
+        25
+      ]
+    }
+  },
+  "E": {
+    "notes": [
+      "E",
+      "Ab",
+      "B"
+    ],
+    "guitar": "022100",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        11
+      ]
+    }
+  },
+  "Em": {
+    "notes": [
+      "E",
+      "G",
+      "B"
+    ],
+    "guitar": "022000",
+    "piano": {
+      "keys": [
+        4,
+        7,
+        11
+      ]
+    }
+  },
+  "Em7": {
+    "notes": [
+      "E",
+      "G",
+      "B",
+      "D"
+    ],
+    "guitar": "020030",
+    "piano": {
+      "keys": [
+        4,
+        7,
+        11,
+        14
+      ]
+    }
+  },
+  "Emaj7": {
+    "notes": [
+      "E",
+      "Ab",
+      "B",
+      "Eb"
+    ],
+    "guitar": "021100",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        11,
+        15
+      ]
+    }
+  },
+  "Eaug": {
+    "notes": [
+      "E",
+      "Ab",
+      "C"
+    ],
+    "guitar": "032110",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        12
+      ]
+    }
+  },
+  "Edim": {
+    "notes": [
+      "E",
+      "G",
+      "Bb"
+    ],
+    "guitar": "012020",
+    "piano": {
+      "keys": [
+        4,
+        7,
+        10
+      ]
+    }
+  },
+  "Esus4": {
+    "notes": [
+      "E",
+      "A",
+      "B"
+    ],
+    "guitar": "022200",
+    "piano": {
+      "keys": [
+        4,
+        9,
+        11
+      ]
+    }
+  },
+  "Esus": {
+    "notes": [
+      "E",
+      "A",
+      "B"
+    ],
+    "guitar": "022200",
+    "piano": {
+      "keys": [
+        4,
+        9,
+        11
+      ]
+    }
+  },
+  "Eadd9": {
+    "notes": [
+      "E",
+      "Ab",
+      "B",
+      "F#"
+    ],
+    "guitar": "024100",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        11,
+        18
+      ]
+    }
+  },
+  "Em6": {
+    "notes": [
+      "E",
+      "G",
+      "B",
+      "C#"
+    ],
+    "guitar": "022020",
+    "piano": {
+      "keys": [
+        4,
+        7,
+        11,
+        13
+      ]
+    }
+  },
+  "Emmaj7": {
+    "notes": [
+      "E",
+      "G",
+      "B",
+      "Eb"
+    ],
+    "guitar": "021000",
+    "piano": {
+      "keys": [
+        4,
+        7,
+        11,
+        15
+      ]
+    }
+  },
+  "Em9": {
+    "notes": [
+      "E",
+      "G",
+      "B",
+      "D",
+      "F#"
+    ],
+    "guitar": "020032",
+    "piano": {
+      "keys": [
+        4,
+        7,
+        11,
+        14,
+        18
+      ]
+    }
+  },
+  "E7sus4": {
+    "notes": [
+      "E",
+      "A",
+      "B",
+      "D"
+    ],
+    "guitar": "020200",
+    "piano": {
+      "keys": [
+        4,
+        9,
+        11,
+        14
+      ]
+    }
+  },
+  "E6add9": {
+    "notes": [
+      "E",
+      "Ab",
+      "B",
+      "C#",
+      "F#"
+    ],
+    "guitar": "022122",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        11,
+        13,
+        18
+      ]
+    }
+  },
+  "E7maj5": {
+    "notes": [
+      "E",
+      "Ab",
+      "C",
+      "D"
+    ],
+    "guitar": "020110",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        12,
+        14
+      ]
+    }
   },
   "Edim7": {
-    notes: ["E", "G", "Bb", "Db"],
-    guitar: { frets: [-1, -1, 2, 3, 2, 3], fingers: [0, 0, 1, 3, 2, 4] },
-    piano: { keys: [4, 7, 10, 13] }
+    "notes": [
+      "E",
+      "G",
+      "Bb",
+      "C#"
+    ],
+    "guitar": "012020",
+    "piano": {
+      "keys": [
+        4,
+        7,
+        10,
+        13
+      ]
+    }
   },
-
-  // --- FA (F) ---
-  "F": {
-    notes: ["F", "A", "C"],
-    guitar: { frets: [1, 3, 3, 2, 1, 1], fingers: [1, 3, 4, 2, 1, 1], barre: 1 },
-    piano: { keys: [5, 9, 12] }
+  "Em7b5": {
+    "notes": [
+      "E",
+      "G",
+      "Bb",
+      "D"
+    ],
+    "guitar": "012020",
+    "piano": {
+      "keys": [
+        4,
+        7,
+        10,
+        14
+      ]
+    }
   },
-  "Fm": {
-    notes: ["F", "Ab", "C"],
-    guitar: { frets: [1, 3, 3, 1, 1, 1], fingers: [1, 3, 4, 1, 1, 1], barre: 1 },
-    piano: { keys: [5, 8, 12] }
+  "EM7": {
+    "notes": [
+      "E",
+      "Ab",
+      "B",
+      "Eb"
+    ],
+    "guitar": "021100",
+    "piano": {
+      "keys": [
+        4,
+        8,
+        11,
+        15
+      ]
+    }
+  },
+  "F5": {
+    "notes": [
+      "F",
+      "C"
+    ],
+    "guitar": "133xxx",
+    "piano": {
+      "keys": [
+        5,
+        12
+      ]
+    }
+  },
+  "F6": {
+    "notes": [
+      "F",
+      "A",
+      "C",
+      "D"
+    ],
+    "guitar": "133231",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        12,
+        14
+      ]
+    }
   },
   "F7": {
-    notes: ["F", "A", "C", "Eb"],
-    guitar: { frets: [1, 3, 1, 2, 1, 1], fingers: [1, 3, 1, 2, 1, 1], barre: 1 },
-    piano: { keys: [5, 9, 12, 15] }
-  },
-  "Fmaj7": {
-    notes: ["F", "A", "C", "E"],
-    guitar: { frets: [-1, -1, 3, 2, 1, 0], fingers: [0, 0, 3, 2, 1, 0] },
-    piano: { keys: [5, 9, 12, 16] }
-  },
-  "Fm7": {
-    notes: ["F", "Ab", "C", "Eb"],
-    guitar: { frets: [1, 3, 1, 1, 1, 1], fingers: [1, 3, 1, 1, 1, 1], barre: 1 },
-    piano: { keys: [5, 8, 12, 15] }
-  },
-  "Fsus4": {
-    notes: ["F", "Bb", "C"],
-    guitar: { frets: [1, 3, 3, 3, 1, 1], fingers: [1, 3, 4, 5, 1, 1], barre: 1 },
-    piano: { keys: [5, 10, 12] }
+    "notes": [
+      "F",
+      "A",
+      "C",
+      "Eb"
+    ],
+    "guitar": "131211",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        12,
+        15
+      ]
+    }
   },
   "F9": {
-    notes: ["F", "A", "Eb", "G"],
-    guitar: { frets: [-1, 8, 7, 8, 8, 8], fingers: [0, 2, 1, 3, 3, 3], barre: 8 },
-    piano: { keys: [5, 9, 15, 19] }
+    "notes": [
+      "F",
+      "A",
+      "C",
+      "Eb",
+      "G"
+    ],
+    "guitar": "131213",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        12,
+        15,
+        19
+      ]
+    }
   },
-  "Fm7b5": {
-    notes: ["F", "Ab", "Cb", "Eb"],
-    guitar: { frets: [-1, 8, 9, 8, 9, -1], fingers: [0, 1, 3, 2, 4, 0] },
-    piano: { keys: [5, 8, 11, 15] }
+  "F11": {
+    "notes": [
+      "F",
+      "A",
+      "C",
+      "Eb",
+      "G",
+      "Bb"
+    ],
+    "guitar": "131321",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        12,
+        15,
+        19,
+        22
+      ]
+    }
+  },
+  "F13": {
+    "notes": [
+      "F",
+      "A",
+      "C",
+      "Eb",
+      "G",
+      "D"
+    ],
+    "guitar": "131231",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        12,
+        15,
+        19,
+        26
+      ]
+    }
+  },
+  "F": {
+    "notes": [
+      "F",
+      "A",
+      "C"
+    ],
+    "guitar": "133211",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        12
+      ]
+    }
+  },
+  "Fm": {
+    "notes": [
+      "F",
+      "Ab",
+      "C"
+    ],
+    "guitar": "133111",
+    "piano": {
+      "keys": [
+        5,
+        8,
+        12
+      ]
+    }
+  },
+  "Fm7": {
+    "notes": [
+      "F",
+      "Ab",
+      "C",
+      "Eb"
+    ],
+    "guitar": "131141",
+    "piano": {
+      "keys": [
+        5,
+        8,
+        12,
+        15
+      ]
+    }
+  },
+  "Fmaj7": {
+    "notes": [
+      "F",
+      "A",
+      "C",
+      "E"
+    ],
+    "guitar": "132211",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        12,
+        16
+      ]
+    }
+  },
+  "Faug": {
+    "notes": [
+      "F",
+      "A",
+      "C#"
+    ],
+    "guitar": "143221",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        13
+      ]
+    }
+  },
+  "Fdim": {
+    "notes": [
+      "F",
+      "Ab",
+      "B"
+    ],
+    "guitar": "123131",
+    "piano": {
+      "keys": [
+        5,
+        8,
+        11
+      ]
+    }
+  },
+  "Fsus4": {
+    "notes": [
+      "F",
+      "Bb",
+      "C"
+    ],
+    "guitar": "133311",
+    "piano": {
+      "keys": [
+        5,
+        10,
+        12
+      ]
+    }
+  },
+  "Fsus": {
+    "notes": [
+      "F",
+      "Bb",
+      "C"
+    ],
+    "guitar": "133311",
+    "piano": {
+      "keys": [
+        5,
+        10,
+        12
+      ]
+    }
+  },
+  "Fadd9": {
+    "notes": [
+      "F",
+      "A",
+      "C",
+      "G"
+    ],
+    "guitar": "135211",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        12,
+        19
+      ]
+    }
+  },
+  "Fm6": {
+    "notes": [
+      "F",
+      "Ab",
+      "C",
+      "D"
+    ],
+    "guitar": "133131",
+    "piano": {
+      "keys": [
+        5,
+        8,
+        12,
+        14
+      ]
+    }
+  },
+  "Fmmaj7": {
+    "notes": [
+      "F",
+      "Ab",
+      "C",
+      "E"
+    ],
+    "guitar": "132111",
+    "piano": {
+      "keys": [
+        5,
+        8,
+        12,
+        16
+      ]
+    }
+  },
+  "Fm9": {
+    "notes": [
+      "F",
+      "Ab",
+      "C",
+      "Eb",
+      "G"
+    ],
+    "guitar": "131143",
+    "piano": {
+      "keys": [
+        5,
+        8,
+        12,
+        15,
+        19
+      ]
+    }
+  },
+  "F7sus4": {
+    "notes": [
+      "F",
+      "Bb",
+      "C",
+      "Eb"
+    ],
+    "guitar": "131311",
+    "piano": {
+      "keys": [
+        5,
+        10,
+        12,
+        15
+      ]
+    }
+  },
+  "F6add9": {
+    "notes": [
+      "F",
+      "A",
+      "C",
+      "D",
+      "G"
+    ],
+    "guitar": "133233",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        12,
+        14,
+        19
+      ]
+    }
+  },
+  "F7maj5": {
+    "notes": [
+      "F",
+      "A",
+      "C#",
+      "Eb"
+    ],
+    "guitar": "131221",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        13,
+        15
+      ]
+    }
   },
   "Fdim7": {
-    notes: ["F", "Ab", "Cb", "D"],
-    guitar: { frets: [-1, -1, 3, 4, 3, 4], fingers: [0, 0, 1, 3, 2, 4] },
-    piano: { keys: [5, 8, 11, 14] }
+    "notes": [
+      "F",
+      "Ab",
+      "B",
+      "D"
+    ],
+    "guitar": "123131",
+    "piano": {
+      "keys": [
+        5,
+        8,
+        11,
+        14
+      ]
+    }
   },
-
-  // --- FA# / SOLb (F#) ---
-  "F#": {
-    notes: ["F#", "A#", "C#"],
-    guitar: { frets: [2, 4, 4, 3, 2, 2], fingers: [1, 3, 4, 2, 1, 1], barre: 2 },
-    piano: { keys: [6, 10, 13] }
+  "Fm7b5": {
+    "notes": [
+      "F",
+      "Ab",
+      "B",
+      "Eb"
+    ],
+    "guitar": "123131",
+    "piano": {
+      "keys": [
+        5,
+        8,
+        11,
+        15
+      ]
+    }
   },
-  "F#m": {
-    notes: ["F#", "A", "C#"],
-    guitar: { frets: [2, 4, 4, 2, 2, 2], fingers: [1, 3, 4, 1, 1, 1], barre: 2 },
-    piano: { keys: [6, 9, 13] }
+  "FM7": {
+    "notes": [
+      "F",
+      "A",
+      "C",
+      "E"
+    ],
+    "guitar": "132211",
+    "piano": {
+      "keys": [
+        5,
+        9,
+        12,
+        16
+      ]
+    }
+  },
+  "F#5": {
+    "notes": [
+      "F#",
+      "C#"
+    ],
+    "guitar": "244xxx",
+    "piano": {
+      "keys": [
+        6,
+        13
+      ]
+    }
+  },
+  "F#6": {
+    "notes": [
+      "F#",
+      "Bb",
+      "C#",
+      "Eb"
+    ],
+    "guitar": "244342",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        13,
+        15
+      ]
+    }
   },
   "F#7": {
-    notes: ["F#", "A#", "C#", "E"],
-    guitar: { frets: [2, 4, 2, 3, 2, 2], fingers: [1, 3, 1, 2, 1, 1], barre: 2 },
-    piano: { keys: [6, 10, 13, 16] }
-  },
-  "F#maj7": {
-    notes: ["F#", "A#", "C#", "F"],
-    guitar: { frets: [2, -1, 3, 3, 2, -1], fingers: [1, 0, 3, 4, 2, 0] },
-    piano: { keys: [6, 10, 13, 17] }
-  },
-  "F#m7": {
-    notes: ["F#", "A", "C#", "E"],
-    guitar: { frets: [2, 4, 2, 2, 2, 2], fingers: [1, 3, 1, 1, 1, 1], barre: 2 },
-    piano: { keys: [6, 9, 13, 16] }
-  },
-  "F#sus4": {
-    notes: ["F#", "B", "C#"],
-    guitar: { frets: [2, 4, 4, 4, 2, 2], fingers: [1, 3, 4, 5, 1, 1], barre: 2 },
-    piano: { keys: [6, 11, 13] }
+    "notes": [
+      "F#",
+      "Bb",
+      "C#",
+      "E"
+    ],
+    "guitar": "242322",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        13,
+        16
+      ]
+    }
   },
   "F#9": {
-    notes: ["F#", "A#", "E", "G#"],
-    guitar: { frets: [2, 1, 2, 1, 2, -1], fingers: [2, 1, 3, 1, 4, 0] },
-    piano: { keys: [6, 10, 16, 20] }
+    "notes": [
+      "F#",
+      "Bb",
+      "C#",
+      "E",
+      "Ab"
+    ],
+    "guitar": "242324",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        13,
+        16,
+        20
+      ]
+    }
   },
-  "F#m7b5": {
-    notes: ["F#", "A", "C", "E"],
-    guitar: { frets: [2, -1, 2, 2, 1, -1], fingers: [2, 0, 3, 4, 1, 0] },
-    piano: { keys: [6, 9, 12, 16] }
+  "F#11": {
+    "notes": [
+      "F#",
+      "Bb",
+      "C#",
+      "E",
+      "Ab",
+      "B"
+    ],
+    "guitar": "242432",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        13,
+        16,
+        20,
+        23
+      ]
+    }
+  },
+  "F#13": {
+    "notes": [
+      "F#",
+      "Bb",
+      "C#",
+      "E",
+      "Ab",
+      "Eb"
+    ],
+    "guitar": "242342",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        13,
+        16,
+        20,
+        27
+      ]
+    }
+  },
+  "F#": {
+    "notes": [
+      "F#",
+      "Bb",
+      "C#"
+    ],
+    "guitar": "244322",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        13
+      ]
+    }
+  },
+  "F#m": {
+    "notes": [
+      "F#",
+      "A",
+      "C#"
+    ],
+    "guitar": "244222",
+    "piano": {
+      "keys": [
+        6,
+        9,
+        13
+      ]
+    }
+  },
+  "F#m7": {
+    "notes": [
+      "F#",
+      "A",
+      "C#",
+      "E"
+    ],
+    "guitar": "242252",
+    "piano": {
+      "keys": [
+        6,
+        9,
+        13,
+        16
+      ]
+    }
+  },
+  "F#maj7": {
+    "notes": [
+      "F#",
+      "Bb",
+      "C#",
+      "F"
+    ],
+    "guitar": "243322",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        13,
+        17
+      ]
+    }
+  },
+  "F#aug": {
+    "notes": [
+      "F#",
+      "Bb",
+      "D"
+    ],
+    "guitar": "254332",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        14
+      ]
+    }
+  },
+  "F#dim": {
+    "notes": [
+      "F#",
+      "A",
+      "C"
+    ],
+    "guitar": "234242",
+    "piano": {
+      "keys": [
+        6,
+        9,
+        12
+      ]
+    }
+  },
+  "F#sus4": {
+    "notes": [
+      "F#",
+      "B",
+      "C#"
+    ],
+    "guitar": "244422",
+    "piano": {
+      "keys": [
+        6,
+        11,
+        13
+      ]
+    }
+  },
+  "F#sus": {
+    "notes": [
+      "F#",
+      "B",
+      "C#"
+    ],
+    "guitar": "244422",
+    "piano": {
+      "keys": [
+        6,
+        11,
+        13
+      ]
+    }
+  },
+  "F#add9": {
+    "notes": [
+      "F#",
+      "Bb",
+      "C#",
+      "Ab"
+    ],
+    "guitar": "246322",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        13,
+        20
+      ]
+    }
+  },
+  "F#m6": {
+    "notes": [
+      "F#",
+      "A",
+      "C#",
+      "Eb"
+    ],
+    "guitar": "244242",
+    "piano": {
+      "keys": [
+        6,
+        9,
+        13,
+        15
+      ]
+    }
+  },
+  "F#mmaj7": {
+    "notes": [
+      "F#",
+      "A",
+      "C#",
+      "F"
+    ],
+    "guitar": "243222",
+    "piano": {
+      "keys": [
+        6,
+        9,
+        13,
+        17
+      ]
+    }
+  },
+  "F#m9": {
+    "notes": [
+      "F#",
+      "A",
+      "C#",
+      "E",
+      "Ab"
+    ],
+    "guitar": "242254",
+    "piano": {
+      "keys": [
+        6,
+        9,
+        13,
+        16,
+        20
+      ]
+    }
+  },
+  "F#7sus4": {
+    "notes": [
+      "F#",
+      "B",
+      "C#",
+      "E"
+    ],
+    "guitar": "242422",
+    "piano": {
+      "keys": [
+        6,
+        11,
+        13,
+        16
+      ]
+    }
+  },
+  "F#6add9": {
+    "notes": [
+      "F#",
+      "Bb",
+      "C#",
+      "Eb",
+      "Ab"
+    ],
+    "guitar": "244344",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        13,
+        15,
+        20
+      ]
+    }
+  },
+  "F#7maj5": {
+    "notes": [
+      "F#",
+      "Bb",
+      "D",
+      "E"
+    ],
+    "guitar": "242332",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        14,
+        16
+      ]
+    }
   },
   "F#dim7": {
-    notes: ["F#", "A", "C", "Eb"],
-    guitar: { frets: [2, -1, 1, 2, 1, -1], fingers: [2, 0, 1, 3, 1, 0] },
-    piano: { keys: [6, 9, 12, 15] }
+    "notes": [
+      "F#",
+      "A",
+      "C",
+      "Eb"
+    ],
+    "guitar": "234242",
+    "piano": {
+      "keys": [
+        6,
+        9,
+        12,
+        15
+      ]
+    }
   },
-
-  // --- SOL (G) ---
-  "G": {
-    notes: ["G", "B", "D"],
-    guitar: { frets: [3, 2, 0, 0, 0, 3], fingers: [3, 2, 0, 0, 0, 4] },
-    piano: { keys: [7, 11, 14] }
+  "F#m7b5": {
+    "notes": [
+      "F#",
+      "A",
+      "C",
+      "E"
+    ],
+    "guitar": "234242",
+    "piano": {
+      "keys": [
+        6,
+        9,
+        12,
+        16
+      ]
+    }
   },
-  "Gm": {
-    notes: ["G", "Bb", "D"],
-    guitar: { frets: [3, 5, 5, 3, 3, 3], fingers: [1, 3, 4, 1, 1, 1], barre: 3 },
-    piano: { keys: [7, 10, 14] }
+  "F#M7": {
+    "notes": [
+      "F#",
+      "Bb",
+      "C#",
+      "F"
+    ],
+    "guitar": "243322",
+    "piano": {
+      "keys": [
+        6,
+        10,
+        13,
+        17
+      ]
+    }
+  },
+  "G5": {
+    "notes": [
+      "G",
+      "D"
+    ],
+    "guitar": "355xxx",
+    "piano": {
+      "keys": [
+        7,
+        14
+      ]
+    }
+  },
+  "G6": {
+    "notes": [
+      "G",
+      "B",
+      "D",
+      "E"
+    ],
+    "guitar": "355453",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        14,
+        16
+      ]
+    }
   },
   "G7": {
-    notes: ["G", "B", "D", "F"],
-    guitar: { frets: [3, 2, 0, 0, 0, 1], fingers: [3, 2, 0, 0, 0, 1] },
-    piano: { keys: [7, 11, 14, 17] }
-  },
-  "Gmaj7": {
-    notes: ["G", "B", "D", "F#"],
-    guitar: { frets: [3, -1, 4, 4, 3, -1], fingers: [1, 0, 3, 4, 2, 0] },
-    piano: { keys: [7, 11, 14, 18] }
-  },
-  "Gm7": {
-    notes: ["G", "Bb", "D", "F"],
-    guitar: { frets: [3, 5, 3, 3, 3, 3], fingers: [1, 3, 1, 1, 1, 1], barre: 3 },
-    piano: { keys: [7, 10, 14, 17] }
-  },
-  "Gsus4": {
-    notes: ["G", "C", "D"],
-    guitar: { frets: [3, 3, 0, 0, 1, 3], fingers: [3, 4, 0, 0, 1, 5] },
-    piano: { keys: [7, 12, 14] }
+    "notes": [
+      "G",
+      "B",
+      "D",
+      "F"
+    ],
+    "guitar": "353433",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        14,
+        17
+      ]
+    }
   },
   "G9": {
-    notes: ["G", "B", "F", "A"],
-    guitar: { frets: [3, 2, 3, 2, 0, -1], fingers: [2, 1, 3, 1, 0, 0] },
-    piano: { keys: [7, 11, 17, 21] }
+    "notes": [
+      "G",
+      "B",
+      "D",
+      "F",
+      "A"
+    ],
+    "guitar": "353435",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        14,
+        17,
+        21
+      ]
+    }
   },
-  "Gm7b5": {
-    notes: ["G", "Bb", "Db", "F"],
-    guitar: { frets: [3, -1, 3, 3, 2, -1], fingers: [2, 0, 3, 4, 1, 0] },
-    piano: { keys: [7, 10, 13, 17] }
+  "G11": {
+    "notes": [
+      "G",
+      "B",
+      "D",
+      "F",
+      "A",
+      "C"
+    ],
+    "guitar": "353543",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        14,
+        17,
+        21,
+        24
+      ]
+    }
+  },
+  "G13": {
+    "notes": [
+      "G",
+      "B",
+      "D",
+      "F",
+      "A",
+      "E"
+    ],
+    "guitar": "353453",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        14,
+        17,
+        21,
+        28
+      ]
+    }
+  },
+  "G": {
+    "notes": [
+      "G",
+      "B",
+      "D"
+    ],
+    "guitar": "355433",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        14
+      ]
+    }
+  },
+  "Gm": {
+    "notes": [
+      "G",
+      "Bb",
+      "D"
+    ],
+    "guitar": "355333",
+    "piano": {
+      "keys": [
+        7,
+        10,
+        14
+      ]
+    }
+  },
+  "Gm7": {
+    "notes": [
+      "G",
+      "Bb",
+      "D",
+      "F"
+    ],
+    "guitar": "353363",
+    "piano": {
+      "keys": [
+        7,
+        10,
+        14,
+        17
+      ]
+    }
+  },
+  "Gmaj7": {
+    "notes": [
+      "G",
+      "B",
+      "D",
+      "F#"
+    ],
+    "guitar": "354433",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        14,
+        18
+      ]
+    }
+  },
+  "Gaug": {
+    "notes": [
+      "G",
+      "B",
+      "Eb"
+    ],
+    "guitar": "365443",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        15
+      ]
+    }
+  },
+  "Gdim": {
+    "notes": [
+      "G",
+      "Bb",
+      "C#"
+    ],
+    "guitar": "345353",
+    "piano": {
+      "keys": [
+        7,
+        10,
+        13
+      ]
+    }
+  },
+  "Gsus4": {
+    "notes": [
+      "G",
+      "C",
+      "D"
+    ],
+    "guitar": "355533",
+    "piano": {
+      "keys": [
+        7,
+        12,
+        14
+      ]
+    }
+  },
+  "Gsus": {
+    "notes": [
+      "G",
+      "C",
+      "D"
+    ],
+    "guitar": "355533",
+    "piano": {
+      "keys": [
+        7,
+        12,
+        14
+      ]
+    }
+  },
+  "Gadd9": {
+    "notes": [
+      "G",
+      "B",
+      "D",
+      "A"
+    ],
+    "guitar": "357433",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        14,
+        21
+      ]
+    }
+  },
+  "Gm6": {
+    "notes": [
+      "G",
+      "Bb",
+      "D",
+      "E"
+    ],
+    "guitar": "355353",
+    "piano": {
+      "keys": [
+        7,
+        10,
+        14,
+        16
+      ]
+    }
+  },
+  "Gmmaj7": {
+    "notes": [
+      "G",
+      "Bb",
+      "D",
+      "F#"
+    ],
+    "guitar": "354333",
+    "piano": {
+      "keys": [
+        7,
+        10,
+        14,
+        18
+      ]
+    }
+  },
+  "Gm9": {
+    "notes": [
+      "G",
+      "Bb",
+      "D",
+      "F",
+      "A"
+    ],
+    "guitar": "353365",
+    "piano": {
+      "keys": [
+        7,
+        10,
+        14,
+        17,
+        21
+      ]
+    }
+  },
+  "G7sus4": {
+    "notes": [
+      "G",
+      "C",
+      "D",
+      "F"
+    ],
+    "guitar": "353533",
+    "piano": {
+      "keys": [
+        7,
+        12,
+        14,
+        17
+      ]
+    }
+  },
+  "G6add9": {
+    "notes": [
+      "G",
+      "B",
+      "D",
+      "E",
+      "A"
+    ],
+    "guitar": "355455",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        14,
+        16,
+        21
+      ]
+    }
+  },
+  "G7maj5": {
+    "notes": [
+      "G",
+      "B",
+      "Eb",
+      "F"
+    ],
+    "guitar": "353443",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        15,
+        17
+      ]
+    }
   },
   "Gdim7": {
-    notes: ["G", "Bb", "Db", "E"],
-    guitar: { frets: [3, -1, 2, 3, 2, -1], fingers: [2, 0, 1, 3, 1, 0] },
-    piano: { keys: [7, 10, 13, 16] }
+    "notes": [
+      "G",
+      "Bb",
+      "C#",
+      "E"
+    ],
+    "guitar": "345353",
+    "piano": {
+      "keys": [
+        7,
+        10,
+        13,
+        16
+      ]
+    }
   },
-
-  // --- SOL# / LAb (Ab) ---
-  "Ab": {
-    notes: ["Ab", "C", "Eb"],
-    guitar: { frets: [4, 6, 6, 5, 4, 4], fingers: [1, 3, 4, 2, 1, 1], barre: 4 },
-    piano: { keys: [8, 12, 15] }
+  "Gm7b5": {
+    "notes": [
+      "G",
+      "Bb",
+      "C#",
+      "F"
+    ],
+    "guitar": "345353",
+    "piano": {
+      "keys": [
+        7,
+        10,
+        13,
+        17
+      ]
+    }
   },
-  "Abm": {
-    notes: ["Ab", "Cb", "Eb"],
-    guitar: { frets: [4, 6, 6, 4, 4, 4], fingers: [1, 3, 4, 1, 1, 1], barre: 4 },
-    piano: { keys: [8, 11, 15] }
+  "GM7": {
+    "notes": [
+      "G",
+      "B",
+      "D",
+      "F#"
+    ],
+    "guitar": "354433",
+    "piano": {
+      "keys": [
+        7,
+        11,
+        14,
+        18
+      ]
+    }
+  },
+  "Ab5": {
+    "notes": [
+      "Ab",
+      "Eb"
+    ],
+    "guitar": "466xxx",
+    "piano": {
+      "keys": [
+        8,
+        15
+      ]
+    }
+  },
+  "Ab6": {
+    "notes": [
+      "Ab",
+      "C",
+      "Eb",
+      "F"
+    ],
+    "guitar": "466564",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        15,
+        17
+      ]
+    }
   },
   "Ab7": {
-    notes: ["Ab", "C", "Eb", "Gb"],
-    guitar: { frets: [4, 6, 4, 5, 4, 4], fingers: [1, 3, 1, 2, 1, 1], barre: 4 },
-    piano: { keys: [8, 12, 15, 18] }
-  },
-  "Abmaj7": {
-    notes: ["Ab", "C", "Eb", "G"],
-    guitar: { frets: [4, -1, 5, 5, 4, -1], fingers: [1, 0, 3, 4, 2, 0] },
-    piano: { keys: [8, 12, 15, 19] }
-  },
-  "Abm7": {
-    notes: ["Ab", "Cb", "Eb", "Gb"],
-    guitar: { frets: [4, 6, 4, 4, 4, 4], fingers: [1, 3, 1, 1, 1, 1], barre: 4 },
-    piano: { keys: [8, 11, 15, 18] }
-  },
-  "Absus4": {
-    notes: ["Ab", "Db", "Eb"],
-    guitar: { frets: [4, 6, 6, 6, 4, 4], fingers: [1, 3, 4, 5, 1, 1], barre: 4 },
-    piano: { keys: [8, 13, 15] }
+    "notes": [
+      "Ab",
+      "C",
+      "Eb",
+      "F#"
+    ],
+    "guitar": "464544",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        15,
+        18
+      ]
+    }
   },
   "Ab9": {
-    notes: ["Ab", "C", "Gb", "Bb"],
-    guitar: { frets: [4, 3, 4, 3, 4, -1], fingers: [2, 1, 3, 1, 4, 0] },
-    piano: { keys: [8, 12, 18, 22] }
+    "notes": [
+      "Ab",
+      "C",
+      "Eb",
+      "F#",
+      "Bb"
+    ],
+    "guitar": "464546",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        15,
+        18,
+        22
+      ]
+    }
   },
-  "Abm7b5": {
-    notes: ["Ab", "Cb", "D", "Gb"],
-    guitar: { frets: [4, -1, 4, 4, 3, -1], fingers: [2, 0, 3, 4, 1, 0] },
-    piano: { keys: [8, 11, 14, 18] }
+  "Ab11": {
+    "notes": [
+      "Ab",
+      "C",
+      "Eb",
+      "F#",
+      "Bb",
+      "C#"
+    ],
+    "guitar": "464654",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        15,
+        18,
+        22,
+        25
+      ]
+    }
+  },
+  "Ab13": {
+    "notes": [
+      "Ab",
+      "C",
+      "Eb",
+      "F#",
+      "Bb",
+      "F"
+    ],
+    "guitar": "464564",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        15,
+        18,
+        22,
+        29
+      ]
+    }
+  },
+  "Ab": {
+    "notes": [
+      "Ab",
+      "C",
+      "Eb"
+    ],
+    "guitar": "466544",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        15
+      ]
+    }
+  },
+  "Abm": {
+    "notes": [
+      "Ab",
+      "B",
+      "Eb"
+    ],
+    "guitar": "466444",
+    "piano": {
+      "keys": [
+        8,
+        11,
+        15
+      ]
+    }
+  },
+  "Abm7": {
+    "notes": [
+      "Ab",
+      "B",
+      "Eb",
+      "F#"
+    ],
+    "guitar": "464474",
+    "piano": {
+      "keys": [
+        8,
+        11,
+        15,
+        18
+      ]
+    }
+  },
+  "Abmaj7": {
+    "notes": [
+      "Ab",
+      "C",
+      "Eb",
+      "G"
+    ],
+    "guitar": "465544",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        15,
+        19
+      ]
+    }
+  },
+  "Abaug": {
+    "notes": [
+      "Ab",
+      "C",
+      "E"
+    ],
+    "guitar": "476554",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        16
+      ]
+    }
+  },
+  "Abdim": {
+    "notes": [
+      "Ab",
+      "B",
+      "D"
+    ],
+    "guitar": "456464",
+    "piano": {
+      "keys": [
+        8,
+        11,
+        14
+      ]
+    }
+  },
+  "Absus4": {
+    "notes": [
+      "Ab",
+      "C#",
+      "Eb"
+    ],
+    "guitar": "466644",
+    "piano": {
+      "keys": [
+        8,
+        13,
+        15
+      ]
+    }
+  },
+  "Absus": {
+    "notes": [
+      "Ab",
+      "C#",
+      "Eb"
+    ],
+    "guitar": "466644",
+    "piano": {
+      "keys": [
+        8,
+        13,
+        15
+      ]
+    }
+  },
+  "Abadd9": {
+    "notes": [
+      "Ab",
+      "C",
+      "Eb",
+      "Bb"
+    ],
+    "guitar": "468544",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        15,
+        22
+      ]
+    }
+  },
+  "Abm6": {
+    "notes": [
+      "Ab",
+      "B",
+      "Eb",
+      "F"
+    ],
+    "guitar": "466464",
+    "piano": {
+      "keys": [
+        8,
+        11,
+        15,
+        17
+      ]
+    }
+  },
+  "Abmmaj7": {
+    "notes": [
+      "Ab",
+      "B",
+      "Eb",
+      "G"
+    ],
+    "guitar": "465444",
+    "piano": {
+      "keys": [
+        8,
+        11,
+        15,
+        19
+      ]
+    }
+  },
+  "Abm9": {
+    "notes": [
+      "Ab",
+      "B",
+      "Eb",
+      "F#",
+      "Bb"
+    ],
+    "guitar": "464476",
+    "piano": {
+      "keys": [
+        8,
+        11,
+        15,
+        18,
+        22
+      ]
+    }
+  },
+  "Ab7sus4": {
+    "notes": [
+      "Ab",
+      "C#",
+      "Eb",
+      "F#"
+    ],
+    "guitar": "464644",
+    "piano": {
+      "keys": [
+        8,
+        13,
+        15,
+        18
+      ]
+    }
+  },
+  "Ab6add9": {
+    "notes": [
+      "Ab",
+      "C",
+      "Eb",
+      "F",
+      "Bb"
+    ],
+    "guitar": "466566",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        15,
+        17,
+        22
+      ]
+    }
+  },
+  "Ab7maj5": {
+    "notes": [
+      "Ab",
+      "C",
+      "E",
+      "F#"
+    ],
+    "guitar": "464554",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        16,
+        18
+      ]
+    }
   },
   "Abdim7": {
-    notes: ["Ab", "Cb", "D", "F"],
-    guitar: { frets: [4, -1, 3, 4, 3, -1], fingers: [2, 0, 1, 3, 1, 0] },
-    piano: { keys: [8, 11, 14, 17] }
+    "notes": [
+      "Ab",
+      "B",
+      "D",
+      "F"
+    ],
+    "guitar": "456464",
+    "piano": {
+      "keys": [
+        8,
+        11,
+        14,
+        17
+      ]
+    }
   },
-
-  // --- LA (A) ---
-  "A": {
-    notes: ["A", "C#", "E"],
-    guitar: { frets: [-1, 0, 2, 2, 2, 0], fingers: [0, 0, 1, 2, 3, 0] },
-    piano: { keys: [9, 13, 16] }
+  "Abm7b5": {
+    "notes": [
+      "Ab",
+      "B",
+      "D",
+      "F#"
+    ],
+    "guitar": "456464",
+    "piano": {
+      "keys": [
+        8,
+        11,
+        14,
+        18
+      ]
+    }
   },
-  "Am": {
-    notes: ["A", "C", "E"],
-    guitar: { frets: [-1, 0, 2, 2, 1, 0], fingers: [0, 0, 2, 3, 1, 0] },
-    piano: { keys: [9, 12, 16] }
+  "AbM7": {
+    "notes": [
+      "Ab",
+      "C",
+      "Eb",
+      "G"
+    ],
+    "guitar": "465544",
+    "piano": {
+      "keys": [
+        8,
+        12,
+        15,
+        19
+      ]
+    }
+  },
+  "A5": {
+    "notes": [
+      "A",
+      "E"
+    ],
+    "guitar": "x022xx",
+    "piano": {
+      "keys": [
+        9,
+        16
+      ]
+    }
+  },
+  "A6": {
+    "notes": [
+      "A",
+      "C#",
+      "E",
+      "F#"
+    ],
+    "guitar": "x02222",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        16,
+        18
+      ]
+    }
   },
   "A7": {
-    notes: ["A", "C#", "E", "G"],
-    guitar: { frets: [-1, 0, 2, 0, 2, 0], fingers: [0, 0, 2, 0, 3, 0] },
-    piano: { keys: [9, 13, 16, 19] }
-  },
-  "Amaj7": {
-    notes: ["A", "C#", "E", "G#"],
-    guitar: { frets: [-1, 0, 2, 1, 2, 0], fingers: [0, 0, 2, 1, 3, 0] },
-    piano: { keys: [9, 13, 16, 20] }
-  },
-  "Am7": {
-    notes: ["A", "C", "E", "G"],
-    guitar: { frets: [-1, 0, 2, 0, 1, 0], fingers: [0, 0, 2, 0, 1, 0] },
-    piano: { keys: [9, 12, 16, 19] }
-  },
-  "Asus4": {
-    notes: ["A", "D", "E"],
-    guitar: { frets: [-1, 0, 2, 2, 3, 0], fingers: [0, 0, 1, 2, 3, 0] },
-    piano: { keys: [9, 14, 16] }
+    "notes": [
+      "A",
+      "C#",
+      "E",
+      "G"
+    ],
+    "guitar": "x02020",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        16,
+        19
+      ]
+    }
   },
   "A9": {
-    notes: ["A", "C#", "G", "B"],
-    guitar: { frets: [-1, 12, 11, 12, 12, 12], fingers: [0, 2, 1, 3, 3, 3], barre: 12 },
-    piano: { keys: [9, 13, 19, 23] }
+    "notes": [
+      "A",
+      "C#",
+      "E",
+      "G",
+      "B"
+    ],
+    "guitar": "x02423",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        16,
+        19,
+        23
+      ]
+    }
   },
-  "Am7b5": {
-    notes: ["A", "C", "Eb", "G"],
-    guitar: { frets: [-1, 0, 1, 0, 1, -1], fingers: [0, 0, 1, 0, 2, 0] },
-    piano: { keys: [9, 12, 15, 19] }
+  "A11": {
+    "notes": [
+      "A",
+      "C#",
+      "E",
+      "G",
+      "B",
+      "D"
+    ],
+    "guitar": "x05555",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        16,
+        19,
+        23,
+        26
+      ]
+    }
+  },
+  "A13": {
+    "notes": [
+      "A",
+      "C#",
+      "E",
+      "G",
+      "B",
+      "F#"
+    ],
+    "guitar": "x02422",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        16,
+        19,
+        23,
+        30
+      ]
+    }
+  },
+  "A": {
+    "notes": [
+      "A",
+      "C#",
+      "E"
+    ],
+    "guitar": "x02220",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        16
+      ]
+    }
+  },
+  "Am": {
+    "notes": [
+      "A",
+      "C",
+      "E"
+    ],
+    "guitar": "x02210",
+    "piano": {
+      "keys": [
+        9,
+        12,
+        16
+      ]
+    }
+  },
+  "Am7": {
+    "notes": [
+      "A",
+      "C",
+      "E",
+      "G"
+    ],
+    "guitar": "x02010",
+    "piano": {
+      "keys": [
+        9,
+        12,
+        16,
+        19
+      ]
+    }
+  },
+  "Amaj7": {
+    "notes": [
+      "A",
+      "C#",
+      "E",
+      "Ab"
+    ],
+    "guitar": "x02120",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        16,
+        20
+      ]
+    }
+  },
+  "Aaug": {
+    "notes": [
+      "A",
+      "C#",
+      "F"
+    ],
+    "guitar": "x03221",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        17
+      ]
+    }
+  },
+  "Adim": {
+    "notes": [
+      "A",
+      "C",
+      "Eb"
+    ],
+    "guitar": "x01210",
+    "piano": {
+      "keys": [
+        9,
+        12,
+        15
+      ]
+    }
+  },
+  "Asus4": {
+    "notes": [
+      "A",
+      "D",
+      "E"
+    ],
+    "guitar": "x02230",
+    "piano": {
+      "keys": [
+        9,
+        14,
+        16
+      ]
+    }
+  },
+  "Asus": {
+    "notes": [
+      "A",
+      "D",
+      "E"
+    ],
+    "guitar": "x02230",
+    "piano": {
+      "keys": [
+        9,
+        14,
+        16
+      ]
+    }
+  },
+  "Aadd9": {
+    "notes": [
+      "A",
+      "C#",
+      "E",
+      "B"
+    ],
+    "guitar": "x02420",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        16,
+        23
+      ]
+    }
+  },
+  "Am6": {
+    "notes": [
+      "A",
+      "C",
+      "E",
+      "F#"
+    ],
+    "guitar": "x02212",
+    "piano": {
+      "keys": [
+        9,
+        12,
+        16,
+        18
+      ]
+    }
+  },
+  "Ammaj7": {
+    "notes": [
+      "A",
+      "C",
+      "E",
+      "Ab"
+    ],
+    "guitar": "x02110",
+    "piano": {
+      "keys": [
+        9,
+        12,
+        16,
+        20
+      ]
+    }
+  },
+  "Am9": {
+    "notes": [
+      "A",
+      "C",
+      "E",
+      "G",
+      "B"
+    ],
+    "guitar": "x02413",
+    "piano": {
+      "keys": [
+        9,
+        12,
+        16,
+        19,
+        23
+      ]
+    }
+  },
+  "A7sus4": {
+    "notes": [
+      "A",
+      "D",
+      "E",
+      "G"
+    ],
+    "guitar": "x02030",
+    "piano": {
+      "keys": [
+        9,
+        14,
+        16,
+        19
+      ]
+    }
+  },
+  "A6add9": {
+    "notes": [
+      "A",
+      "C#",
+      "E",
+      "F#",
+      "B"
+    ],
+    "guitar": "x02202",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        16,
+        18,
+        23
+      ]
+    }
+  },
+  "A7maj5": {
+    "notes": [
+      "A",
+      "C#",
+      "F",
+      "G"
+    ],
+    "guitar": "x03021",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        17,
+        19
+      ]
+    }
   },
   "Adim7": {
-    notes: ["A", "C", "Eb", "Gb"],
-    guitar: { frets: [-1, 0, 1, 2, 1, -1], fingers: [0, 0, 1, 3, 2, 0] },
-    piano: { keys: [9, 12, 15, 18] }
+    "notes": [
+      "A",
+      "C",
+      "Eb",
+      "F#"
+    ],
+    "guitar": "x01210",
+    "piano": {
+      "keys": [
+        9,
+        12,
+        15,
+        18
+      ]
+    }
   },
-
-  // --- LA# / SIb (Bb) ---
-  "Bb": {
-    notes: ["Bb", "D", "F"],
-    guitar: { frets: [-1, 1, 3, 3, 3, 1], fingers: [0, 1, 2, 3, 4, 1], barre: 1 },
-    piano: { keys: [10, 14, 17] }
+  "Am7b5": {
+    "notes": [
+      "A",
+      "C",
+      "Eb",
+      "G"
+    ],
+    "guitar": "x01212",
+    "piano": {
+      "keys": [
+        9,
+        12,
+        15,
+        19
+      ]
+    }
   },
-  "Bbm": {
-    notes: ["Bb", "Db", "F"],
-    guitar: { frets: [-1, 1, 3, 3, 2, 1], fingers: [0, 1, 3, 4, 2, 1], barre: 1 },
-    piano: { keys: [10, 13, 17] }
+  "AM7": {
+    "notes": [
+      "A",
+      "C#",
+      "E",
+      "Ab"
+    ],
+    "guitar": "x02120",
+    "piano": {
+      "keys": [
+        9,
+        13,
+        16,
+        20
+      ]
+    }
+  },
+  "Bb5": {
+    "notes": [
+      "Bb",
+      "F"
+    ],
+    "guitar": "x133xx",
+    "piano": {
+      "keys": [
+        10,
+        17
+      ]
+    }
+  },
+  "Bb6": {
+    "notes": [
+      "Bb",
+      "D",
+      "F",
+      "G"
+    ],
+    "guitar": "x13333",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        17,
+        19
+      ]
+    }
   },
   "Bb7": {
-    notes: ["Bb", "D", "F", "Ab"],
-    guitar: { frets: [-1, 1, 3, 1, 3, 1], fingers: [0, 1, 3, 1, 4, 1], barre: 1 },
-    piano: { keys: [10, 14, 17, 20] }
-  },
-  "Bbmaj7": {
-    notes: ["Bb", "D", "F", "A"],
-    guitar: { frets: [-1, 1, 3, 2, 3, 1], fingers: [0, 1, 3, 2, 4, 1], barre: 1 },
-    piano: { keys: [10, 14, 17, 21] }
-  },
-  "Bbm7": {
-    notes: ["Bb", "Db", "F", "Ab"],
-    guitar: { frets: [-1, 1, 3, 1, 2, 1], fingers: [0, 1, 3, 1, 2, 1], barre: 1 },
-    piano: { keys: [10, 13, 17, 20] }
-  },
-  "Bbsus4": {
-    notes: ["Bb", "Eb", "F"],
-    guitar: { frets: [-1, 1, 3, 3, 4, 1], fingers: [0, 1, 3, 4, 5, 1], barre: 1 },
-    piano: { keys: [10, 15, 17] }
+    "notes": [
+      "Bb",
+      "D",
+      "F",
+      "Ab"
+    ],
+    "guitar": "x13131",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        17,
+        20
+      ]
+    }
   },
   "Bb9": {
-    notes: ["Bb", "D", "Ab", "C"],
-    guitar: { frets: [-1, 1, 0, 1, 1, 1], fingers: [0, 1, 0, 2, 3, 4] },
-    piano: { keys: [10, 14, 20, 24] }
+    "notes": [
+      "Bb",
+      "D",
+      "F",
+      "Ab",
+      "C"
+    ],
+    "guitar": "x13534",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        17,
+        20,
+        24
+      ]
+    }
   },
-  "Bbm7b5": {
-    notes: ["Bb", "Db", "E", "Ab"],
-    guitar: { frets: [-1, 1, 2, 1, 2, -1], fingers: [0, 1, 3, 2, 4, 0] },
-    piano: { keys: [10, 13, 16, 20] }
+  "Bb11": {
+    "notes": [
+      "Bb",
+      "D",
+      "F",
+      "Ab",
+      "C",
+      "Eb"
+    ],
+    "guitar": "x16666",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        17,
+        20,
+        24,
+        27
+      ]
+    }
+  },
+  "Bb13": {
+    "notes": [
+      "Bb",
+      "D",
+      "F",
+      "Ab",
+      "C",
+      "G"
+    ],
+    "guitar": "x13533",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        17,
+        20,
+        24,
+        31
+      ]
+    }
+  },
+  "Bb": {
+    "notes": [
+      "Bb",
+      "D",
+      "F"
+    ],
+    "guitar": "x13331",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        17
+      ]
+    }
+  },
+  "Bbm": {
+    "notes": [
+      "Bb",
+      "C#",
+      "F"
+    ],
+    "guitar": "x13321",
+    "piano": {
+      "keys": [
+        10,
+        13,
+        17
+      ]
+    }
+  },
+  "Bbm7": {
+    "notes": [
+      "Bb",
+      "C#",
+      "F",
+      "Ab"
+    ],
+    "guitar": "x13121",
+    "piano": {
+      "keys": [
+        10,
+        13,
+        17,
+        20
+      ]
+    }
+  },
+  "Bbmaj7": {
+    "notes": [
+      "Bb",
+      "D",
+      "F",
+      "A"
+    ],
+    "guitar": "x13231",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        17,
+        21
+      ]
+    }
+  },
+  "Bbaug": {
+    "notes": [
+      "Bb",
+      "D",
+      "F#"
+    ],
+    "guitar": "x14332",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        18
+      ]
+    }
+  },
+  "Bbdim": {
+    "notes": [
+      "Bb",
+      "C#",
+      "E"
+    ],
+    "guitar": "x12321",
+    "piano": {
+      "keys": [
+        10,
+        13,
+        16
+      ]
+    }
+  },
+  "Bbsus4": {
+    "notes": [
+      "Bb",
+      "Eb",
+      "F"
+    ],
+    "guitar": "x13341",
+    "piano": {
+      "keys": [
+        10,
+        15,
+        17
+      ]
+    }
+  },
+  "Bbsus": {
+    "notes": [
+      "Bb",
+      "Eb",
+      "F"
+    ],
+    "guitar": "x13341",
+    "piano": {
+      "keys": [
+        10,
+        15,
+        17
+      ]
+    }
+  },
+  "Bbadd9": {
+    "notes": [
+      "Bb",
+      "D",
+      "F",
+      "C"
+    ],
+    "guitar": "x13531",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        17,
+        24
+      ]
+    }
+  },
+  "Bbm6": {
+    "notes": [
+      "Bb",
+      "C#",
+      "F",
+      "G"
+    ],
+    "guitar": "x13323",
+    "piano": {
+      "keys": [
+        10,
+        13,
+        17,
+        19
+      ]
+    }
+  },
+  "Bbmmaj7": {
+    "notes": [
+      "Bb",
+      "C#",
+      "F",
+      "A"
+    ],
+    "guitar": "x13221",
+    "piano": {
+      "keys": [
+        10,
+        13,
+        17,
+        21
+      ]
+    }
+  },
+  "Bbm9": {
+    "notes": [
+      "Bb",
+      "C#",
+      "F",
+      "Ab",
+      "C"
+    ],
+    "guitar": "x13524",
+    "piano": {
+      "keys": [
+        10,
+        13,
+        17,
+        20,
+        24
+      ]
+    }
+  },
+  "Bb7sus4": {
+    "notes": [
+      "Bb",
+      "Eb",
+      "F",
+      "Ab"
+    ],
+    "guitar": "x13141",
+    "piano": {
+      "keys": [
+        10,
+        15,
+        17,
+        20
+      ]
+    }
+  },
+  "Bb6add9": {
+    "notes": [
+      "Bb",
+      "D",
+      "F",
+      "G",
+      "C"
+    ],
+    "guitar": "x13313",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        17,
+        19,
+        24
+      ]
+    }
+  },
+  "Bb7maj5": {
+    "notes": [
+      "Bb",
+      "D",
+      "F#",
+      "Ab"
+    ],
+    "guitar": "x14132",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        18,
+        20
+      ]
+    }
   },
   "Bbdim7": {
-    notes: ["Bb", "Db", "E", "G"],
-    guitar: { frets: [-1, 1, 2, 0, 2, -1], fingers: [0, 1, 2, 0, 3, 0] },
-    piano: { keys: [10, 13, 16, 19] }
+    "notes": [
+      "Bb",
+      "C#",
+      "E",
+      "G"
+    ],
+    "guitar": "x12321",
+    "piano": {
+      "keys": [
+        10,
+        13,
+        16,
+        19
+      ]
+    }
   },
-
-  // --- SI (B) ---
-  "B": {
-    notes: ["B", "D#", "F#"],
-    guitar: { frets: [-1, 2, 4, 4, 4, 2], fingers: [0, 1, 2, 3, 4, 1], barre: 2 },
-    piano: { keys: [11, 15, 18] }
+  "Bbm7b5": {
+    "notes": [
+      "Bb",
+      "C#",
+      "E",
+      "Ab"
+    ],
+    "guitar": "x12323",
+    "piano": {
+      "keys": [
+        10,
+        13,
+        16,
+        20
+      ]
+    }
   },
-  "Bm": {
-    notes: ["B", "D", "F#"],
-    guitar: { frets: [-1, 2, 4, 4, 3, 2], fingers: [0, 1, 3, 4, 2, 1], barre: 2 },
-    piano: { keys: [11, 14, 18] }
+  "BbM7": {
+    "notes": [
+      "Bb",
+      "D",
+      "F",
+      "A"
+    ],
+    "guitar": "x13231",
+    "piano": {
+      "keys": [
+        10,
+        14,
+        17,
+        21
+      ]
+    }
+  },
+  "B5": {
+    "notes": [
+      "B",
+      "F#"
+    ],
+    "guitar": "x244xx",
+    "piano": {
+      "keys": [
+        11,
+        18
+      ]
+    }
+  },
+  "B6": {
+    "notes": [
+      "B",
+      "Eb",
+      "F#",
+      "Ab"
+    ],
+    "guitar": "x24444",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        18,
+        20
+      ]
+    }
   },
   "B7": {
-    notes: ["B", "D#", "F#", "A"],
-    guitar: { frets: [-1, 2, 1, 2, 0, 2], fingers: [0, 2, 1, 3, 0, 4] },
-    piano: { keys: [11, 15, 18, 21] }
-  },
-  "Bmaj7": {
-    notes: ["B", "D#", "F#", "A#"],
-    guitar: { frets: [-1, 2, 4, 3, 4, 2], fingers: [0, 1, 3, 2, 4, 1], barre: 2 },
-    piano: { keys: [11, 15, 18, 22] }
-  },
-  "Bm7": {
-    notes: ["B", "D", "F#", "A"],
-    guitar: { frets: [-1, 2, 4, 2, 3, 2], fingers: [0, 1, 3, 1, 2, 1], barre: 2 },
-    piano: { keys: [11, 14, 18, 21] }
-  },
-  "Bsus4": {
-    notes: ["B", "E", "F#"],
-    guitar: { frets: [-1, 2, 4, 4, 5, 2], fingers: [0, 1, 3, 4, 5, 1], barre: 2 },
-    piano: { keys: [11, 16, 18] }
+    "notes": [
+      "B",
+      "Eb",
+      "F#",
+      "A"
+    ],
+    "guitar": "x24242",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        18,
+        21
+      ]
+    }
   },
   "B9": {
-    notes: ["B", "D#", "A", "C#"],
-    guitar: { frets: [-1, 2, 1, 2, 2, 2], fingers: [0, 2, 1, 3, 3, 3], barre: 2 },
-    piano: { keys: [11, 15, 21, 25] }
+    "notes": [
+      "B",
+      "Eb",
+      "F#",
+      "A",
+      "C#"
+    ],
+    "guitar": "x24645",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        18,
+        21,
+        25
+      ]
+    }
   },
-  "Bm7b5": {
-    notes: ["B", "D", "F", "A"],
-    guitar: { frets: [-1, 2, 3, 2, 3, -1], fingers: [0, 1, 3, 2, 4, 0] },
-    piano: { keys: [11, 14, 17, 21] }
+  "B11": {
+    "notes": [
+      "B",
+      "Eb",
+      "F#",
+      "A",
+      "C#",
+      "E"
+    ],
+    "guitar": "x27777",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        18,
+        21,
+        25,
+        28
+      ]
+    }
+  },
+  "B13": {
+    "notes": [
+      "B",
+      "Eb",
+      "F#",
+      "A",
+      "C#",
+      "Ab"
+    ],
+    "guitar": "x24644",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        18,
+        21,
+        25,
+        32
+      ]
+    }
+  },
+  "B": {
+    "notes": [
+      "B",
+      "Eb",
+      "F#"
+    ],
+    "guitar": "x24442",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        18
+      ]
+    }
+  },
+  "Bm": {
+    "notes": [
+      "B",
+      "D",
+      "F#"
+    ],
+    "guitar": "x24432",
+    "piano": {
+      "keys": [
+        11,
+        14,
+        18
+      ]
+    }
+  },
+  "Bm7": {
+    "notes": [
+      "B",
+      "D",
+      "F#",
+      "A"
+    ],
+    "guitar": "x24232",
+    "piano": {
+      "keys": [
+        11,
+        14,
+        18,
+        21
+      ]
+    }
+  },
+  "Bmaj7": {
+    "notes": [
+      "B",
+      "Eb",
+      "F#",
+      "Bb"
+    ],
+    "guitar": "x24342",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        18,
+        22
+      ]
+    }
+  },
+  "Baug": {
+    "notes": [
+      "B",
+      "Eb",
+      "G"
+    ],
+    "guitar": "x25443",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        19
+      ]
+    }
+  },
+  "Bdim": {
+    "notes": [
+      "B",
+      "D",
+      "F"
+    ],
+    "guitar": "x23432",
+    "piano": {
+      "keys": [
+        11,
+        14,
+        17
+      ]
+    }
+  },
+  "Bsus4": {
+    "notes": [
+      "B",
+      "E",
+      "F#"
+    ],
+    "guitar": "x24452",
+    "piano": {
+      "keys": [
+        11,
+        16,
+        18
+      ]
+    }
+  },
+  "Bsus": {
+    "notes": [
+      "B",
+      "E",
+      "F#"
+    ],
+    "guitar": "x24452",
+    "piano": {
+      "keys": [
+        11,
+        16,
+        18
+      ]
+    }
+  },
+  "Badd9": {
+    "notes": [
+      "B",
+      "Eb",
+      "F#",
+      "C#"
+    ],
+    "guitar": "x24642",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        18,
+        25
+      ]
+    }
+  },
+  "Bm6": {
+    "notes": [
+      "B",
+      "D",
+      "F#",
+      "Ab"
+    ],
+    "guitar": "x24434",
+    "piano": {
+      "keys": [
+        11,
+        14,
+        18,
+        20
+      ]
+    }
+  },
+  "Bmmaj7": {
+    "notes": [
+      "B",
+      "D",
+      "F#",
+      "Bb"
+    ],
+    "guitar": "x24332",
+    "piano": {
+      "keys": [
+        11,
+        14,
+        18,
+        22
+      ]
+    }
+  },
+  "Bm9": {
+    "notes": [
+      "B",
+      "D",
+      "F#",
+      "A",
+      "C#"
+    ],
+    "guitar": "x24635",
+    "piano": {
+      "keys": [
+        11,
+        14,
+        18,
+        21,
+        25
+      ]
+    }
+  },
+  "B7sus4": {
+    "notes": [
+      "B",
+      "E",
+      "F#",
+      "A"
+    ],
+    "guitar": "x24252",
+    "piano": {
+      "keys": [
+        11,
+        16,
+        18,
+        21
+      ]
+    }
+  },
+  "B6add9": {
+    "notes": [
+      "B",
+      "Eb",
+      "F#",
+      "Ab",
+      "C#"
+    ],
+    "guitar": "x24424",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        18,
+        20,
+        25
+      ]
+    }
+  },
+  "B7maj5": {
+    "notes": [
+      "B",
+      "Eb",
+      "G",
+      "A"
+    ],
+    "guitar": "x25243",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        19,
+        21
+      ]
+    }
   },
   "Bdim7": {
-    notes: ["B", "D", "F", "Ab"],
-    guitar: { frets: [-1, 2, 3, 1, 3, -1], fingers: [0, 2, 3, 1, 4, 0] },
-    piano: { keys: [11, 14, 17, 20] }
+    "notes": [
+      "B",
+      "D",
+      "F",
+      "Ab"
+    ],
+    "guitar": "x23432",
+    "piano": {
+      "keys": [
+        11,
+        14,
+        17,
+        20
+      ]
+    }
+  },
+  "Bm7b5": {
+    "notes": [
+      "B",
+      "D",
+      "F",
+      "A"
+    ],
+    "guitar": "x23434",
+    "piano": {
+      "keys": [
+        11,
+        14,
+        17,
+        21
+      ]
+    }
+  },
+  "BM7": {
+    "notes": [
+      "B",
+      "Eb",
+      "F#",
+      "Bb"
+    ],
+    "guitar": "x24342",
+    "piano": {
+      "keys": [
+        11,
+        15,
+        18,
+        22
+      ]
+    }
   }
 };
 
-// --- BASE DE DATOS DE ESCALAS ---
 const SCALE_DATABASE = {
   "pentatonic_major": {
     name: "Pentatónica Mayor",
