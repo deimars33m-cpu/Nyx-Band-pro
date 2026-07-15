@@ -4334,6 +4334,97 @@ function filterChordType(type) {
   selectChord(chordName);
 }
 
+// --- EDICIÓN TOTAL DE ACORDES ---
+function saveCustomChord() {
+  const input = document.getElementById("chord-string-input");
+  if (!input) return;
+  const val = input.value.trim();
+  if (val.length < 1) return;
+  
+  let customChords = {};
+  try {
+    customChords = JSON.parse(localStorage.getItem('bandCustomChords') || '{}');
+  } catch(e){}
+  
+  customChords[state.currentChord] = val;
+  localStorage.setItem('bandCustomChords', JSON.stringify(customChords));
+  
+  const status = document.getElementById("custom-chord-status");
+  if (status) {
+    status.style.display = "block";
+    setTimeout(() => { status.style.display = "none"; }, 3000);
+  }
+  
+  // Re-render
+  if (state.currentInstrument === "guitar") {
+    renderGuitarChordSVG(state.currentChord, "chord-svg-render-area");
+  }
+}
+
+// Configurar listener en tiempo real para el input del editor
+setTimeout(() => {
+  const input = document.getElementById("chord-string-input");
+  if (input) {
+    input.addEventListener("input", (e) => {
+      const val = e.target.value.trim();
+      if (state.currentInstrument === "guitar") {
+        // Renderizar temporalmente con el nuevo string sin guardar en localStorage todavía
+        const container = document.getElementById("chord-svg-render-area");
+        if (!container) return;
+        
+        let frets = val.split('').reverse().map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
+        // Necesitamos llenar con 0 hasta llegar a 6 cuerdas por si escribe parcial
+        while (frets.length < 6) frets.push(0);
+        
+        // Render manually reusing the logic for real-time
+        let minFret = 999;
+        let maxFret = 0;
+        frets.forEach(f => {
+          if (f > 0) {
+            if (f < minFret) minFret = f;
+            if (f > maxFret) maxFret = f;
+          }
+        });
+        
+        let baseFret = 1;
+        if (maxFret > 4 && minFret !== 999) {
+          baseFret = minFret;
+        }
+        
+        let svg = \`<svg viewBox="0 0 200 240" class="chord-svg-fretboard" style="width:100%; height:100%">\`;
+        if (baseFret > 1) {
+          svg += \`<text x="12" y="62" font-size="11" font-weight="700" fill="var(--neon-cyan)">Fr. \${baseFret}</text>\`;
+        }
+        const nutWidth = baseFret === 1 ? 4 : 1;
+        svg += \`<rect x="40" y="38" width="120" height="\${nutWidth}" fill="\${baseFret === 1 ? 'var(--text-primary)' : 'var(--text-muted)'}" />\`;
+        
+        for (let i = 0; i <= 4; i++) {
+          const y = 40 + i * 40;
+          svg += \`<line x1="40" y1="\${y}" x2="160" y2="\${y}" stroke-width="1.5" stroke="rgba(255,255,255,0.4)" />\`;
+        }
+        
+        for (let i = 0; i < 6; i++) {
+          const x = 40 + i * 24;
+          const thickness = 1 + (5 - i) * 0.4;
+          svg += \`<line x1="\${x}" y1="40" x2="\${x}" y2="200" stroke-width="\${thickness}" stroke="var(--text-primary)" />\`;
+          
+          const fretVal = frets[i];
+          if (fretVal === -1) {
+            svg += \`<text x="\${x}" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="var(--neon-red)">×</text>\`;
+          } else if (fretVal === 0) {
+            svg += \`<circle cx="\${x}" cy="24" r="5" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" />\`;
+          } else {
+            const cy = 40 + (fretVal - baseFret) * 40 + 20;
+            svg += \`<circle cx="\${x}" cy="\${cy}" r="8" fill="var(--neon-cyan)" />\`;
+          }
+        }
+        svg += \`</svg>\`;
+        container.innerHTML = svg;
+      }
+    });
+  }
+}, 1500);
+
 function onScaleChange() {
   const rootSelect = document.getElementById("scale-root-select");
   const typeSelect = document.getElementById("scale-type-select");
@@ -4385,7 +4476,11 @@ function renderDictionary() {
     renderFavoritesList();
 
     // Títulos e información
-    const chord = CHORD_DATABASE[state.currentChord];
+    let chord = CHORD_DATABASE[state.currentChord];
+    if (!chord) {
+      chord = { notes: ["?"], guitar: "xxxxxx" };
+    }
+    
     const chordNameTitle = document.getElementById("chord-name-title");
     const chordNotesList = document.getElementById("chord-notes-list");
     const notesLabel = document.getElementById("notes-list-label");
@@ -4435,6 +4530,30 @@ function renderDictionary() {
       // Renderizar los diagramas SVG correspondientes
       if (state.currentInstrument === "guitar") {
         renderGuitarChordSVG(state.currentChord, "chord-svg-render-area");
+        
+        // Actualizar el valor del input de edición total
+        const input = document.getElementById("chord-string-input");
+        if (input) {
+          let customChords = {};
+          try { customChords = JSON.parse(localStorage.getItem('bandCustomChords') || '{}'); } catch(e){}
+          const chordDef = customChords[state.currentChord] || CHORD_DATABASE[state.currentChord];
+          
+          if (typeof chordDef === "string") {
+            input.value = chordDef;
+          } else if (chordDef && chordDef.guitar && typeof chordDef.guitar === "string") {
+            input.value = chordDef.guitar;
+          } else if (chordDef && chordDef.guitar && chordDef.guitar.frets) {
+            // Revertir frets (6ta a 1ra) a string (1ra a 6ta)
+            const frets = chordDef.guitar.frets;
+            let str = "";
+            for (let i = 5; i >= 0; i--) {
+              str += frets[i] === -1 ? "x" : frets[i].toString();
+            }
+            input.value = str;
+          } else {
+            input.value = "";
+          }
+        }
       } else {
         renderPianoChordSVG(state.currentChord, "chord-svg-render-area");
       }

@@ -651,13 +651,38 @@ function renderGuitarChordSVG(chordName, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
   
-  const chord = CHORD_DATABASE[chordName];
-  if (!chord || !chord.guitar) {
+  // Soportar acordes personalizados en localStorage
+  let customChords = {};
+  try {
+    customChords = JSON.parse(localStorage.getItem('bandCustomChords') || '{}');
+  } catch (e) {}
+  
+  const chordDef = customChords[chordName] || CHORD_DATABASE[chordName];
+  
+  if (!chordDef) {
     container.innerHTML = `<p style="color:var(--text-muted)">Acorde no disponible para guitarra</p>`;
     return;
   }
   
-  const { frets, fingers, barre } = chord.guitar;
+  let frets, fingers, barre;
+  
+  // Soporte para el formato de cadena "123456" (Ej: "010230" para C Mayor)
+  if (typeof chordDef === "string") {
+    frets = chordDef.split('').reverse().map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
+    fingers = [0, 0, 0, 0, 0, 0];
+    barre = null;
+  } else if (chordDef.guitar && typeof chordDef.guitar === "string") {
+    frets = chordDef.guitar.split('').reverse().map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
+    fingers = [0, 0, 0, 0, 0, 0];
+    barre = null;
+  } else if (chordDef.guitar) {
+    frets = chordDef.guitar.frets;
+    fingers = chordDef.guitar.fingers || [0, 0, 0, 0, 0, 0];
+    barre = chordDef.guitar.barre;
+  } else {
+    container.innerHTML = `<p style="color:var(--text-muted)">Acorde sin formato de guitarra válido</p>`;
+    return;
+  }
   
   // Encontrar el traste mínimo que no sea 0 o -1 para ajustar la vista del mástil
   let minFret = 999;

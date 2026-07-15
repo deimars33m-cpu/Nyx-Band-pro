@@ -261,16 +261,35 @@
               <div class="panel-card glass" style="margin-top: 20px;">
                 <div class="panel-title">Tipo de Acorde</div>
                 <div class="chord-types-grid" id="dict-chord-type-filters"
-                  style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                  <button class="filter-btn active" onclick="filterChordType('')">Mayor</button>
-                  <button class="filter-btn" onclick="filterChordType('m')">Menor</button>
-                  <button class="filter-btn" onclick="filterChordType('maj7')">maj7</button>
-                  <button class="filter-btn" onclick="filterChordType('m7')">m7</button>
+                  style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 11px;">
+                  <!-- Variaciones Básicas -->
+                  <button class="filter-btn active" onclick="filterChordType('')">M</button>
+                  <button class="filter-btn" onclick="filterChordType('m')">m</button>
                   <button class="filter-btn" onclick="filterChordType('7')">7</button>
-                  <button class="filter-btn" onclick="filterChordType('dim7')">dim</button>
-                  <button class="filter-btn" onclick="filterChordType('m7b5')">m7b5</button>
-                  <button class="filter-btn" onclick="filterChordType('sus4')">sus4</button>
+                  
+                  <button class="filter-btn" onclick="filterChordType('m7')">m7</button>
+                  <button class="filter-btn" onclick="filterChordType('maj7')">maj7</button>
+                  <button class="filter-btn" onclick="filterChordType('aug')">aug</button>
+                  
+                  <button class="filter-btn" onclick="filterChordType('dim')">dim</button>
+                  <button class="filter-btn" onclick="filterChordType('sus4')">sus</button>
+                  <button class="filter-btn" onclick="filterChordType('5')">5</button>
+                  
+                  <!-- Variaciones Extendidas -->
+                  <button class="filter-btn" onclick="filterChordType('6')">6</button>
                   <button class="filter-btn" onclick="filterChordType('9')">9</button>
+                  <button class="filter-btn" onclick="filterChordType('add9')">add9</button>
+                  
+                  <button class="filter-btn" onclick="filterChordType('m6')">m6</button>
+                  <button class="filter-btn" onclick="filterChordType('mmaj7')">mmaj7</button>
+                  <button class="filter-btn" onclick="filterChordType('m9')">m9</button>
+                  
+                  <button class="filter-btn" onclick="filterChordType('11')">11</button>
+                  <button class="filter-btn" onclick="filterChordType('7sus4')">7sus4</button>
+                  <button class="filter-btn" onclick="filterChordType('13')">13</button>
+                  
+                  <button class="filter-btn" onclick="filterChordType('6add9')">6add9</button>
+                  <button class="filter-btn" onclick="filterChordType('7maj5')">7maj5</button>
                 </div>
               </div>
             </div>
@@ -343,6 +362,19 @@
                 <!-- SVG inyectado por chords.js -->
               </div>
               <div id="chord-voicing-dots-container"></div>
+            </div>
+
+            <!-- Editor Total de Acorde -->
+            <div id="custom-chord-editor" class="panel-card glass" style="margin-top: 20px; text-align: left;">
+              <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Control Total de Edición</span>
+              </div>
+              <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">Arma este acorde usando cuerdas de 1ra a 6ta (123456). Usa 'x' para mutear.</p>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="chord-string-input" class="form-input" style="flex: 1; font-family: monospace; letter-spacing: 2px;" placeholder="Ej: 01023x para C Mayor" maxlength="6">
+                <button id="btn-save-custom-chord" class="btn btn-primary" onclick="saveCustomChord()">Guardar</button>
+              </div>
+              <p id="custom-chord-status" style="font-size: 11px; color: var(--neon-cyan); margin-top: 8px; display: none;">¡Acorde guardado localmente!</p>
             </div>
 
             <div class="chord-info-details" style="margin-top: 20px;">
