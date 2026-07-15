@@ -238,11 +238,11 @@
           <!-- Columna 1: Selectores -->
           <div class="dict-col-selectors">
             <!-- Bloque de Acordes -->
-            <div id="dict-chords-selectors">
-              <div class="panel-card glass">
-                <div class="panel-title">Nota Raíz</div>
+            <div id="dict-chords-selectors" style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; margin-bottom: 12px;">
+              <div class="panel-card glass" style="padding: 10px;">
+                <div class="panel-title" style="font-size: 11px; margin-bottom: 8px;">Nota Raíz</div>
                 <div class="filter-group root-notes-grid" id="dict-chord-root-filters"
-                  style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                  style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
                   <button class="filter-btn active" onclick="filterChordRoot('C')">C</button>
                   <button class="filter-btn" onclick="filterChordRoot('C#')">C#</button>
                   <button class="filter-btn" onclick="filterChordRoot('D')">D</button>
@@ -258,10 +258,10 @@
                 </div>
               </div>
 
-              <div class="panel-card glass" style="margin-top: 20px;">
-                <div class="panel-title">Tipo de Acorde</div>
+              <div class="panel-card glass" style="padding: 10px;">
+                <div class="panel-title" style="font-size: 11px; margin-bottom: 8px;">Tipo de Acorde</div>
                 <div class="chord-types-grid" id="dict-chord-type-filters"
-                  style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 11px;">
+                  style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 11px;">
                   <!-- Variaciones Básicas -->
                   <button class="filter-btn active" onclick="filterChordType('')">M</button>
                   <button class="filter-btn" onclick="filterChordType('m')">m</button>

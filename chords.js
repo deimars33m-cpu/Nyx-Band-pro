@@ -668,11 +668,11 @@ function renderGuitarChordSVG(chordName, containerId) {
   
   // Soporte para el formato de cadena "123456" (Ej: "010230" para C Mayor)
   if (typeof chordDef === "string") {
-    frets = chordDef.split('').reverse().map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
+    frets = chordDef.split('').map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
     fingers = [0, 0, 0, 0, 0, 0];
     barre = null;
   } else if (chordDef.guitar && typeof chordDef.guitar === "string") {
-    frets = chordDef.guitar.split('').reverse().map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
+    frets = chordDef.guitar.split('').map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
     fingers = [0, 0, 0, 0, 0, 0];
     barre = null;
   } else if (chordDef.guitar) {

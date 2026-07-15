@@ -4372,7 +4372,7 @@ setTimeout(() => {
         const container = document.getElementById("chord-svg-render-area");
         if (!container) return;
         
-        let frets = val.split('').reverse().map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
+        let frets = val.split('').map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
         // Necesitamos llenar con 0 hasta llegar a 6 cuerdas por si escribe parcial
         while (frets.length < 6) frets.push(0);
         
@@ -4543,10 +4543,10 @@ function renderDictionary() {
           } else if (chordDef && chordDef.guitar && typeof chordDef.guitar === "string") {
             input.value = chordDef.guitar;
           } else if (chordDef && chordDef.guitar && chordDef.guitar.frets) {
-            // Revertir frets (6ta a 1ra) a string (1ra a 6ta)
+            // Reconstruir string (6ta a 1ra)
             const frets = chordDef.guitar.frets;
             let str = "";
-            for (let i = 5; i >= 0; i--) {
+            for (let i = 0; i < 6; i++) {
               str += frets[i] === -1 ? "x" : frets[i].toString();
             }
             input.value = str;
