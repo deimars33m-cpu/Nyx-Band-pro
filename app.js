@@ -4391,34 +4391,34 @@ setTimeout(() => {
           baseFret = minFret;
         }
         
-        let svg = \`<svg viewBox="0 0 200 240" class="chord-svg-fretboard" style="width:100%; height:100%">\`;
+        let svg = `<svg viewBox="0 0 200 240" class="chord-svg-fretboard" style="width:100%; height:100%">`;
         if (baseFret > 1) {
-          svg += \`<text x="12" y="62" font-size="11" font-weight="700" fill="var(--neon-cyan)">Fr. \${baseFret}</text>\`;
+          svg += `<text x="12" y="62" font-size="11" font-weight="700" fill="var(--neon-cyan)">Fr. ${baseFret}</text>`;
         }
         const nutWidth = baseFret === 1 ? 4 : 1;
-        svg += \`<rect x="40" y="38" width="120" height="\${nutWidth}" fill="\${baseFret === 1 ? 'var(--text-primary)' : 'var(--text-muted)'}" />\`;
+        svg += `<rect x="40" y="38" width="120" height="${nutWidth}" fill="${baseFret === 1 ? 'var(--text-primary)' : 'var(--text-muted)'}" />`;
         
         for (let i = 0; i <= 4; i++) {
           const y = 40 + i * 40;
-          svg += \`<line x1="40" y1="\${y}" x2="160" y2="\${y}" stroke-width="1.5" stroke="rgba(255,255,255,0.4)" />\`;
+          svg += `<line x1="40" y1="${y}" x2="160" y2="${y}" stroke-width="1.5" stroke="rgba(255,255,255,0.4)" />`;
         }
         
         for (let i = 0; i < 6; i++) {
           const x = 40 + i * 24;
           const thickness = 1 + (5 - i) * 0.4;
-          svg += \`<line x1="\${x}" y1="40" x2="\${x}" y2="200" stroke-width="\${thickness}" stroke="var(--text-primary)" />\`;
+          svg += `<line x1="${x}" y1="40" x2="${x}" y2="200" stroke-width="${thickness}" stroke="var(--text-primary)" />`;
           
           const fretVal = frets[i];
           if (fretVal === -1) {
-            svg += \`<text x="\${x}" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="var(--neon-red)">×</text>\`;
+            svg += `<text x="${x}" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="var(--neon-red)">×</text>`;
           } else if (fretVal === 0) {
-            svg += \`<circle cx="\${x}" cy="24" r="5" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" />\`;
+            svg += `<circle cx="${x}" cy="24" r="5" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" />`;
           } else {
             const cy = 40 + (fretVal - baseFret) * 40 + 20;
-            svg += \`<circle cx="\${x}" cy="\${cy}" r="8" fill="var(--neon-cyan)" />\`;
+            svg += `<circle cx="${x}" cy="${cy}" r="8" fill="var(--neon-cyan)" />`;
           }
         }
-        svg += \`</svg>\`;
+        svg += `</svg>`;
         container.innerHTML = svg;
       }
     });
