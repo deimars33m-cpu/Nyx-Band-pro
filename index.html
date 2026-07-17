@@ -217,15 +217,10 @@
       <main id="tab-dictionary" class="tab-content">
         <div class="page-header">
           <div class="page-title-area">
-            <h1 id="dict-title-main">Diccionario de Acordes</h1>
-            <p id="dict-subtitle-main">Busca, visualiza y guarda posiciones de acordes.</p>
+            <h1 id="dict-title-main">Biblioteca de Teoría</h1>
+            <p id="dict-subtitle-main">Constructor armónico, escalas sugeridas y colección de posiciones.</p>
           </div>
           <div class="page-actions">
-            <!-- Modo de Consulta (Acordes vs Escalas) -->
-            <div class="instrument-select-btns" style="margin-right: 12px;">
-              <button id="btn-dict-mode-chords" class="active" onclick="switchDictMode('chords')">Acordes</button>
-              <button id="btn-dict-mode-scales" onclick="switchDictMode('scales')">Escalas</button>
-            </div>
             <!-- Instrumento (Guitarra vs Piano) -->
             <div class="instrument-select-btns">
               <button id="btn-select-guitar" class="active" onclick="selectInstrument('guitar')">Guitarra</button>
@@ -234,29 +229,12 @@
           </div>
         </div>
 
-        <div class="dictionary-grid-3col">
-          <!-- Columna 1: Selectores -->
-          <div class="dict-col-selectors">
-            <!-- Bloque de Acordes -->
-            <div id="dict-chords-selectors" class="dict-selectors-mobile-grid">
-              <div class="panel-card glass" style="padding: 10px;">
-                <div class="panel-title" style="font-size: 11px; margin-bottom: 8px;">Nota Raíz</div>
-                <div class="filter-group root-notes-grid" id="dict-chord-root-filters"
-                  style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
-                  <button class="filter-btn active" onclick="filterChordRoot('C')">C</button>
-                  <button class="filter-btn" onclick="filterChordRoot('C#')">C#</button>
-                  <button class="filter-btn" onclick="filterChordRoot('D')">D</button>
-                  <button class="filter-btn" onclick="filterChordRoot('Eb')">Eb</button>
-                  <button class="filter-btn" onclick="filterChordRoot('E')">E</button>
-                  <button class="filter-btn" onclick="filterChordRoot('F')">F</button>
-                  <button class="filter-btn" onclick="filterChordRoot('F#')">F#</button>
-                  <button class="filter-btn" onclick="filterChordRoot('G')">G</button>
-                  <button class="filter-btn" onclick="filterChordRoot('Ab')">Ab</button>
-                  <button class="filter-btn" onclick="filterChordRoot('A')">A</button>
-                  <button class="filter-btn" onclick="filterChordRoot('Bb')">Bb</button>
-                  <button class="filter-btn" onclick="filterChordRoot('B')">B</button>
-                </div>
-              </div>
+        <!-- Botones de Navegación de Sub-pestañas -->
+        <div class="lib-subtab-headers" id="lib-subtab-headers" style="margin-bottom: 20px; display: flex; gap: 10px;">
+          <button class="lib-subtab-btn active" id="btn-lib-subtab-builder" onclick="switchLibSubtab('builder')">Constructor</button>
+          <button class="lib-subtab-btn" id="btn-lib-subtab-scales" onclick="switchLibSubtab('scales')">Explorador de Escalas</button>
+          <button class="lib-subtab-btn" id="btn-lib-subtab-library" onclick="switchLibSubtab('library')">Colección</button>
+        </div>
         <!-- SUB-PESTAÑA 1: CONSTRUCTOR (BUILDER) -->
         <div id="lib-subtab-content-builder" class="lib-subtab-content active">
           <div class="dictionary-grid-3col">
