@@ -7721,27 +7721,59 @@ function initQuickChordInsertion() {
 
   // Manejador de doble toque para mobile (evita zoom y selecciona el carácter)
   let lastTapTime = 0;
-  editor// Permite a un usuario cancelar su solicitud de acceso pendiente
-  async function cancelPendingRequest() {
-    state.requestedBandId = null;
-    state.currentBandId = "KAWSAY";
-    try { localStorage.setItem("coop_current_band_id", "KAWSAY"); } catch (e) { }
-    await loadSongsFromDB();
-    await loadMembersFromDB();
-    renderApp();
-  }
+  editor.addEventListener("touchend", (e) => {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTapTime;
+    if (tapLength < 500 && tapLength > 0) {
+      e.preventDefault();
+      
+      let range;
+      const touch = e.changedTouches[0];
+      if (document.caretRangeFromPoint) {
+        range = document.caretRangeFromPoint(touch.clientX, touch.clientY);
+      }
+      
+      if (range && range.startContainer) {
+        const container = range.startContainer;
+        if (editor.contains(container)) {
+          const badge = document.createElement("span");
+          badge.className = "editor-chord-badge";
+          badge.setAttribute("contenteditable", "false");
+          badge.setAttribute("data-chord", "C");
+          badge.textContent = "[C]";
+          
+          range.insertNode(badge);
+          window.getSelection().removeAllRanges();
+          bindChordBadgeEvents();
+          
+          const rawInput = document.getElementById("song-lyrics");
+          if (rawInput) rawInput.value = serializeRichLyrics();
+        }
+      }
+    }
+    lastTapTime = currentTime;
+  });
+}
 
-  // Renderiza solicitudes pendientes (mockeado para Supabase)
-  async function renderPendingRequests() {
-    const requestsList = document.getElementById("requests-list");
-    if (!requestsList) return;
-    requestsList.innerHTML = `<p style="color:var(--text-muted); font-size:12px; text-align:center; padding:10px;">No hay solicitudes pendientes.</p>`;
-  }
+// Permite a un usuario cancelar su solicitud de acceso pendiente
+async function cancelPendingRequest() {
+  state.requestedBandId = null;
+  state.currentBandId = "KAWSAY";
+  try { localStorage.setItem("coop_current_band_id", "KAWSAY"); } catch (e) { }
+  await loadSongsFromDB();
+  await loadMembersFromDB();
+  renderApp();
+}
 
-  async function approveRequest(reqUid, email, name) {
-    // Las uniones son directas en esta versión
-  }
+// Renderiza solicitudes pendientes (mockeado para Supabase)
+async function renderPendingRequests() {
+  const requestsList = document.getElementById("requests-list");
+  if (!requestsList) return;
+  requestsList.innerHTML = `<p style="color:var(--text-muted); font-size:12px; text-align:center; padding:10px;">No hay solicitudes pendientes.</p>`;
+}
 
+async function approveRequest(reqUid, email, name) {
+  // Las uniones son directas en esta versión
 }
 
 
