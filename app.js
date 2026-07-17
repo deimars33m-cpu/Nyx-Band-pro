@@ -5087,6 +5087,7 @@ function renderDictionary() {
     updateScalesTab();
   } else if (state.libSubtab === "library") {
     updateLibraryTab();
+  }
 }
 
 // --- CORE CHORD UTILS ---
