@@ -10,7 +10,7 @@
   <title>NYX Band-Pro - Repertorio Colaborativo</title>
 
   <!-- CSS Global -->
-  <link rel="stylesheet" href="index.css?v=7.6">
+  <link rel="stylesheet" href="index.css?v=7.7">
   <!-- Tabler Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.36.0/tabler-icons.min.css">
 
@@ -252,106 +252,95 @@
                 
                 <!-- 1. Tónica -->
                 <div class="drum-wheel-wrapper">
-                  <div class="drum-wheel-label">Tónica</div>
+                  <div class="drum-wheel-label">TONICA</div>
                   <div class="drum-wheel" id="wheel-root" onscroll="handleWheelScroll('root')">
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-item" data-val="C">C</div>
-                    <div class="drum-wheel-item" data-val="C#">C#</div>
                     <div class="drum-wheel-item" data-val="D">D</div>
-                    <div class="drum-wheel-item" data-val="Eb">Eb</div>
                     <div class="drum-wheel-item" data-val="E">E</div>
                     <div class="drum-wheel-item" data-val="F">F</div>
-                    <div class="drum-wheel-item" data-val="F#">F#</div>
                     <div class="drum-wheel-item" data-val="G">G</div>
-                    <div class="drum-wheel-item" data-val="Ab">Ab</div>
                     <div class="drum-wheel-item" data-val="A">A</div>
-                    <div class="drum-wheel-item" data-val="Bb">Bb</div>
                     <div class="drum-wheel-item" data-val="B">B</div>
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-spacer"></div>
                   </div>
                 </div>
-
+ 
                 <!-- 2. Tríada -->
                 <div class="drum-wheel-wrapper">
-                  <div class="drum-wheel-label">Tríada</div>
+                  <div class="drum-wheel-label">TRIADAS</div>
                   <div class="drum-wheel" id="wheel-quality" onscroll="handleWheelScroll('quality')">
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-item" data-val="M">M</div>
                     <div class="drum-wheel-item" data-val="m">m</div>
-                    <div class="drum-wheel-item" data-val="dim">dim</div>
-                    <div class="drum-wheel-item" data-val="aug">aug</div>
+                    <div class="drum-wheel-item" data-val="dim">Dim</div>
+                    <div class="drum-wheel-item" data-val="aug">Aug</div>
                     <div class="drum-wheel-item" data-val="sus2">sus2</div>
                     <div class="drum-wheel-item" data-val="sus4">sus4</div>
-                    <div class="drum-wheel-item" data-val="5">5</div>
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-spacer"></div>
                   </div>
                 </div>
-
-                <!-- 3. Complejas -->
+ 
+                <!-- 3. 7th -->
                 <div class="drum-wheel-wrapper">
-                  <div class="drum-wheel-label">Extensión</div>
+                  <div class="drum-wheel-label">7th</div>
                   <div class="drum-wheel" id="wheel-extension" onscroll="handleWheelScroll('extension')">
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-spacer"></div>
-                    <div class="drum-wheel-item" data-val="NONE">-</div>
-                    <div class="drum-wheel-item" data-val="7">7</div>
+                    <div class="drum-wheel-item" data-val="NONE">NONE</div>
                     <div class="drum-wheel-item" data-val="maj7">maj7</div>
+                    <div class="drum-wheel-item" data-val="7">7</div>
                     <div class="drum-wheel-item" data-val="m7">m7</div>
-                    <div class="drum-wheel-item" data-val="mmaj7">mmaj7</div>
-                    <div class="drum-wheel-item" data-val="9">9</div>
                     <div class="drum-wheel-item" data-val="maj9">maj9</div>
+                    <div class="drum-wheel-item" data-val="9">9</div>
                     <div class="drum-wheel-item" data-val="m9">m9</div>
-                    <div class="drum-wheel-item" data-val="11">11</div>
                     <div class="drum-wheel-item" data-val="maj11">maj11</div>
+                    <div class="drum-wheel-item" data-val="11">11</div>
                     <div class="drum-wheel-item" data-val="m11">m11</div>
-                    <div class="drum-wheel-item" data-val="13">13</div>
                     <div class="drum-wheel-item" data-val="maj13">maj13</div>
+                    <div class="drum-wheel-item" data-val="13">13</div>
                     <div class="drum-wheel-item" data-val="m13">m13</div>
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-spacer"></div>
                   </div>
                 </div>
-
-                <!-- 4. Otros -->
+ 
+                <!-- 4. add -->
                 <div class="drum-wheel-wrapper">
-                  <div class="drum-wheel-label">Otros</div>
+                  <div class="drum-wheel-label">add</div>
                   <div class="drum-wheel" id="wheel-alteration" onscroll="handleWheelScroll('alteration')">
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-spacer"></div>
-                    <div class="drum-wheel-item" data-val="NONE">-</div>
-                    <div class="drum-wheel-item" data-val="add9">add9</div>
-                    <div class="drum-wheel-item" data-val="6">6</div>
-                    <div class="drum-wheel-item" data-val="m6">m6</div>
-                    <div class="drum-wheel-item" data-val="6add9">6add9</div>
-                    <div class="drum-wheel-item" data-val="7sus4">7sus4</div>
-                    <div class="drum-wheel-item" data-val="7maj5">7maj5</div>
+                    <div class="drum-wheel-item" data-val="NONE">NONE</div>
+                    <div class="drum-wheel-item" data-val="addC">add C</div>
+                    <div class="drum-wheel-item" data-val="addD">add D</div>
+                    <div class="drum-wheel-item" data-val="addE">add E</div>
+                    <div class="drum-wheel-item" data-val="addF">add F</div>
+                    <div class="drum-wheel-item" data-val="addG">add G</div>
+                    <div class="drum-wheel-item" data-val="addA">add A</div>
+                    <div class="drum-wheel-item" data-val="addB">add B</div>
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-spacer"></div>
                   </div>
                 </div>
-
-                <!-- 5. Bajo -->
+ 
+                <!-- 5. extended -->
                 <div class="drum-wheel-wrapper">
-                  <div class="drum-wheel-label">Bajo</div>
+                  <div class="drum-wheel-label">extended</div>
                   <div class="drum-wheel" id="wheel-bass" onscroll="handleWheelScroll('bass')">
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-spacer"></div>
-                    <div class="drum-wheel-item" data-val="NONE">-</div>
+                    <div class="drum-wheel-item" data-val="NONE">NONE</div>
                     <div class="drum-wheel-item" data-val="/C">/C</div>
-                    <div class="drum-wheel-item" data-val="/C#">/C#</div>
                     <div class="drum-wheel-item" data-val="/D">/D</div>
-                    <div class="drum-wheel-item" data-val="/Eb">/Eb</div>
                     <div class="drum-wheel-item" data-val="/E">/E</div>
                     <div class="drum-wheel-item" data-val="/F">/F</div>
-                    <div class="drum-wheel-item" data-val="/F#">/F#</div>
                     <div class="drum-wheel-item" data-val="/G">/G</div>
-                    <div class="drum-wheel-item" data-val="/Ab">/Ab</div>
                     <div class="drum-wheel-item" data-val="/A">/A</div>
-                    <div class="drum-wheel-item" data-val="/Bb">/Bb</div>
                     <div class="drum-wheel-item" data-val="/B">/B</div>
                     <div class="drum-wheel-spacer"></div>
                     <div class="drum-wheel-spacer"></div>
@@ -1042,12 +1031,12 @@
     </button>
   </nav>
 
-  <script src="chords.js?v=2.1"></script>
+  <script src="chords.js?v=2.2"></script>
   <!-- SDK de Supabase desde CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js?v=3.7"></script>
-  <script src="songsService.js?v=3.7"></script>
-  <script src="app.js?v=3.7"></script>
+  <script src="supabase.js?v=3.8"></script>
+  <script src="songsService.js?v=3.8"></script>
+  <script src="app.js?v=3.8"></script>
 </body>
 
 </html>
