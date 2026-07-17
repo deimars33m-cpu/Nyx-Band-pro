@@ -4300,9 +4300,23 @@ function initLibSubtabs() {
       el.addEventListener('scroll', () => handleWheelScroll(w));
       el.querySelectorAll('.drum-wheel-item').forEach((item, idx) => {
         item.addEventListener('click', () => {
-          el.scrollTo({ top: (idx - 2) * 40, behavior: 'smooth' });
+          el.scrollTo({ top: idx * 40, behavior: 'smooth' });
         });
       });
+      // Controlar la sensibilidad de la rueda de ratón (un ítem a la vez)
+      el.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const direction = e.deltaY > 0 ? 1 : -1;
+        const items = el.querySelectorAll('.drum-wheel-item');
+        const currentIndex = Math.round(el.scrollTop / 40);
+        const targetIndex = currentIndex + direction;
+        const clampedIndex = Math.max(0, Math.min(targetIndex, items.length - 1));
+        
+        el.scrollTo({
+          top: clampedIndex * 40,
+          behavior: 'smooth'
+        });
+      }, { passive: false });
     }
   });
   
@@ -4401,7 +4415,7 @@ function alignWheelsToState() {
       if (targetIdx !== -1) {
         items.forEach(item => item.classList.remove('active'));
         items[targetIdx].classList.add('active');
-        el.scrollTop = (targetIdx - 2) * 40;
+        el.scrollTop = targetIdx * 40;
       }
     }
   });
