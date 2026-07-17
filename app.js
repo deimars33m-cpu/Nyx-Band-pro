@@ -1316,6 +1316,10 @@ function switchTab(tabName) {
   closeMobileDrawers();
 
   renderNav();
+
+  if (tabName === "dictionary") {
+    renderDictionary();
+  }
 }
 
 // --- VISTA 1: REPERTORIO ---
@@ -4344,17 +4348,29 @@ function handleWheelScroll(type) {
   
   clearTimeout(wheelScrollTimeouts[type]);
   wheelScrollTimeouts[type] = setTimeout(() => {
-    const scrollTop = el.scrollTop;
-    const activeIdx = Math.round(scrollTop / 40);
-    const items = el.querySelectorAll('.drum-wheel-item');
+    const rect = el.getBoundingClientRect();
+    const centerY = rect.top + rect.height / 2;
     
-    const targetIdx = activeIdx + 2; // Compensar spacers de arriba
-    if (items[targetIdx]) {
-      const val = items[targetIdx].getAttribute('data-val');
+    const items = el.querySelectorAll('.drum-wheel-item');
+    let closestItem = null;
+    let minDiff = Infinity;
+    
+    items.forEach(item => {
+      const itemRect = item.getBoundingClientRect();
+      const itemCenterY = itemRect.top + itemRect.height / 2;
+      const diff = Math.abs(centerY - itemCenterY);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestItem = item;
+      }
+    });
+    
+    if (closestItem) {
+      const val = closestItem.getAttribute('data-val');
       if (state.builder[type] !== val) {
         // Limpiar otros active de esta rueda
         items.forEach(item => item.classList.remove('active'));
-        items[targetIdx].classList.add('active');
+        closestItem.classList.add('active');
         
         state.builder[type] = val;
         updateBuilderBadges();
@@ -4365,7 +4381,7 @@ function handleWheelScroll(type) {
         renderBuilderChord();
       }
     }
-  }, 120);
+  }, 80);
 }
 
 function alignWheelsToState() {
@@ -4401,64 +4417,33 @@ function getChordNameFromBuilder() {
   
   let name = root;
   
-  if (alt && alt !== 'NONE') {
-    if (alt === '6') {
-      name += (quality === 'm' ? 'm6' : '6');
-    } else if (alt === '9') {
-      name += (quality === 'm' ? 'm9' : '9');
-    } else if (alt === 'add9') {
-      name += (quality === 'm' ? 'madd9' : 'add9');
-    } else if (alt === '6add9') {
-      name += '6add9';
-    } else if (alt === '7sus4') {
-      name += '7sus4';
-    } else if (alt === '7maj5') {
-      name += '7maj5';
-    } else {
-      name += alt;
-    }
-  } else if (ext && ext !== 'NONE') {
-    if (ext === '7') {
-      name += (quality === 'm' ? 'm7' : '7');
-    } else if (ext === 'maj7') {
-      name += (quality === 'm' ? 'mmaj7' : 'maj7');
-    } else if (ext === 'mmaj7') {
-      name += 'mmaj7';
-    } else if (ext === '9') {
-      name += (quality === 'm' ? 'm9' : '9');
-    } else if (ext === 'maj9') {
-      name += 'maj9';
-    } else if (ext === 'm9') {
-      name += 'm9';
-    } else if (ext === '11') {
-      name += (quality === 'm' ? 'm11' : '11');
-    } else if (ext === 'maj11') {
-      name += 'maj11';
-    } else if (ext === 'm11') {
-      name += 'm11';
-    } else if (ext === '13') {
-      name += (quality === 'm' ? 'm13' : '13');
-    } else if (ext === 'maj13') {
-      name += 'maj13';
-    } else if (ext === 'm13') {
-      name += 'm13';
+  let qualSuffix = "";
+  if (quality === 'm') {
+    qualSuffix = "m";
+  } else if (quality === 'dim') {
+    qualSuffix = "dim";
+  } else if (quality === 'aug') {
+    qualSuffix = "aug";
+  } else if (quality === 'sus2') {
+    qualSuffix = "sus2";
+  } else if (quality === 'sus4') {
+    qualSuffix = "sus";
+  } else if (quality === '5') {
+    qualSuffix = "5";
+  }
+  
+  name += qualSuffix;
+  
+  if (ext && ext !== 'NONE') {
+    if (ext.startsWith("m") && ext !== "maj7" && ext !== "maj9" && ext !== "maj11" && ext !== "maj13") {
+      name = root + ext;
     } else {
       name += ext;
     }
-  } else {
-    if (quality === 'm') {
-      name += 'm';
-    } else if (quality === 'dim') {
-      name += 'dim';
-    } else if (quality === 'aug') {
-      name += 'aug';
-    } else if (quality === 'sus2') {
-      name += 'sus2';
-    } else if (quality === 'sus4') {
-      name += 'sus';
-    } else if (quality === '5') {
-      name += '5';
-    }
+  }
+  
+  if (alt && alt !== 'NONE') {
+    name += alt;
   }
   
   if (bass && bass !== 'NONE') {
