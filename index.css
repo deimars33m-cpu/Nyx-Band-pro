@@ -5046,3 +5046,477 @@ textarea {
   max-height: 260px !important;
 }
 
+/* --- ESTILOS DE BIBLIOTECA (CHORD_LAB) --- */
+
+.lib-subtab-content {
+  display: none;
+}
+.lib-subtab-content.active {
+  display: block;
+}
+
+/* Tambores Giratorios (Constructor) */
+.metallic-drum-container {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  background: linear-gradient(to right, #353534 0%, #201f1f 20%, #1c1b1b 50%, #201f1f 80%, #353534 100%);
+  border-radius: 12px;
+  padding: 16px 8px;
+  box-shadow: inset 0 0 24px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.5);
+  height: 280px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.drum-active-overlay {
+  position: absolute;
+  top: 110px;
+  left: 0;
+  right: 0;
+  height: 44px;
+  border-top: 1px solid rgba(255, 108, 108, 0.4);
+  border-bottom: 1px solid rgba(255, 108, 108, 0.4);
+  background: rgba(255, 108, 108, 0.06);
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.drum-active-needle-left {
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 8px solid #ff6c6c;
+  filter: drop-shadow(0 0 4px rgba(255, 108, 108, 0.6));
+}
+
+.drum-active-needle-right {
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 8px solid #ff6c6c;
+  filter: drop-shadow(0 0 4px rgba(255, 108, 108, 0.6));
+}
+
+.drum-wheel-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 5;
+}
+
+.drum-wheel-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.drum-wheel {
+  width: 100%;
+  height: 200px;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  display: flex;
+  flex-direction: column;
+  mask-image: linear-gradient(to bottom, transparent 0%, white 30%, white 70%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, white 30%, white 70%, transparent 100%);
+}
+
+.drum-wheel::-webkit-scrollbar {
+  display: none;
+}
+
+.drum-wheel-item {
+  height: 40px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.35);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  scroll-snap-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  user-select: none;
+}
+
+.drum-wheel-item:hover {
+  color: var(--text-primary);
+}
+
+.drum-wheel-item.active {
+  font-size: 16px;
+  font-weight: 800;
+  transform: scale(1.1);
+}
+
+/* Colores de tambor activo según su tipo */
+#wheel-root .drum-wheel-item.active {
+  color: var(--neon-cyan);
+  text-shadow: 0 0 10px rgba(76, 215, 246, 0.5);
+}
+#wheel-quality .drum-wheel-item.active {
+  color: #a180ff;
+  text-shadow: 0 0 10px rgba(161, 128, 255, 0.5);
+}
+#wheel-extension .drum-wheel-item.active {
+  color: #ffb950;
+  text-shadow: 0 0 10px rgba(255, 185, 80, 0.5);
+}
+#wheel-alteration .drum-wheel-item.active {
+  color: #ff8ca3;
+  text-shadow: 0 0 10px rgba(255, 140, 163, 0.5);
+}
+#wheel-bass .drum-wheel-item.active {
+  color: #ff6c6c;
+  text-shadow: 0 0 10px rgba(255, 108, 108, 0.5);
+}
+
+.drum-wheel-spacer {
+  height: 40px;
+  min-height: 40px;
+  pointer-events: none;
+}
+
+/* Fórmulas y Badges */
+.formula-badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.formula-badge.badge-root {
+  border-color: rgba(76, 215, 246, 0.4);
+  background: rgba(76, 215, 246, 0.08);
+  color: var(--neon-cyan);
+}
+.formula-badge.badge-quality {
+  border-color: rgba(161, 128, 255, 0.4);
+  background: rgba(161, 128, 255, 0.08);
+  color: #cdbdff;
+}
+.formula-badge.badge-extension {
+  border-color: rgba(255, 185, 80, 0.4);
+  background: rgba(255, 185, 80, 0.08);
+  color: #ffb950;
+}
+.formula-badge.badge-alteration {
+  border-color: rgba(255, 140, 163, 0.4);
+  background: rgba(255, 140, 163, 0.08);
+  color: #ff8ca3;
+}
+.formula-badge.badge-bass {
+  border-color: rgba(255, 108, 108, 0.4);
+  background: rgba(255, 108, 108, 0.08);
+  color: #ff6c6c;
+}
+
+/* Explorador de Escalas */
+.scales-tab-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+  text-align: left;
+}
+@media (max-width: 1024px) {
+  .scales-tab-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scales-sidebar {
+  background: rgba(255,255,255,0.02);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel-card-flat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.panel-title-small {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.checkbox-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.checkbox-label input {
+  cursor: pointer;
+}
+
+.scales-results-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scales-results-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.scales-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.scale-card {
+  background: rgba(255,255,255,0.02);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  transition: all 0.2s ease;
+  border-left: 4px solid var(--text-muted);
+}
+.scale-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.scale-card.exact-match {
+  border-left-color: var(--neon-cyan);
+}
+.scale-card.common-variant {
+  border-left-color: #a180ff;
+}
+.scale-card.subset-match {
+  border-left-color: #ffb950;
+}
+
+.scale-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.scale-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+.scale-match-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.exact-match .scale-match-badge {
+  background: rgba(76, 215, 246, 0.1);
+  color: var(--neon-cyan);
+}
+.common-variant .scale-match-badge {
+  background: rgba(161, 128, 255, 0.1);
+  color: #cdbdff;
+}
+.subset-match .scale-match-badge {
+  background: rgba(255, 185, 80, 0.1);
+  color: #ffb950;
+}
+
+.scale-notes-list {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+}
+
+/* Piano Roll Simplificado */
+.scale-piano-roll {
+  display: flex;
+  height: 28px;
+  background: #080a10;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.scale-key {
+  flex: 1;
+  background: #171f33;
+  border-right: 1px solid rgba(0,0,0,0.5);
+  position: relative;
+}
+.scale-key.black {
+  background: #0e1322;
+}
+.scale-key.active {
+  background: var(--neon-cyan);
+  box-shadow: inset 0 0 6px rgba(76, 215, 246, 0.6);
+}
+.common-variant .scale-key.active {
+  background: #a180ff;
+  box-shadow: inset 0 0 6px rgba(161, 128, 255, 0.6);
+}
+.subset-match .scale-key.active {
+  background: #ffb950;
+  box-shadow: inset 0 0 6px rgba(255, 185, 80, 0.6);
+}
+
+.scale-intervals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.scale-interval-tag {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.03);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+.scale-interval-tag.chord-member {
+  border-color: rgba(76, 215, 246, 0.3);
+  color: var(--neon-cyan);
+  background: rgba(76, 215, 246, 0.05);
+}
+
+/* Rejilla de la Colección */
+.library-chords-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.lib-chord-card {
+  background: rgba(255,255,255,0.02);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  text-align: left;
+}
+.lib-chord-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 4px 12px rgba(76, 215, 246, 0.1);
+}
+
+.lib-chord-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.lib-chord-name {
+  font-size: 15px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--neon-cyan);
+}
+.lib-chord-notes {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+.lib-mini-fretboard {
+  height: 48px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.lib-meta-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.lib-tag {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.04);
+  color: var(--text-muted);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+/* Control Segmentado */
+.segmented-control {
+  display: flex;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.segmented-control button {
+  background: none;
+  border: none;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+.segmented-control button:hover {
+  color: var(--text-primary);
+}
+.segmented-control button.active {
+  background: var(--neon-cyan);
+  color: #000;
+}
+
+

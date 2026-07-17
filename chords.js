@@ -5325,14 +5325,29 @@ function playChord(chordName, instrument = 'guitar') {
   initAudioContext();
   if (!audioCtx) return;
   
-  const chord = CHORD_DATABASE[chordName];
-  if (!chord) return;
+  // Soportar acordes personalizados
+  let customChords = {};
+  try {
+    customChords = JSON.parse(localStorage.getItem('bandCustomChords') || '{}');
+  } catch (e) {}
+  
+  const chordDef = customChords[chordName] || CHORD_DATABASE[chordName];
+  if (!chordDef) return;
+  
+  let frets = null;
+  if (typeof chordDef === "string") {
+    frets = chordDef.split('').map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
+  } else if (chordDef.guitar && typeof chordDef.guitar === "string") {
+    frets = chordDef.guitar.split('').map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
+  } else if (chordDef.guitar) {
+    frets = chordDef.guitar.frets;
+  }
   
   const now = audioCtx.currentTime;
   const duration = 3.5;
   
   if (instrument === 'guitar') {
-    const { frets } = chord.guitar;
+    if (!frets) return;
     const guitarStringSemitones = [-20, -15, -10, -5, -1, 4];
     
     let delay = 0;
@@ -5346,11 +5361,38 @@ function playChord(chordName, instrument = 'guitar') {
       }
     }
   } else {
-    const keys = chord.piano.keys;
-    keys.forEach(semitone => {
-      const freq = semitoneToFrequency(semitone);
-      playSyntheticTone(freq, 'piano', now, duration);
-    });
+    // Piano
+    let keys = null;
+    if (chordDef.piano && chordDef.piano.keys) {
+      keys = chordDef.piano.keys;
+    } else {
+      let notes = [];
+      if (chordDef.notes) {
+        notes = chordDef.notes;
+      } else {
+        // Heurística de fallback usando el nombre
+        let root = chordName.substring(0, 1);
+        if (chordName.length > 1 && (chordName[1] === '#' || chordName[1] === 'b')) {
+          root = chordName.substring(0, 2);
+        }
+        const rootIdx = NOTE_NAMES.indexOf(root);
+        if (rootIdx !== -1) {
+          keys = [rootIdx, rootIdx + 4, rootIdx + 7];
+        }
+      }
+      if (notes.length > 0) {
+        keys = notes.map(n => {
+          const idx = NOTE_NAMES.indexOf(n);
+          return idx !== -1 ? idx : 0;
+        });
+      }
+    }
+    if (keys) {
+      keys.forEach(semitone => {
+        const freq = semitoneToFrequency(semitone);
+        playSyntheticTone(freq, 'piano', now, duration);
+      });
+    }
   }
 }
 

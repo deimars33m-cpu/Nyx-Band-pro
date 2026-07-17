@@ -223,7 +223,20 @@ let state = {
     logoUrl: null,
     settings: {}
   },
-  isLoginMode: true // true: login, false: registro
+  isLoginMode: true, // true: login, false: registro
+
+  // Biblioteca y Constructor
+  libSubtab: "builder",
+  builder: {
+    root: "C",
+    quality: "M",
+    extension: "NONE",
+    alteration: "NONE",
+    bass: "NONE"
+  },
+  libRootFilter: "ALL",
+  libTypeFilter: "ALL",
+  libSearchQuery: ""
 };
 window.state = state;
 
@@ -4269,72 +4282,755 @@ function deleteRecording(id) {
 }
 
 // --- VISTA 3: DICCIONARIO Y ESCALAS ---
-function switchDictMode(mode) {
-  state.dictMode = mode;
+// --- VISTA 3: DICCIONARIO Y BIBLIOTECA DE TEORÍA ---
 
-  const btnChords = document.getElementById("btn-dict-mode-chords");
-  const btnScales = document.getElementById("btn-dict-mode-scales");
-  const chordsSelectors = document.getElementById("dict-chords-selectors");
-  const scalesSelectors = document.getElementById("dict-scales-selectors");
-  const heartBtn = document.getElementById("chord-fav-heart");
+let libSubtabsInitialized = false;
 
-  if (mode === "chords") {
-    if (btnChords) btnChords.classList.add("active");
-    if (btnScales) btnScales.classList.remove("active");
-    if (chordsSelectors) chordsSelectors.style.display = "block";
-    if (scalesSelectors) scalesSelectors.style.display = "none";
-    if (heartBtn) heartBtn.style.display = "inline-block";
+function initLibSubtabs() {
+  if (libSubtabsInitialized) return;
+  
+  const wheels = ['root', 'quality', 'extension', 'alteration', 'bass'];
+  wheels.forEach(w => {
+    const el = document.getElementById(`wheel-${w}`);
+    if (el) {
+      el.addEventListener('scroll', () => handleWheelScroll(w));
+      el.querySelectorAll('.drum-wheel-item').forEach((item, idx) => {
+        item.addEventListener('click', () => {
+          el.scrollTo({ top: (idx - 2) * 40, behavior: 'smooth' });
+        });
+      });
+    }
+  });
+  
+  // Alinear ruedas al estado inicial
+  alignWheelsToState();
+  libSubtabsInitialized = true;
+}
+
+function switchLibSubtab(subtab) {
+  state.libSubtab = subtab;
+  
+  // Resaltar botones de pestaña
+  const subtabs = ['builder', 'scales', 'library'];
+  subtabs.forEach(t => {
+    const btn = document.getElementById(`btn-lib-subtab-${t}`);
+    const content = document.getElementById(`lib-subtab-content-${t}`);
+    
+    if (btn) {
+      if (t === subtab) btn.classList.add("active");
+      else btn.classList.remove("active");
+    }
+    
+    if (content) {
+      if (t === subtab) {
+        content.style.display = "block";
+        content.classList.add("active");
+      } else {
+        content.style.display = "none";
+        content.classList.remove("active");
+      }
+    }
+  });
+  
+  // Re-renderizar según la sub-pestaña seleccionada
+  renderDictionary();
+}
+
+// Controladores de Ruedas
+let wheelScrollTimeouts = {};
+function handleWheelScroll(type) {
+  const el = document.getElementById(`wheel-${type}`);
+  if (!el) return;
+  
+  clearTimeout(wheelScrollTimeouts[type]);
+  wheelScrollTimeouts[type] = setTimeout(() => {
+    const scrollTop = el.scrollTop;
+    const activeIdx = Math.round(scrollTop / 40);
+    const items = el.querySelectorAll('.drum-wheel-item');
+    
+    const targetIdx = activeIdx + 2; // Compensar spacers de arriba
+    if (items[targetIdx]) {
+      const val = items[targetIdx].getAttribute('data-val');
+      if (state.builder[type] !== val) {
+        // Limpiar otros active de esta rueda
+        items.forEach(item => item.classList.remove('active'));
+        items[targetIdx].classList.add('active');
+        
+        state.builder[type] = val;
+        updateBuilderBadges();
+        
+        const newChordName = getChordNameFromBuilder();
+        state.currentChord = newChordName;
+        
+        renderBuilderChord();
+      }
+    }
+  }, 120);
+}
+
+function alignWheelsToState() {
+  const wheels = ['root', 'quality', 'extension', 'alteration', 'bass'];
+  wheels.forEach(w => {
+    const el = document.getElementById(`wheel-${w}`);
+    if (el) {
+      const val = state.builder[w];
+      const items = el.querySelectorAll('.drum-wheel-item');
+      let targetIdx = -1;
+      items.forEach((item, idx) => {
+        if (item.getAttribute('data-val') === val) {
+          targetIdx = idx;
+        }
+      });
+      
+      if (targetIdx !== -1) {
+        items.forEach(item => item.classList.remove('active'));
+        items[targetIdx].classList.add('active');
+        el.scrollTop = (targetIdx - 2) * 40;
+      }
+    }
+  });
+  updateBuilderBadges();
+}
+
+function getChordNameFromBuilder() {
+  const root = state.builder.root;
+  const quality = state.builder.quality;
+  const ext = state.builder.extension;
+  const alt = state.builder.alteration;
+  const bass = state.builder.bass;
+  
+  let name = root;
+  
+  if (alt && alt !== 'NONE') {
+    if (alt === '6') {
+      name += (quality === 'm' ? 'm6' : '6');
+    } else if (alt === '9') {
+      name += (quality === 'm' ? 'm9' : '9');
+    } else if (alt === 'add9') {
+      name += (quality === 'm' ? 'madd9' : 'add9');
+    } else if (alt === '6add9') {
+      name += '6add9';
+    } else if (alt === '7sus4') {
+      name += '7sus4';
+    } else if (alt === '7maj5') {
+      name += '7maj5';
+    } else {
+      name += alt;
+    }
+  } else if (ext && ext !== 'NONE') {
+    if (ext === '7') {
+      name += (quality === 'm' ? 'm7' : '7');
+    } else if (ext === 'maj7') {
+      name += (quality === 'm' ? 'mmaj7' : 'maj7');
+    } else if (ext === 'mmaj7') {
+      name += 'mmaj7';
+    } else if (ext === '9') {
+      name += (quality === 'm' ? 'm9' : '9');
+    } else if (ext === 'maj9') {
+      name += 'maj9';
+    } else if (ext === 'm9') {
+      name += 'm9';
+    } else if (ext === '11') {
+      name += (quality === 'm' ? 'm11' : '11');
+    } else if (ext === 'maj11') {
+      name += 'maj11';
+    } else if (ext === 'm11') {
+      name += 'm11';
+    } else if (ext === '13') {
+      name += (quality === 'm' ? 'm13' : '13');
+    } else if (ext === 'maj13') {
+      name += 'maj13';
+    } else if (ext === 'm13') {
+      name += 'm13';
+    } else {
+      name += ext;
+    }
   } else {
-    if (btnChords) btnChords.classList.remove("active");
-    if (btnScales) btnScales.classList.add("active");
-    if (chordsSelectors) chordsSelectors.style.display = "none";
-    if (scalesSelectors) scalesSelectors.style.display = "flex";
-    if (heartBtn) heartBtn.style.display = "none"; // Escalas no tienen favoritos
+    if (quality === 'm') {
+      name += 'm';
+    } else if (quality === 'dim') {
+      name += 'dim';
+    } else if (quality === 'aug') {
+      name += 'aug';
+    } else if (quality === 'sus2') {
+      name += 'sus2';
+    } else if (quality === 'sus4') {
+      name += 'sus';
+    } else if (quality === '5') {
+      name += '5';
+    }
+  }
+  
+  if (bass && bass !== 'NONE') {
+    name += bass;
+  }
+  
+  return name;
+}
+
+function updateBuilderBadges() {
+  const rootB = document.getElementById("badge-root");
+  const qualB = document.getElementById("badge-quality");
+  const extB = document.getElementById("badge-extension");
+  const altB = document.getElementById("badge-alteration");
+  const bassB = document.getElementById("badge-bass");
+  
+  if (rootB) rootB.textContent = `Tónica: ${state.builder.root}`;
+  
+  if (qualB) {
+    const maps = { 'M': 'Mayor', 'm': 'Menor', 'dim': 'Disminuida', 'aug': 'Aumentada', 'sus2': 'sus2', 'sus4': 'sus4', '5': 'Poder (5)' };
+    qualB.textContent = `Tríada: ${maps[state.builder.quality] || state.builder.quality}`;
+  }
+  
+  if (extB) {
+    if (state.builder.extension !== 'NONE') {
+      extB.textContent = `Ext: ${state.builder.extension}`;
+      extB.style.display = "inline-block";
+    } else {
+      extB.style.display = "none";
+    }
+  }
+  
+  if (altB) {
+    if (state.builder.alteration !== 'NONE') {
+      altB.textContent = `Alt: ${state.builder.alteration}`;
+      altB.style.display = "inline-block";
+    } else {
+      altB.style.display = "none";
+    }
+  }
+  
+  if (bassB) {
+    if (state.builder.bass !== 'NONE') {
+      bassB.textContent = `Bajo: ${state.builder.bass}`;
+      bassB.style.display = "inline-block";
+    } else {
+      bassB.style.display = "none";
+    }
+  }
+}
+
+// Renderizadores de Sub-Pestañas
+function renderBuilderChord() {
+  const chordName = state.currentChord;
+  
+  let chord = CHORD_DATABASE[chordName];
+  let customChords = {};
+  try {
+    customChords = JSON.parse(localStorage.getItem('bandCustomChords') || '{}');
+  } catch (e) {}
+  
+  const isCustom = customChords[chordName] !== undefined;
+  
+  if (!chord && !isCustom) {
+    // Generar un acorde vacío personalizable
+    chord = { notes: getChordNotes(chordName), guitar: "xxxxxx" };
+  } else if (isCustom) {
+    chord = { notes: getChordNotes(chordName), guitar: customChords[chordName] };
+  }
+  
+  const chordNameTitle = document.getElementById("chord-name-title");
+  const chordNotesList = document.getElementById("chord-notes-list");
+  const playBtn = document.getElementById("btn-play-dict-audio");
+  const favHeart = document.getElementById("chord-fav-heart");
+  
+  if (chordNameTitle) {
+    chordNameTitle.className = state.currentInstrument === "guitar" ? "chord-guitar-title chord-guitar-title-glow" : "chord-piano-title chord-piano-title-glow";
+    let root = chordName.substring(0, 1);
+    if (chordName.length > 1 && (chordName[1] === '#' || chordName[1] === 'b')) {
+      root = chordName.substring(0, 2);
+    }
+    const type = chordName.substring(root.length);
+    const color = state.currentInstrument === "guitar" ? "var(--neon-cyan)" : "var(--neon-orange)";
+    chordNameTitle.innerHTML = `<span class="chord-root" style="color: #ffffff; font-size: 36px; font-weight: 800;">${root}</span><span class="chord-type" style="color: ${color}; font-size: 20px; font-weight: 700; margin-left: 2px; vertical-align: top;">${type}</span>`;
+  }
+  
+  if (chordNotesList) {
+    const notes = getChordNotes(chordName);
+    chordNotesList.innerHTML = notes.map(n => `<span class="note-bubble">${n}</span>`).join("");
+  }
+  
+  if (playBtn) playBtn.textContent = "🔊 Escuchar Acorde";
+  
+  if (favHeart) {
+    const isFav = state.favoritesChords.includes(chordName);
+    if (isFav) {
+      favHeart.classList.add("active");
+      favHeart.innerHTML = "❤️";
+    } else {
+      favHeart.classList.remove("active");
+      favHeart.innerHTML = "🤍";
+    }
+  }
+  
+  // Renderizar Diagramas
+  if (state.currentInstrument === "guitar") {
+    renderGuitarChordSVG(chordName, "chord-svg-render-area");
+    
+    // Rellenar input del editor en vivo
+    const input = document.getElementById("chord-string-input");
+    if (input) {
+      const val = customChords[chordName] || (CHORD_DATABASE[chordName] ? (typeof CHORD_DATABASE[chordName] === "string" ? CHORD_DATABASE[chordName] : CHORD_DATABASE[chordName].guitar) : "xxxxxx");
+      
+      if (typeof val === "string") {
+        input.value = val;
+      } else if (val && val.frets) {
+        input.value = val.frets.map(f => (f === -1 ? "x" : f.toString())).join("");
+      } else {
+        input.value = "xxxxxx";
+      }
+    }
+  } else {
+    renderPianoChordSVG(chordName, "chord-svg-render-area");
+  }
+  
+  // Renderizar favoritos rápidos de abajo
+  renderFavoritesList();
+  
+  // Roster del indicador visual
+  const voicingContainer = document.getElementById("chord-voicing-dots-container");
+  if (voicingContainer) {
+    const color = state.currentInstrument === "guitar" ? "var(--neon-cyan)" : "var(--neon-orange)";
+    const shadow = state.currentInstrument === "guitar" ? "var(--glow-cyan)" : "var(--glow-orange)";
+    voicingContainer.innerHTML = `
+      <div class="voicing-dots" style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
+        <span class="dot active" style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; box-shadow: ${shadow};"></span>
+        <span class="dot" style="width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15);"></span>
+        <span class="dot" style="width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15);"></span>
+      </div>
+    `;
+  }
+}
+
+// Analizador de Escalas Coincidentes
+function noteToPitchClass(note) {
+  const map = {
+    'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4,
+    'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9,
+    'A#': 10, 'Bb': 10, 'B': 11
+  };
+  return map[note.trim()] !== undefined ? map[note.trim()] : 0;
+}
+
+function updateScalesTab() {
+  const currentChord = getChordNameFromBuilder();
+  const chordNotes = getChordNotes(currentChord);
+  
+  const lblChordName = document.getElementById("lbl-matching-chord-name");
+  const lblChordNotes = document.getElementById("lbl-matching-chord-notes");
+  if (lblChordName) lblChordName.textContent = currentChord;
+  if (lblChordNotes) lblChordNotes.textContent = chordNotes.join(" - ");
+  
+  if (chordNotes.length === 0) {
+    const container = document.getElementById("scales-cards-container");
+    if (container) container.innerHTML = `<p style="color: var(--text-muted); font-size: 13px;">Construye un acorde válido primero.</p>`;
+    return;
+  }
+  
+  const chordPitches = chordNotes.map(noteToPitchClass);
+  const matches = [];
+  
+  for (let r = 0; r < 12; r++) {
+    const rootName = NOTE_NAMES[r];
+    for (const [scaleKey, scale] of Object.entries(SCALE_DATABASE)) {
+      const scalePitches = scale.intervals.map(int => (r + int) % 12);
+      
+      let matchCount = 0;
+      chordPitches.forEach(p => {
+        if (scalePitches.includes(p)) matchCount++;
+      });
+      
+      const matchPercentage = matchCount / chordPitches.length;
+      
+      if (matchCount > 0) {
+        let type = "subset-match";
+        let typeLabel = "Subconjunto";
+        
+        if (matchCount === chordPitches.length) {
+          if (scalePitches.length - chordPitches.length <= 2) {
+            type = "exact-match";
+            typeLabel = "Coincidencia Exacta";
+          } else {
+            type = "common-variant";
+            typeLabel = "Modo Compatible";
+          }
+        }
+        
+        matches.push({
+          rootName,
+          rootVal: r,
+          scaleKey,
+          scaleName: scale.name,
+          desc: scale.desc,
+          intervals: scale.intervals,
+          scalePitches,
+          matchCount,
+          matchPercentage,
+          type,
+          typeLabel
+        });
+      }
+    }
+  }
+  
+  matches.sort((a, b) => {
+    if (a.type === "exact-match" && b.type !== "exact-match") return -1;
+    if (a.type !== "exact-match" && b.type === "exact-match") return 1;
+    if (a.type === "common-variant" && b.type === "subset-match") return -1;
+    if (a.type === "subset-match" && b.type === "common-variant") return 1;
+    return b.matchPercentage - a.matchPercentage;
+  });
+  
+  const showDiatonic = document.getElementById("chk-scale-filter-diatonic")?.checked ?? true;
+  const showPentatonic = document.getElementById("chk-scale-filter-pentatonic")?.checked ?? true;
+  const showSymmetrical = document.getElementById("chk-scale-filter-symmetrical")?.checked ?? true;
+  
+  const filteredMatches = matches.filter(m => {
+    const isPent = m.scaleKey.includes("pentatonic") || m.scaleKey === "blues";
+    const isSymm = m.scaleKey === "whole_tone" || m.scaleKey === "diminished" || m.scaleKey === "byzantine" || m.scaleKey === "insen" || m.scaleKey === "hungarian";
+    const isDiatonic = !isPent && !isSymm;
+    
+    if (isPent && !showPentatonic) return false;
+    if (isSymm && !showSymmetrical) return false;
+    if (isDiatonic && !showDiatonic) return false;
+    return true;
+  });
+  
+  const container = document.getElementById("scales-cards-container");
+  if (container) {
+    if (filteredMatches.length === 0) {
+      container.innerHTML = `<p style="color: var(--text-muted); font-size: 13px;">No se encontraron escalas coincidentes con los filtros seleccionados.</p>`;
+      return;
+    }
+    
+    container.innerHTML = filteredMatches.slice(0, 12).map(m => {
+      const scaleNotes = m.intervals.map(int => NOTE_NAMES[(m.rootVal + int) % 12]);
+      
+      let pianoRollHtml = `<div class="scale-piano-roll">`;
+      for (let k = 0; k < 12; k++) {
+        const isBlack = [1, 3, 6, 8, 10].includes(k);
+        const isActive = m.scalePitches.includes(k);
+        pianoRollHtml += `<div class="scale-key ${isBlack ? 'black' : ''} ${isActive ? 'active' : ''}"></div>`;
+      }
+      pianoRollHtml += `</div>`;
+      
+      const intervalNames = ["R", "b2", "2", "b3", "3", "4", "#4/b5", "5", "b6", "6", "b7", "7"];
+      const intervalsHtml = m.intervals.map(int => {
+        const pitch = (m.rootVal + int) % 12;
+        const isChordMember = chordPitches.includes(pitch);
+        return `<span class="scale-interval-tag ${isChordMember ? 'chord-member' : ''}">${intervalNames[int] || int}</span>`;
+      }).join("");
+      
+      return `
+        <div class="scale-card ${m.type}">
+          <div class="scale-card-header">
+            <div>
+              <div class="scale-card-title">${m.rootName} ${m.scaleName}</div>
+              <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.3; margin-top: 4px;">${m.desc}</p>
+            </div>
+            <span class="scale-match-badge">${m.typeLabel}</span>
+          </div>
+          
+          <div class="scale-notes-list">${scaleNotes.join(" · ")}</div>
+          
+          ${pianoRollHtml}
+          
+          <div class="scale-intervals" style="margin-bottom: 30px;">
+            ${intervalsHtml}
+          </div>
+          
+          <button class="btn btn-secondary btn-sm" style="position: absolute; right: 12px; bottom: 12px; padding: 4px 8px; font-size: 11px;" onclick="playScaleSequence(${m.rootVal}, '${m.scaleKey}', state.currentInstrument)">
+            🔊 Play
+          </button>
+        </div>
+      `;
+    }).join("");
+  }
+}
+
+function filterScalesList() {
+  updateScalesTab();
+}
+
+function onManualScaleSelect() {
+  const rootSel = document.getElementById("scale-root-select-manual");
+  const typeSel = document.getElementById("scale-type-select-manual");
+  if (!rootSel || !typeSel) return;
+  
+  const root = rootSel.value;
+  const scaleKey = typeSel.value;
+  const rootIdx = NOTE_NAMES.indexOf(root);
+  
+  // Forzar visualización de esta escala manual
+  state.currentScaleRoot = rootIdx;
+  state.currentScale = scaleKey;
+  
+  // Buscar en SCALE_DATABASE y dibujarla como coincidencia exacta simulada
+  const scale = SCALE_DATABASE[scaleKey];
+  const container = document.getElementById("scales-cards-container");
+  if (scale && container) {
+    const scalePitches = scale.intervals.map(int => (rootIdx + int) % 12);
+    const scaleNotes = scale.intervals.map(int => NOTE_NAMES[(rootIdx + int) % 12]);
+    
+    let pianoRollHtml = `<div class="scale-piano-roll">`;
+    for (let k = 0; k < 12; k++) {
+      const isBlack = [1, 3, 6, 8, 10].includes(k);
+      const isActive = scalePitches.includes(k);
+      pianoRollHtml += `<div class="scale-key ${isBlack ? 'black' : ''} ${isActive ? 'active' : ''}"></div>`;
+    }
+    pianoRollHtml += `</div>`;
+    
+    container.innerHTML = `
+      <div class="scale-card exact-match" style="grid-column: 1 / -1;">
+        <div class="scale-card-header">
+          <div>
+            <div class="scale-card-title">${root} ${scale.name} (Búsqueda Manual)</div>
+            <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.3; margin-top: 4px;">${scale.desc}</p>
+          </div>
+          <span class="scale-match-badge">Manual</span>
+        </div>
+        
+        <div class="scale-notes-list">${scaleNotes.join(" · ")}</div>
+        
+        ${pianoRollHtml}
+        
+        <button class="btn btn-secondary btn-sm" style="position: absolute; right: 12px; bottom: 12px; padding: 4px 8px; font-size: 11px;" onclick="playScaleSequence(${rootIdx}, '${scaleKey}', state.currentInstrument)">
+          🔊 Play Escala
+        </button>
+      </div>
+    `;
+  }
+}
+
+// Colección de Acordes
+function updateLibraryTab() {
+  let customChords = {};
+  try {
+    customChords = JSON.parse(localStorage.getItem('bandCustomChords') || '{}');
+  } catch (e) {}
+  
+  const customKeys = Object.keys(customChords);
+  const favKeys = state.favoritesChords;
+  const allChords = Array.from(new Set([...customKeys, ...favKeys]));
+  
+  // Filtrar
+  const filtered = allChords.filter(chord => {
+    // Filtro por nota raíz
+    if (state.libRootFilter !== "ALL") {
+      let root = chord.substring(0, 1);
+      if (chord.length > 1 && (chord[1] === '#' || chord[1] === 'b')) {
+        root = chord.substring(0, 2);
+      }
+      if (root !== state.libRootFilter) return false;
+    }
+    
+    // Filtro por tipo
+    if (state.libTypeFilter !== "ALL") {
+      // Remover raíz
+      let root = chord.substring(0, 1);
+      if (chord.length > 1 && (chord[1] === '#' || chord[1] === 'b')) {
+        root = chord.substring(0, 2);
+      }
+      const type = chord.substring(root.length);
+      
+      const triads = ["", "m", "dim", "aug", "sus2", "sus", "5"];
+      const sevenths = ["7", "maj7", "m7", "mmaj7"];
+      
+      if (state.libTypeFilter === "triads") {
+        if (!triads.includes(type)) return false;
+      } else if (state.libTypeFilter === "7ths") {
+        if (!sevenths.includes(type)) return false;
+      } else if (state.libTypeFilter === "extended") {
+        if (triads.includes(type) || sevenths.includes(type)) return false;
+      }
+    }
+    
+    // Filtro de búsqueda
+    if (state.libSearchQuery) {
+      if (!chord.toLowerCase().includes(state.libSearchQuery.toLowerCase())) return false;
+    }
+    
+    return true;
+  });
+  
+  const container = document.getElementById("lib-chords-grid-container");
+  if (container) {
+    if (filtered.length === 0) {
+      container.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; grid-column: 1 / -1; text-align: center; padding: 40px 0;">No tienes acordes guardados que coincidan con los filtros.</p>`;
+      return;
+    }
+    
+    container.innerHTML = filtered.map(name => {
+      const notes = getChordNotes(name);
+      const val = customChords[name] || (CHORD_DATABASE[name] ? (typeof CHORD_DATABASE[name] === "string" ? CHORD_DATABASE[name] : CHORD_DATABASE[name].guitar) : "xxxxxx");
+      let shapeStr = "xxxxxx";
+      if (typeof val === "string") {
+        shapeStr = val;
+      } else if (val && val.frets) {
+        shapeStr = val.frets.map(f => (f === -1 ? "x" : f.toString())).join("");
+      }
+      
+      const isFav = state.favoritesChords.includes(name);
+      
+      return `
+        <div class="lib-chord-card" onclick="selectLibraryCard('${name}')">
+          <div class="lib-chord-header">
+            <span class="lib-chord-name">${name}</span>
+            <button class="chord-favorite-heart active" style="font-size: 13px;" onclick="event.stopPropagation(); removeLibraryCard('${name}')">❤️</button>
+          </div>
+          <div class="lib-chord-notes">${notes.join(" · ")}</div>
+          
+          <div class="lib-mini-fretboard">
+            Trastes: ${shapeStr.split("").join(" ")}
+          </div>
+          
+          <div class="lib-meta-tags">
+            <span class="lib-tag">${state.currentInstrument.toUpperCase()}</span>
+            <span class="lib-tag">${customChords[name] ? 'Custom' : 'Preset'}</span>
+          </div>
+          
+          <button class="btn btn-secondary btn-sm" style="position: absolute; right: 10px; bottom: 10px; padding: 2px 6px; font-size: 10px;" onclick="event.stopPropagation(); playChord('${name}', state.currentInstrument)">
+            🔊 Play
+          </button>
+        </div>
+      `;
+    }).join("");
+  }
+}
+
+function selectLibraryCard(name) {
+  selectChord(name);
+  switchLibSubtab('builder');
+}
+
+function removeLibraryCard(name) {
+  // Quitar de favoritos
+  state.favoritesChords = state.favoritesChords.filter(c => c !== name);
+  saveFavorites();
+  
+  // Quitar de personalizados
+  let customChords = {};
+  try { customChords = JSON.parse(localStorage.getItem('bandCustomChords') || '{}'); } catch(e){}
+  if (customChords[name]) {
+    delete customChords[name];
+    localStorage.setItem('bandCustomChords', JSON.stringify(customChords));
+  }
+  
+  updateLibraryTab();
+}
+
+function filterLibRoot(root) {
+  state.libRootFilter = root;
+  
+  const el = document.getElementById("lib-root-filter");
+  if (el) {
+    el.querySelectorAll("button").forEach(btn => {
+      if (btn.textContent.trim() === root || (root === "ALL" && btn.textContent.trim() === "TODAS")) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+  }
+  updateLibraryTab();
+}
+
+function filterLibType(type) {
+  state.libTypeFilter = type;
+  
+  const el = document.getElementById("lib-type-filter");
+  if (el) {
+    el.querySelectorAll("button").forEach(btn => {
+      const onclickAttr = btn.getAttribute("onclick") || "";
+      if (onclickAttr.includes(`'${type}'`) || (type === "ALL" && onclickAttr.includes("'ALL'"))) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+  }
+  updateLibraryTab();
+}
+
+function filterLibSearch() {
+  const input = document.getElementById("lib-search-input");
+  state.libSearchQuery = input ? input.value.trim() : "";
+  updateLibraryTab();
+}
+
+// Modificar renderFavoritesList original para que sea responsiva
+function renderFavoritesList() {
+  const container = document.getElementById("favorites-chords-list");
+  if (!container) return;
+
+  if (state.favoritesChords.length === 0) {
+    container.innerHTML = `<span style="font-size:12px; color:var(--text-muted)">No tienes favoritos aún.</span>`;
+    return;
+  }
+
+  const groups = {};
+  state.favoritesChords.forEach(chord => {
+    let root = chord.substring(0, 1);
+    if (chord.length > 1 && (chord[1] === '#' || chord[1] === 'b')) {
+      root = chord.substring(0, 2);
+    }
+    if (!groups[root]) groups[root] = [];
+    groups[root].push(chord);
+  });
+
+  container.innerHTML = Object.keys(groups).map(root => {
+    const chords = groups[root];
+    return `
+      <div class="favorite-group-card glass" style="margin-bottom: 8px; padding: 10px; border-radius: 6px; background: rgba(15, 23, 42, 0.35); text-align: left;">
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          ${chords.map(c => `
+            <button class="favorite-chord-pill ${c === state.currentChord ? 'active' : ''}" onclick="selectChord('${c}')" style="padding: 4px 8px; border-radius: 12px; font-family: var(--font-mono); font-size: 10px; font-weight: 600;">
+              ${c}
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// Modificar selectInstrument original para que renderice Biblioteca de forma responsiva
+function selectInstrument(inst) {
+  state.currentInstrument = inst;
+
+  const btnGuitar = document.getElementById("btn-select-guitar");
+  const btnPiano = document.getElementById("btn-select-piano");
+
+  if (btnGuitar && btnPiano) {
+    if (inst === "guitar") {
+      btnGuitar.classList.add("active");
+      btnPiano.classList.remove("active");
+    } else {
+      btnPiano.classList.add("active");
+      btnGuitar.classList.remove("active");
+    }
   }
 
   renderDictionary();
 }
 
-function filterChordRoot(root) {
-  state.chordFilterRoot = root;
-
-  // Resaltar botón activo en el filtro de nota raíz
-  const filterGroup = document.getElementById("dict-chord-root-filters");
-  if (filterGroup) {
-    filterGroup.querySelectorAll(".filter-btn").forEach(btn => {
-      if (btn.textContent.trim() === root) {
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
-      }
-    });
+// Modificar toggleFavoriteChord original
+function toggleFavoriteChord() {
+  const isFav = state.favoritesChords.includes(state.currentChord);
+  if (isFav) {
+    state.favoritesChords = state.favoritesChords.filter(c => c !== state.currentChord);
+  } else {
+    state.favoritesChords.push(state.currentChord);
   }
-
-  const chordName = state.chordFilterRoot + state.chordFilterType;
-  selectChord(chordName);
+  saveFavorites();
+  renderBuilderChord();
+  
+  if (state.libSubtab === "library") {
+    updateLibraryTab();
+  }
 }
 
-function filterChordType(type) {
-  state.chordFilterType = type;
-
-  // Resaltar botón activo en el filtro de tipo de acorde
-  const filterGroup = document.getElementById("dict-chord-type-filters");
-  if (filterGroup) {
-    filterGroup.querySelectorAll(".filter-btn").forEach(btn => {
-      const onclickAttr = btn.getAttribute("onclick") || "";
-      if (onclickAttr.includes(`'${type}'`) || onclickAttr.includes(`"${type}"`)) {
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
-      }
-    });
-  }
-
-  const chordName = state.chordFilterRoot + state.chordFilterType;
-  selectChord(chordName);
-}
-
-// --- EDICIÓN TOTAL DE ACORDES ---
+// --- EDICIÓN TOTAL DE ACORDES (INTEGRACIÓN) ---
 function saveCustomChord() {
   const input = document.getElementById("chord-string-input");
   if (!input) return;
@@ -4355,98 +5051,24 @@ function saveCustomChord() {
     setTimeout(() => { status.style.display = "none"; }, 3000);
   }
   
-  // Re-render
-  if (state.currentInstrument === "guitar") {
-    renderGuitarChordSVG(state.currentChord, "chord-svg-render-area");
+  // Re-renderizar Constructor
+  renderBuilderChord();
+  
+  // Re-renderizar Colección si está abierta
+  if (state.libSubtab === "library") {
+    updateLibraryTab();
   }
-}
-
-// Configurar listener en tiempo real para el input del editor
-setTimeout(() => {
-  const input = document.getElementById("chord-string-input");
-  if (input) {
-    input.addEventListener("input", (e) => {
-      const val = e.target.value.trim();
-      if (state.currentInstrument === "guitar") {
-        // Renderizar temporalmente con el nuevo string sin guardar en localStorage todavía
-        const container = document.getElementById("chord-svg-render-area");
-        if (!container) return;
-        
-        let frets = val.split('').map(c => (c.toLowerCase() === 'x' ? -1 : parseInt(c) || 0));
-        // Necesitamos llenar con 0 hasta llegar a 6 cuerdas por si escribe parcial
-        while (frets.length < 6) frets.push(0);
-        
-        // Render manually reusing the logic for real-time
-        let minFret = 999;
-        let maxFret = 0;
-        frets.forEach(f => {
-          if (f > 0) {
-            if (f < minFret) minFret = f;
-            if (f > maxFret) maxFret = f;
-          }
-        });
-        
-        let baseFret = 1;
-        if (maxFret > 4 && minFret !== 999) {
-          baseFret = minFret;
-        }
-        
-        let svg = `<svg viewBox="0 0 200 240" class="chord-svg-fretboard" style="width:100%; height:100%">`;
-        if (baseFret > 1) {
-          svg += `<text x="12" y="62" font-size="11" font-weight="700" fill="var(--neon-cyan)">Fr. ${baseFret}</text>`;
-        }
-        const nutWidth = baseFret === 1 ? 4 : 1;
-        svg += `<rect x="40" y="38" width="120" height="${nutWidth}" fill="${baseFret === 1 ? 'var(--text-primary)' : 'var(--text-muted)'}" />`;
-        
-        for (let i = 0; i <= 4; i++) {
-          const y = 40 + i * 40;
-          svg += `<line x1="40" y1="${y}" x2="160" y2="${y}" stroke-width="1.5" stroke="rgba(255,255,255,0.4)" />`;
-        }
-        
-        for (let i = 0; i < 6; i++) {
-          const x = 40 + i * 24;
-          const thickness = 1 + (5 - i) * 0.4;
-          svg += `<line x1="${x}" y1="40" x2="${x}" y2="200" stroke-width="${thickness}" stroke="var(--text-primary)" />`;
-          
-          const fretVal = frets[i];
-          if (fretVal === -1) {
-            svg += `<text x="${x}" y="28" text-anchor="middle" font-size="14" font-weight="700" fill="var(--neon-red)">×</text>`;
-          } else if (fretVal === 0) {
-            svg += `<circle cx="${x}" cy="24" r="5" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" />`;
-          } else {
-            const cy = 40 + (fretVal - baseFret) * 40 + 20;
-            svg += `<circle cx="${x}" cy="${cy}" r="8" fill="var(--neon-cyan)" />`;
-          }
-        }
-        svg += `</svg>`;
-        container.innerHTML = svg;
-      }
-    });
-  }
-}, 1500);
-
-function onScaleChange() {
-  const rootSelect = document.getElementById("scale-root-select");
-  const typeSelect = document.getElementById("scale-type-select");
-
-  if (rootSelect && typeSelect) {
-    state.currentScaleRoot = parseInt(rootSelect.value);
-    state.currentScale = typeSelect.value;
-  }
-
-  renderDictionary();
 }
 
 function playDictAudio() {
-  if (state.dictMode === "chords") {
-    playChord(state.currentChord, state.currentInstrument);
-  } else {
-    playScaleSequence(state.currentScaleRoot, state.currentScale, state.currentInstrument);
-  }
+  playChord(state.currentChord, state.currentInstrument);
 }
 
+// --- RENDER DICCIONARIO PRINCIPAL ROUTER ---
 function renderDictionary() {
-  // 1. Manejar el tema visual según instrumento
+  // Inicializar tambores defensivamente
+  initLibSubtabs();
+
   const dictContainer = document.getElementById("tab-dictionary");
   if (dictContainer) {
     if (state.currentInstrument === "guitar") {
@@ -4458,281 +5080,167 @@ function renderDictionary() {
     }
   }
 
-  // 2. Renderizado según Modo
-  if (state.dictMode === "chords") {
-    // --- MODO ACORDES ---
-    // Sidebar de acordes
-    const chordsSidebar = document.getElementById("chords-list-sidebar");
-    if (chordsSidebar) {
-      const allChords = Object.keys(CHORD_DATABASE);
-      const filteredChords = allChords.filter(c => c.startsWith(state.chordFilterRoot));
-      chordsSidebar.innerHTML = filteredChords.map(c => `
-        <button class="chord-selection-btn ${c === state.currentChord ? 'active' : ''}" onclick="selectChord('${c}')">
-          ${c}
-        </button>
-      `).join("");
-    }
-
-    renderFavoritesList();
-
-    // Títulos e información
-    let chord = CHORD_DATABASE[state.currentChord];
-    if (!chord) {
-      chord = { notes: ["?"], guitar: "xxxxxx" };
-    }
-    
-    const chordNameTitle = document.getElementById("chord-name-title");
-    const chordNotesList = document.getElementById("chord-notes-list");
-    const notesLabel = document.getElementById("notes-list-label");
-    const tipsTitle = document.getElementById("tips-panel-title");
-    const tipsDesc = document.getElementById("tips-panel-desc");
-    const playBtn = document.getElementById("btn-play-dict-audio");
-    const favHeart = document.getElementById("chord-fav-heart");
-
-    if (chord) {
-      if (chordNameTitle) {
-        chordNameTitle.className = state.currentInstrument === "guitar" ? "chord-guitar-title chord-guitar-title-glow" : "chord-piano-title chord-piano-title-glow";
-        let root = state.currentChord.substring(0, 1);
-        if (state.currentChord.length > 1 && (state.currentChord[1] === '#' || state.currentChord[1] === 'b')) {
-          root = state.currentChord.substring(0, 2);
-        }
-        const type = state.currentChord.substring(root.length);
-        const color = state.currentInstrument === "guitar" ? "var(--neon-lime)" : "var(--neon-orange)";
-        chordNameTitle.innerHTML = `<span class="chord-root" style="color: #ffffff; font-size: 40px; font-weight: 800;">${root}</span><span class="chord-type" style="color: ${color}; font-size: 24px; font-weight: 700; margin-left: 2px; vertical-align: top;">${type}</span>`;
-      }
-
-      if (notesLabel) notesLabel.textContent = "Notas que lo componen";
-
-      if (chordNotesList) {
-        chordNotesList.innerHTML = chord.notes.map(n => `<span class="note-bubble">${n}</span>`).join("");
-      }
-
-      if (tipsTitle) tipsTitle.textContent = "Tips de Práctica";
-      if (tipsDesc) {
-        tipsDesc.innerHTML = `
-          Asegúrate de presionar las cuerdas cerca de los trastes metálicos sin tocarlos para evitar el trasteo. Mantén los dedos arqueados para no mutear cuerdas adyacentes.
-        `;
-      }
-
-      if (playBtn) playBtn.textContent = "🔊 Escuchar Acorde";
-
-      if (favHeart) {
-        const isFav = state.favoritesChords.includes(state.currentChord);
-        if (isFav) {
-          favHeart.classList.add("active");
-          favHeart.innerHTML = "❤️";
-        } else {
-          favHeart.classList.remove("active");
-          favHeart.innerHTML = "🤍";
-        }
-      }
-
-      // Renderizar los diagramas SVG correspondientes
-      if (state.currentInstrument === "guitar") {
-        renderGuitarChordSVG(state.currentChord, "chord-svg-render-area");
-        
-        // Actualizar el valor del input de edición total
-        const input = document.getElementById("chord-string-input");
-        if (input) {
-          let customChords = {};
-          try { customChords = JSON.parse(localStorage.getItem('bandCustomChords') || '{}'); } catch(e){}
-          const chordDef = customChords[state.currentChord] || CHORD_DATABASE[state.currentChord];
-          
-          if (typeof chordDef === "string") {
-            input.value = chordDef;
-          } else if (chordDef && chordDef.guitar && typeof chordDef.guitar === "string") {
-            input.value = chordDef.guitar;
-          } else if (chordDef && chordDef.guitar && chordDef.guitar.frets) {
-            // Reconstruir string (6ta a 1ra)
-            const frets = chordDef.guitar.frets;
-            let str = "";
-            for (let i = 0; i < 6; i++) {
-              str += frets[i] === -1 ? "x" : frets[i].toString();
-            }
-            input.value = str;
-          } else {
-            input.value = "";
-          }
-        }
-      } else {
-        renderPianoChordSVG(state.currentChord, "chord-svg-render-area");
-      }
-
-      // Renderizar voicing dots interactivos visually
-      const voicingContainer = document.getElementById("chord-voicing-dots-container");
-      if (voicingContainer) {
-        const color = state.currentInstrument === "guitar" ? "var(--neon-cyan)" : "var(--neon-orange)";
-        const shadow = state.currentInstrument === "guitar" ? "var(--glow-cyan)" : "var(--glow-orange)";
-        voicingContainer.innerHTML = `
-          <div class="voicing-dots" style="display: flex; gap: 8px; justify-content: center;">
-            <span class="dot active" style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; box-shadow: ${shadow};"></span>
-            <span class="dot" style="width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15);"></span>
-            <span class="dot" style="width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15);"></span>
-            <span class="dot" style="width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15);"></span>
-          </div>
-        `;
-      }
-    }
-  } else {
-    // --- MODO ESCALAS ---
-    const voicingContainer = document.getElementById("chord-voicing-dots-container");
-    if (voicingContainer) voicingContainer.innerHTML = "";
-
-    const scale = SCALE_DATABASE[state.currentScale];
-    const rootName = NOTE_NAMES[state.currentScaleRoot];
-
-    const scaleNameTitle = document.getElementById("chord-name-title");
-    const scaleNotesList = document.getElementById("chord-notes-list");
-    const notesLabel = document.getElementById("notes-list-label");
-    const tipsTitle = document.getElementById("tips-panel-title");
-    const tipsDesc = document.getElementById("tips-panel-desc");
-    const playBtn = document.getElementById("btn-play-dict-audio");
-
-    if (scale) {
-      if (scaleNameTitle) {
-        scaleNameTitle.className = state.currentInstrument === "guitar" ? "chord-guitar-title chord-guitar-title-glow" : "chord-piano-title chord-piano-title-glow";
-        scaleNameTitle.innerHTML = `${rootName} ${scale.name} <span style="font-size:14px; font-weight:400; color:var(--text-secondary)">Escala</span>`;
-      }
-
-      if (notesLabel) notesLabel.textContent = "Estructura e Intervalos";
-
-      // Notas reales de la escala
-      if (scaleNotesList) {
-        const scaleNotes = scale.intervals.map(int => NOTE_NAMES[(state.currentScaleRoot + int) % 12]);
-        scaleNotesList.innerHTML = scaleNotes.map(n => `<span class="note-bubble">${n}</span>`).join("");
-      }
-
-      if (tipsTitle) tipsTitle.textContent = "Teoría y Origen";
-      if (tipsDesc) tipsDesc.textContent = scale.desc;
-
-      if (playBtn) playBtn.textContent = "🔊 Escuchar Escala";
-
-      // Renderizar SVG de Escala
-      if (state.currentInstrument === "guitar") {
-        renderGuitarScaleSVG(state.currentScaleRoot, state.currentScale, "chord-svg-render-area");
-      } else {
-        renderPianoScaleSVG(state.currentScaleRoot, state.currentScale, "chord-svg-render-area");
-      }
-    }
-  }
+  // Direccionar a sub-pestaña
+  if (state.libSubtab === "builder") {
+    renderBuilderChord();
+  } else if (state.libSubtab === "scales") {
+    updateScalesTab();
+  } else if (state.libSubtab === "library") {
+    updateLibraryTab();
 }
 
-function selectChord(chordName) {
-  state.currentChord = chordName;
+// --- CORE CHORD UTILS ---
+function getChordNotes(chordName) {
+  let customChords = {};
+  try {
+    customChords = JSON.parse(localStorage.getItem('bandCustomChords') || '{}');
+  } catch (e) {}
+  
+  const chordDef = customChords[chordName] || CHORD_DATABASE[chordName];
+  if (!chordDef) return [];
+  
+  if (chordDef.notes) {
+    return chordDef.notes;
+  }
+  
+  let baseName = chordName;
+  let bassNote = "";
+  if (chordName.includes("/")) {
+    const parts = chordName.split("/");
+    baseName = parts[0];
+    bassNote = parts[1];
+  }
+  
+  let notes = [];
+  const baseDef = CHORD_DATABASE[baseName];
+  if (baseDef && baseDef.notes) {
+    notes = [...baseDef.notes];
+  } else {
+    let root = baseName.substring(0, 1);
+    if (baseName.length > 1 && (baseName[1] === '#' || baseName[1] === 'b')) {
+      root = baseName.substring(0, 2);
+    }
+    const rootIdx = NOTE_NAMES.indexOf(root);
+    if (rootIdx !== -1) {
+      notes = [
+        NOTE_NAMES[rootIdx],
+        NOTE_NAMES[(rootIdx + 4) % 12],
+        NOTE_NAMES[(rootIdx + 7) % 12]
+      ];
+    }
+  }
+  
+  if (bassNote && !notes.includes(bassNote)) {
+    notes.unshift(bassNote);
+  }
+  
+  return notes;
+}
 
-  // Parsear la raíz y el tipo
-  // Las raíces pueden ser C, C#, D, Eb, E, F, F#, G, Ab, A, Bb, B (longitud 1 o 2)
+function parseChordName(chordName) {
   let root = chordName.substring(0, 1);
   if (chordName.length > 1 && (chordName[1] === '#' || chordName[1] === 'b')) {
     root = chordName.substring(0, 2);
   }
-  const type = chordName.substring(root.length);
-
-  state.chordFilterRoot = root;
-  state.chordFilterType = type;
-
-  // Sincronizar botones de nota raíz
-  const rootGroup = document.getElementById("dict-chord-root-filters");
-  if (rootGroup) {
-    rootGroup.querySelectorAll(".filter-btn").forEach(btn => {
-      if (btn.textContent.trim() === root) {
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
-      }
-    });
+  
+  let rest = chordName.substring(root.length);
+  
+  let bass = "NONE";
+  if (rest.includes("/")) {
+    const parts = rest.split("/");
+    rest = parts[0];
+    bass = "/" + parts[1];
   }
-
-  // Sincronizar botones de tipo de acorde
-  const typeGroup = document.getElementById("dict-chord-type-filters");
-  if (typeGroup) {
-    typeGroup.querySelectorAll(".filter-btn").forEach(btn => {
-      const onclickAttr = btn.getAttribute("onclick") || "";
-      if (onclickAttr.includes(`'${type}'`) || onclickAttr.includes(`"${type}"`)) {
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
-      }
-    });
+  
+  let quality = "M";
+  let extension = "NONE";
+  let alteration = "NONE";
+  
+  if (rest.includes("6add9")) {
+    alteration = "6add9";
+    rest = rest.replace("6add9", "");
+  } else if (rest.includes("7sus4")) {
+    alteration = "7sus4";
+    rest = rest.replace("7sus4", "");
+  } else if (rest.includes("7maj5")) {
+    alteration = "7maj5";
+    rest = rest.replace("7maj5", "");
+  } else if (rest.includes("add9")) {
+    alteration = "add9";
+    rest = rest.replace("add9", "");
+  } else if (rest.includes("sus2")) {
+    quality = "sus2";
+    rest = rest.replace("sus2", "");
+  } else if (rest.includes("sus4")) {
+    quality = "sus4";
+    rest = rest.replace("sus4", "");
+  } else if (rest === "sus") {
+    quality = "sus4";
+    rest = "";
   }
-
-  renderDictionary();
-}
-
-function selectInstrument(inst) {
-  state.currentInstrument = inst;
-
-  const btnGuitar = document.getElementById("btn-select-guitar");
-  const btnPiano = document.getElementById("btn-select-piano");
-
-  if (btnGuitar && btnPiano) {
-    if (inst === "guitar") {
-      btnGuitar.classList.add("active");
-      btnPiano.classList.remove("active");
-    } else {
-      btnPiano.classList.add("active");
-      btnGuitar.classList.remove("active");
+  
+  const extensions = ["maj7", "mmaj7", "maj9", "maj11", "maj13", "m7", "m9", "m11", "m13", "7", "9", "11", "13"];
+  for (const ext of extensions) {
+    if (rest.includes(ext)) {
+      extension = ext;
+      if (ext.startsWith("m") && ext !== "maj7") {
+        quality = "m";
+      }
+      rest = rest.replace(ext, "");
+      break;
     }
   }
-
-  renderDictionary();
+  
+  if (rest === "m" || rest === "min") {
+    quality = "m";
+  } else if (rest === "dim") {
+    quality = "dim";
+  } else if (rest === "aug") {
+    quality = "aug";
+  } else if (rest === "5") {
+    quality = "5";
+  } else if (rest === "6") {
+    alteration = "6";
+  } else if (rest === "m6") {
+    quality = "m";
+    alteration = "6";
+  } else if (rest === "9") {
+    extension = "9";
+  } else if (rest === "m9") {
+    quality = "m";
+    extension = "9";
+  }
+  
+  return {
+    root,
+    quality,
+    extension,
+    alteration,
+    bass
+  };
 }
 
-// Favoritos
-function toggleFavoriteChord() {
-  const isFav = state.favoritesChords.includes(state.currentChord);
-  if (isFav) {
-    state.favoritesChords = state.favoritesChords.filter(c => c !== state.currentChord);
-  } else {
-    state.favoritesChords.push(state.currentChord);
-  }
-  saveFavorites();
-  renderDictionary();
-}
-
-function renderFavoritesList() {
-  const container = document.getElementById("favorites-chords-list");
-  if (!container) return;
-
-  if (state.favoritesChords.length === 0) {
-    container.innerHTML = `<span style="font-size:12px; color:var(--text-muted)">No tienes favoritos aún.</span>`;
-    return;
-  }
-
-  // Group by root note
-  const groups = {};
-  state.favoritesChords.forEach(chord => {
-    let root = chord.substring(0, 1);
-    if (chord.length > 1 && (chord[1] === '#' || chord[1] === 'b')) {
-      root = chord.substring(0, 2);
-    }
-    if (!groups[root]) groups[root] = [];
-    groups[root].push(chord);
-  });
-
-  container.innerHTML = Object.keys(groups).map(root => {
-    const chords = groups[root];
-    return `
-      <div class="favorite-group-card glass" style="margin-bottom: 8px; padding: 12px; border-radius: var(--radius-md); background: rgba(15, 23, 42, 0.35);">
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          ${chords.map(c => `
-            <button class="favorite-chord-pill ${c === state.currentChord ? 'active' : ''}" onclick="selectChord('${c}')" style="padding: 6px 12px; border-radius: 20px; font-family: var(--font-mono); font-size: 11px; font-weight: 600;">
-              ${c}
-            </button>
-          `).join("")}
-        </div>
-      </div>
-    `;
-  }).join("");
+function selectChord(chordName) {
+  state.currentChord = chordName;
+  
+  const parsed = parseChordName(chordName);
+  state.builder = parsed;
+  
+  // Alinear ruedas al estado parsed
+  alignWheelsToState();
+  
+  // Render
+  renderBuilderChord();
 }
 
 function openKeyInDict(keyName) {
   const cleanKey = keyName.split("/")[0].trim();
-  if (CHORD_DATABASE[cleanKey]) {
-    const rootNote = cleanKey[0];
-    switchDictMode("chords");
-    filterChordRoot(rootNote);
+  let customChords = {};
+  try { customChords = JSON.parse(localStorage.getItem('bandCustomChords') || '{}'); } catch(e){}
+  
+  if (CHORD_DATABASE[cleanKey] || customChords[cleanKey]) {
     selectChord(cleanKey);
+    switchLibSubtab("builder");
     switchTab("dictionary");
   }
 }
