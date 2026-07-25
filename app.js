@@ -1047,7 +1047,39 @@ async function loadUserProfile(user) {
     })
     .subscribe();
 
+  // Suscribirse a cambios en tiempo real de las CANCIONES del grupo (sincronización instantánea en móvil)
+  if (window._supabaseSongsChannel) window._supabaseSongsChannel.unsubscribe();
+  window._supabaseSongsChannel = window.supabaseClient
+    .channel(`songs-changes-${state.currentBandId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'songs', filter: `band_id=eq.${state.currentBandId}` }, () => {
+      console.log("⚡ Cambio en canciones detectado en Supabase -> Recargando repertorio...");
+      loadSongsFromDB();
+    })
+    .subscribe();
+
+  // Suscribirse a cambios en tiempo real de los MIEMBROS del grupo
+  if (window._supabaseMembersChannel) window._supabaseMembersChannel.unsubscribe();
+  window._supabaseMembersChannel = window.supabaseClient
+    .channel(`members-changes-${state.currentBandId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'members', filter: `band_id=eq.${state.currentBandId}` }, () => {
+      console.log("⚡ Cambio en miembros detectado en Supabase -> Recargando equipo...");
+      loadMembersFromDB();
+    })
+    .subscribe();
+
   return true;
+}
+
+// Auto-recargar canciones y equipo cuando el móvil se desbloquea o regresa a la app
+if (!window._visibilityListenerAdded) {
+  window._visibilityListenerAdded = true;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && state.currentUser && state.currentBandId && window.supabaseClient) {
+      console.log("📱 App visible en móvil -> Sincronizando repertorio con Supabase...");
+      loadSongsFromDB();
+      loadMembersFromDB();
+    }
+  });
 }
 
 async function initAuthAndApp() {
