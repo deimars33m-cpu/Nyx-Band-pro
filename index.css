@@ -5525,4 +5525,255 @@ textarea {
   color: #000;
 }
 
+/* ================================================================
+   AUDIO IMPORT PANEL - Panel de Importación de Audio de Referencia
+   ================================================================ */
+.audio-import-panel {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 229, 255, 0.12);
+  background: rgba(0, 229, 255, 0.03);
+  margin-bottom: 12px;
+}
+
+.audio-import-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.audio-import-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+.audio-import-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.audio-import-btn {
+  padding: 5px 12px !important;
+  font-size: 11px !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  cursor: pointer !important;
+}
+
+/* Estado de audio cargado */
+.audio-loaded-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  flex-wrap: wrap;
+}
+
+.audio-file-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(0, 229, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  font-family: 'JetBrains Mono', monospace;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.audio-bpm-result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bpm-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.bpm-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--neon-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  text-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+}
+
+.bpm-confidence {
+  font-size: 9px;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Contenedor de forma de onda */
+.waveform-container {
+  position: relative;
+  width: 100%;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  margin: 8px 0;
+}
+
+.waveform-container canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.waveform-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.waveform-playhead {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--neon-cyan);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+  transition: left 0.05s linear;
+}
+
+/* Controles de reproducción mini */
+.audio-mini-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.audio-ctrl-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--neon-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+}
+
+.audio-ctrl-btn:hover {
+  background: rgba(0, 229, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.audio-ctrl-btn.playing {
+  background: var(--neon-cyan);
+  color: #000;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+}
+
+.audio-time {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-secondary);
+  min-width: 32px;
+  text-align: center;
+}
+
+.audio-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.audio-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--neon-cyan), rgba(0, 229, 255, 0.6));
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+/* Animación de análisis de BPM */
+.analyzing-pulse {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--neon-cyan);
+  margin: 0 auto 8px;
+  animation: analyzeGlow 1.2s ease-in-out infinite;
+}
+
+@keyframes analyzeGlow {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.4;
+    box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.4);
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+    box-shadow: 0 0 20px 8px rgba(0, 229, 255, 0.3);
+  }
+}
+
+/* Marcadores de beat en la forma de onda */
+.waveform-beat-marker {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: rgba(255, 185, 80, 0.3);
+  pointer-events: none;
+}
+
+.waveform-beat-marker.strong {
+  background: rgba(255, 108, 108, 0.5);
+  width: 2px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .audio-import-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .audio-loaded-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .waveform-container {
+    height: 60px;
+  }
+}
+
 

@@ -7954,6 +7954,327 @@ function renderNotesPane(song, lines) {
   `;
 }
 
+// ================================================================
+// --- FUNCIONES DE IMPORTACIÓN Y GESTIÓN DE AUDIO DE REFERENCIA ---
+// ================================================================
+
+// Estado temporal del audio de referencia en el formulario
+let audioRefState = {
+  file: null,
+  url: null,
+  bpm: null,
+  confidence: null,
+  waveformData: null,
+  duration: 0,
+  beats: [],
+  isPlaying: false,
+  animFrameId: null
+};
+
+// Manejo de selección de archivo de audio
+async function handleAudioFileSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // Validar tipo de archivo
+  if (!file.type.startsWith('audio/')) {
+    alert('Por favor selecciona un archivo de audio válido (MP3, WAV, OGG, etc.)');
+    return;
+  }
+  
+  // Validar tamaño (máx 15 MB)
+  if (file.size > 15 * 1024 * 1024) {
+    alert('El archivo es demasiado grande. Máximo 15 MB.');
+    return;
+  }
+  
+  audioRefState.file = file;
+  audioRefState.url = URL.createObjectURL(file);
+  
+  // Mostrar panel de estado
+  const statusPanel = document.getElementById('audio-import-status');
+  const fileNameEl = document.getElementById('audio-file-name');
+  const spinner = document.getElementById('bpm-analyzing-spinner');
+  
+  if (statusPanel) statusPanel.style.display = 'block';
+  if (fileNameEl) fileNameEl.textContent = file.name;
+  if (spinner) spinner.style.display = 'block';
+  
+  // Configurar elemento de audio para reproducción
+  const audioEl = document.getElementById('audio-ref-element');
+  if (audioEl) {
+    audioEl.src = audioRefState.url;
+    audioEl.load();
+    audioEl.addEventListener('loadedmetadata', () => {
+      const totalTimeEl = document.getElementById('audio-total-time');
+      if (totalTimeEl) totalTimeEl.textContent = formatAudioTime(audioEl.duration);
+      audioRefState.duration = audioEl.duration;
+    });
+    audioEl.addEventListener('timeupdate', updateAudioProgress);
+    audioEl.addEventListener('ended', () => {
+      audioRefState.isPlaying = false;
+      const btn = document.getElementById('btn-audio-play');
+      if (btn) {
+        btn.classList.remove('playing');
+        btn.innerHTML = '<i class="ti ti-player-play"></i>';
+      }
+    });
+  }
+  
+  // Analizar BPM si el módulo está disponible
+  if (window.BpmDetector) {
+    try {
+      const result = await window.BpmDetector.analyzeFile(file);
+      
+      audioRefState.bpm = result.bpm;
+      audioRefState.confidence = result.confidence;
+      audioRefState.waveformData = result.waveformData;
+      audioRefState.duration = result.duration;
+      audioRefState.beats = result.beats;
+      
+      // Actualizar UI con resultados
+      const bpmValueEl = document.getElementById('detected-bpm-value');
+      const confidenceEl = document.getElementById('bpm-confidence');
+      
+      if (bpmValueEl) bpmValueEl.textContent = result.bpm;
+      if (confidenceEl) {
+        const pct = Math.round(result.confidence * 100);
+        confidenceEl.textContent = `(${pct}% conf.)`;
+        confidenceEl.style.color = pct > 70 ? 'var(--neon-lime)' : pct > 40 ? '#ffb950' : '#ff6c6c';
+      }
+      
+      // Renderizar forma de onda
+      renderWaveform(result.waveformData, result.beats, result.duration);
+      
+      if (spinner) spinner.style.display = 'none';
+      
+    } catch (err) {
+      console.error('Error al analizar BPM:', err);
+      if (spinner) spinner.style.display = 'none';
+      const bpmValueEl = document.getElementById('detected-bpm-value');
+      if (bpmValueEl) bpmValueEl.textContent = '---';
+    }
+  } else {
+    if (spinner) spinner.style.display = 'none';
+  }
+}
+
+// Prompt para URL externa de audio
+function promptAudioUrl() {
+  const url = prompt('Pega la URL del audio de referencia (MP3, WAV, o enlace directo):');
+  if (!url || !url.trim()) return;
+  
+  audioRefState.url = url.trim();
+  audioRefState.file = null;
+  
+  const statusPanel = document.getElementById('audio-import-status');
+  const fileNameEl = document.getElementById('audio-file-name');
+  
+  if (statusPanel) statusPanel.style.display = 'block';
+  if (fileNameEl) fileNameEl.textContent = url.split('/').pop() || 'Audio URL';
+  
+  // Configurar reproducción
+  const audioEl = document.getElementById('audio-ref-element');
+  if (audioEl) {
+    audioEl.src = url.trim();
+    audioEl.load();
+    audioEl.addEventListener('loadedmetadata', () => {
+      const totalTimeEl = document.getElementById('audio-total-time');
+      if (totalTimeEl) totalTimeEl.textContent = formatAudioTime(audioEl.duration);
+      audioRefState.duration = audioEl.duration;
+    });
+    audioEl.addEventListener('timeupdate', updateAudioProgress);
+  }
+}
+
+// Quitar la referencia de audio
+function removeAudioReference() {
+  const audioEl = document.getElementById('audio-ref-element');
+  if (audioEl) {
+    audioEl.pause();
+    audioEl.src = '';
+  }
+  
+  if (audioRefState.url && audioRefState.file) {
+    URL.revokeObjectURL(audioRefState.url);
+  }
+  
+  audioRefState = { file: null, url: null, bpm: null, confidence: null, waveformData: null, duration: 0, beats: [], isPlaying: false, animFrameId: null };
+  
+  const statusPanel = document.getElementById('audio-import-status');
+  if (statusPanel) statusPanel.style.display = 'none';
+  
+  // Limpiar el input file
+  const fileInput = document.getElementById('audio-file-input');
+  if (fileInput) fileInput.value = '';
+}
+
+// Reproducción de audio de referencia
+function toggleAudioRefPlayback() {
+  const audioEl = document.getElementById('audio-ref-element');
+  if (!audioEl || !audioEl.src) return;
+  
+  const btn = document.getElementById('btn-audio-play');
+  
+  if (audioRefState.isPlaying) {
+    audioEl.pause();
+    audioRefState.isPlaying = false;
+    if (btn) {
+      btn.classList.remove('playing');
+      btn.innerHTML = '<i class="ti ti-player-play"></i>';
+    }
+  } else {
+    audioEl.play().catch(e => console.warn('No se pudo reproducir:', e));
+    audioRefState.isPlaying = true;
+    if (btn) {
+      btn.classList.add('playing');
+      btn.innerHTML = '<i class="ti ti-player-pause"></i>';
+    }
+  }
+}
+
+// Seek en la barra de progreso del audio
+function seekAudioRef(event) {
+  const audioEl = document.getElementById('audio-ref-element');
+  if (!audioEl || !audioEl.duration) return;
+  
+  const bar = document.getElementById('audio-progress-bar');
+  if (!bar) return;
+  
+  const rect = bar.getBoundingClientRect();
+  const percent = (event.clientX - rect.left) / rect.width;
+  audioEl.currentTime = percent * audioEl.duration;
+}
+
+// Actualizar indicadores de progreso
+function updateAudioProgress() {
+  const audioEl = document.getElementById('audio-ref-element');
+  if (!audioEl || !audioEl.duration) return;
+  
+  const percent = (audioEl.currentTime / audioEl.duration) * 100;
+  
+  const fill = document.getElementById('audio-progress-fill');
+  if (fill) fill.style.width = percent + '%';
+  
+  const currentTimeEl = document.getElementById('audio-current-time');
+  if (currentTimeEl) currentTimeEl.textContent = formatAudioTime(audioEl.currentTime);
+  
+  // Mover el playhead en la forma de onda
+  const playhead = document.getElementById('waveform-playhead');
+  if (playhead) playhead.style.left = percent + '%';
+}
+
+// Formatear tiempo mm:ss
+function formatAudioTime(seconds) {
+  if (!seconds || isNaN(seconds)) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// Aplicar el BPM detectado al campo del formulario y al metrónomo
+function applyDetectedBpm() {
+  if (!audioRefState.bpm) {
+    alert('No se ha detectado un BPM aún. Importa un archivo de audio primero.');
+    return;
+  }
+  
+  const bpmInput = document.getElementById('song-bpm');
+  const metaBpm = document.getElementById('meta-bpm');
+  
+  if (bpmInput) bpmInput.value = audioRefState.bpm;
+  if (metaBpm) metaBpm.textContent = audioRefState.bpm;
+  
+  // Actualizar metrónomo activo
+  if (typeof updateBpm === 'function') {
+    updateBpm(audioRefState.bpm);
+  }
+  
+  // Feedback visual
+  const bpmValueEl = document.getElementById('detected-bpm-value');
+  if (bpmValueEl) {
+    bpmValueEl.style.transform = 'scale(1.3)';
+    setTimeout(() => { bpmValueEl.style.transform = 'scale(1)'; }, 300);
+  }
+}
+
+// Renderizar forma de onda en el canvas
+function renderWaveform(waveformData, beats, duration) {
+  const canvas = document.getElementById('waveform-canvas');
+  if (!canvas || !waveformData) return;
+  
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  
+  const width = rect.width;
+  const height = rect.height;
+  const midY = height / 2;
+  const barWidth = width / waveformData.length;
+  
+  // Limpiar
+  ctx.clearRect(0, 0, width, height);
+  
+  // Dibujar forma de onda con gradiente
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, 'rgba(0, 229, 255, 0.7)');
+  gradient.addColorStop(0.5, 'rgba(0, 229, 255, 0.3)');
+  gradient.addColorStop(1, 'rgba(0, 229, 255, 0.7)');
+  
+  ctx.fillStyle = gradient;
+  
+  for (let i = 0; i < waveformData.length; i++) {
+    const amplitude = waveformData[i] * midY * 0.9;
+    const x = i * barWidth;
+    
+    ctx.fillRect(x, midY - amplitude, Math.max(barWidth - 0.5, 1), amplitude * 2);
+  }
+  
+  // Dibujar línea central
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, midY);
+  ctx.lineTo(width, midY);
+  ctx.stroke();
+  
+  // Dibujar marcadores de beat
+  if (beats && beats.length > 0 && duration > 0) {
+    const overlay = document.querySelector('.waveform-overlay');
+    if (overlay) {
+      // Limpiar marcadores anteriores
+      overlay.querySelectorAll('.waveform-beat-marker').forEach(m => m.remove());
+      
+      const beatsPerMeasure = parseInt(document.getElementById('song-timesig')?.value?.split('/')[0]) || 4;
+      
+      beats.forEach((beatTime, idx) => {
+        const percent = (beatTime / duration) * 100;
+        const marker = document.createElement('div');
+        marker.className = 'waveform-beat-marker' + ((idx % beatsPerMeasure === 0) ? ' strong' : '');
+        marker.style.left = percent + '%';
+        overlay.appendChild(marker);
+      });
+    }
+  }
+}
+
+// Click en el waveform para seek
+document.addEventListener('click', function(e) {
+  const waveformContainer = e.target.closest('.waveform-container');
+  if (!waveformContainer) return;
+  
+  const audioEl = document.getElementById('audio-ref-element');
+  if (!audioEl || !audioEl.duration) return;
+  
+  const rect = waveformContainer.getBoundingClientRect();
+  const percent = (e.clientX - rect.left) / rect.width;
+  audioEl.currentTime = percent * audioEl.duration;
+});
+
 function renderAudioPane(song, lines) {
   return `
     <div class="audio-editor-pane pane-responsive-padding">

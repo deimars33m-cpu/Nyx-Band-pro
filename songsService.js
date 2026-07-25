@@ -46,6 +46,8 @@ const SongsService = {
           tareas_ensayo: metadata.tareas_ensayo || null,
           audios: metadata.audios || null,
           image: metadata.image || "",
+          audioRef: metadata.audioRef || null,
+          chordTimeline: metadata.chordTimeline || null,
           // mantenemos la referencia por si se necesita
           chords: song.chords
         };
@@ -84,7 +86,9 @@ const SongsService = {
           notas_globales: song.notas_globales || null,
           tareas_ensayo: song.tareas_ensayo || null,
           audios: song.audios || null,
-          image: song.image || ""
+          image: song.image || "",
+          audioRef: song.audioRef || null,
+          chordTimeline: song.chordTimeline || null
         }),
         bpm: song.bpm || 120,
         status: song.status || "pendiente"
@@ -153,7 +157,10 @@ const SongsService = {
           lineAudios: song.lineAudios || null,
           notas_globales: song.notas_globales || null,
           tareas_ensayo: song.tareas_ensayo || null,
-          audios: song.audios || null
+          audios: song.audios || null,
+          image: song.image || "",
+          audioRef: song.audioRef || null,
+          chordTimeline: song.chordTimeline || null
         }),
         bpm: song.bpm || 120,
         status: song.status || "pendiente"
@@ -167,6 +174,110 @@ const SongsService = {
       return true;
     } catch (error) {
       console.error("Error al guardar lote de canciones en Supabase:", error);
+      throw error;
+    }
+  },
+
+  // Subir archivo de audio de la canción a Supabase Storage
+  async uploadSongAudio(songId, file) {
+    const bandId = this._getBandId();
+    const supabase = window.supabaseClient;
+    if (!supabase) {
+      throw new Error("Supabase no disponible");
+    }
+
+    try {
+      const extension = file.name.split('.').pop();
+      const filePath = `${bandId}/${songId}.${extension}`;
+
+      const { error: uploadError } = await supabase
+        .storage
+        .from('song-audio')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase
+        .storage
+        .from('song-audio')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error("Error al subir audio a Supabase:", error);
+      throw error;
+    }
+  },
+
+  // Obtener URL pública del audio de una canción
+  async getSongAudioUrl(songId) {
+    const bandId = this._getBandId();
+    const supabase = window.supabaseClient;
+    if (!supabase) return null;
+
+    try {
+      const { data: files, error } = await supabase
+        .storage
+        .from('song-audio')
+        .list(bandId, {
+          search: songId
+        });
+
+      if (error) throw error;
+      
+      if (!files || files.length === 0) return null;
+
+      const fileMatch = files.find(f => f.name.startsWith(songId + '.'));
+      if (!fileMatch) return null;
+
+      const filePath = `${bandId}/${fileMatch.name}`;
+      const { data } = supabase
+        .storage
+        .from('song-audio')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error("Error al obtener URL de audio de Supabase:", error);
+      return null;
+    }
+  },
+
+  // Eliminar el audio de una canción de Storage
+  async deleteSongAudio(songId) {
+    const bandId = this._getBandId();
+    const supabase = window.supabaseClient;
+    if (!supabase) {
+      console.warn("Supabase no disponible — audio no eliminado");
+      return false;
+    }
+
+    try {
+      const { data: files, error: listError } = await supabase
+        .storage
+        .from('song-audio')
+        .list(bandId, {
+          search: songId
+        });
+
+      if (listError) throw listError;
+      
+      if (!files || files.length === 0) return true;
+
+      const fileToDelete = files.find(f => f.name.startsWith(songId + '.'));
+      if (!fileToDelete) return true;
+
+      const filePath = `${bandId}/${fileToDelete.name}`;
+      
+      const { error } = await supabase
+        .storage
+        .from('song-audio')
+        .remove([filePath]);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error("Error al eliminar audio en Supabase:", error);
       throw error;
     }
   }

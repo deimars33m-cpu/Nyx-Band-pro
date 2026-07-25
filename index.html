@@ -10,7 +10,7 @@
   <title>NYX Band-Pro - Repertorio Colaborativo</title>
 
   <!-- CSS Global -->
-  <link rel="stylesheet" href="index.css?v=7.7">
+  <link rel="stylesheet" href="index.css?v=7.8">
   <!-- Tabler Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.36.0/tabler-icons.min.css">
 
@@ -832,6 +832,75 @@
             </div>
           </div>
 
+          <!-- IMPORTACIÓN DE AUDIO DE REFERENCIA -->
+          <div class="audio-import-panel glass" id="audio-import-panel">
+            <div class="audio-import-header">
+              <div class="audio-import-title">
+                <i class="ti ti-waveform"></i> Audio de Referencia
+              </div>
+              <div class="audio-import-actions">
+                <input type="file" id="audio-file-input" accept="audio/*" style="display:none"
+                  onchange="handleAudioFileSelected(event)">
+                <button type="button" class="btn btn-secondary audio-import-btn"
+                  onclick="document.getElementById('audio-file-input').click()">
+                  <i class="ti ti-upload"></i> Importar Audio
+                </button>
+                <button type="button" class="btn btn-secondary audio-import-btn" id="btn-audio-url"
+                  onclick="promptAudioUrl()">
+                  <i class="ti ti-link"></i> URL
+                </button>
+              </div>
+            </div>
+
+            <!-- Estado del audio cargado -->
+            <div id="audio-import-status" style="display:none;">
+              <div class="audio-loaded-info">
+                <div class="audio-file-name" id="audio-file-name">archivo.mp3</div>
+                <div class="audio-bpm-result" id="audio-bpm-result">
+                  <span class="bpm-label">BPM Detectado:</span>
+                  <span class="bpm-value" id="detected-bpm-value">---</span>
+                  <span class="bpm-confidence" id="bpm-confidence"></span>
+                </div>
+                <button type="button" class="btn-small btn-danger" onclick="removeAudioReference()" 
+                  style="padding: 4px 10px; font-size: 10px; cursor: pointer;">
+                  <i class="ti ti-trash"></i> Quitar
+                </button>
+              </div>
+              
+              <!-- Forma de onda -->
+              <div class="waveform-container" id="waveform-container">
+                <canvas id="waveform-canvas" height="80"></canvas>
+                <div class="waveform-overlay">
+                  <div class="waveform-playhead" id="waveform-playhead"></div>
+                </div>
+              </div>
+
+              <!-- Controles de reproducción mini -->
+              <div class="audio-mini-controls">
+                <button type="button" class="audio-ctrl-btn" id="btn-audio-play" onclick="toggleAudioRefPlayback()">
+                  <i class="ti ti-player-play"></i>
+                </button>
+                <span class="audio-time" id="audio-current-time">0:00</span>
+                <div class="audio-progress-bar" id="audio-progress-bar" onclick="seekAudioRef(event)">
+                  <div class="audio-progress-fill" id="audio-progress-fill"></div>
+                </div>
+                <span class="audio-time" id="audio-total-time">0:00</span>
+                <button type="button" class="audio-ctrl-btn" onclick="applyDetectedBpm()" title="Aplicar BPM detectado">
+                  <i class="ti ti-metronome"></i>
+                </button>
+              </div>
+
+              <!-- Spinner de análisis -->
+              <div id="bpm-analyzing-spinner" style="display:none; text-align:center; padding:12px;">
+                <div class="analyzing-pulse"></div>
+                <span style="font-size:11px; color:var(--text-secondary);">Analizando BPM...</span>
+              </div>
+            </div>
+            
+            <!-- Audio element oculto para reproducción de referencia -->
+            <audio id="audio-ref-element" preload="auto"></audio>
+          </div>
+
           <div class="form-group form-group-lyrics">
             <label for="song-lyrics" style="display: none;">Letra y Acordes *</label>
 
@@ -1031,12 +1100,13 @@
     </button>
   </nav>
 
-  <script src="chords.js?v=2.4"></script>
+  <script src="chords.js?v=2.5"></script>
   <!-- SDK de Supabase desde CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js?v=4.0"></script>
-  <script src="songsService.js?v=4.0"></script>
-  <script src="app.js?v=4.0"></script>
+  <script src="supabase.js?v=4.1"></script>
+  <script src="songsService.js?v=4.1"></script>
+  <script src="bpmDetector.js?v=1.0"></script>
+  <script src="app.js?v=4.1"></script>
 </body>
 
 </html>
