@@ -1186,6 +1186,10 @@ function initEventHandlers() {
       document.getElementById("song-lyrics").value = "";
       document.getElementById("song-image").value = "";
 
+      if (typeof removeAudioReference === 'function') {
+        removeAudioReference();
+      }
+
       // Restablecer campos inline
       const metaTitle = document.getElementById("meta-title");
       const metaArtist = document.getElementById("meta-artist");
@@ -1623,10 +1627,44 @@ function saveSongFromForm() {
     state.songs.unshift(songToSave);
   }
 
-  // Guardar directamente en Firestore la canción modificada/creada
+  // Vincular el audio de referencia cargado en el formulario si existe
+  if (audioRefState && (audioRefState.url || audioRefState.file)) {
+    if (!songToSave.audios) songToSave.audios = [];
+    const newAudioRef = {
+      name: audioRefState.file ? audioRefState.file.name : (audioRefState.url.split('/').pop() || "Audio de Referencia"),
+      url: audioRefState.url,
+      bpm: audioRefState.bpm || null,
+      date: new Date().toLocaleDateString()
+    };
+    songToSave.audios.push(newAudioRef);
+    songToSave.audioRef = newAudioRef.url;
+
+    // Subir en segundo plano a Supabase Storage si se dispone de archivo local
+    if (audioRefState.file && window.SongsService && typeof window.SongsService.uploadSongAudio === 'function') {
+      const fileToUpload = audioRefState.file;
+      const targetSong = songToSave;
+      window.SongsService.uploadSongAudio(targetSong.id, fileToUpload).then(uploadedUrl => {
+        if (uploadedUrl) {
+          const item = (targetSong.audios || []).find(a => a.name === fileToUpload.name);
+          if (item) item.url = uploadedUrl;
+          targetSong.audioRef = uploadedUrl;
+          saveLocalStorage();
+          window.SongsService.saveSong(targetSong).catch(err => console.error("Error al actualizar URL de Supabase:", err));
+        }
+      }).catch(err => console.warn("Subida a Supabase falló:", err));
+    }
+  }
+
+  // Resetear el estado temporal del formulario de audio
+  if (typeof removeAudioReference === 'function') {
+    removeAudioReference();
+  }
+
+  // Guardar directamente la canción modificada/creada
+  saveLocalStorage();
   if (songToSave && window.SongsService) {
     window.SongsService.saveSong(songToSave).catch(err => {
-      console.error("Error al guardar canción en Firebase:", err);
+      console.error("Error al guardar canción en Supabase:", err);
     });
   }
 
