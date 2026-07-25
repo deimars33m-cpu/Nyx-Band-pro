@@ -977,9 +977,25 @@ async function loadUserProfile(user) {
     .eq('id', state.currentBandId)
     .maybeSingle();
 
-  state.bandMetadata = bandDoc
-    ? { name: bandDoc.name, logoUrl: bandDoc.logo_url, createdBy: bandDoc.created_by }
-    : { name: state.currentBandId, logoUrl: null, createdBy: null };
+  if (bandDoc) {
+    state.bandMetadata = {
+      name: bandDoc.name || state.currentBandId,
+      logoUrl: bandDoc.logo_url || null,
+      createdBy: bandDoc.created_by || null
+    };
+  } else {
+    // Si la banda no tenía fila en Supabase, registrarla automáticamente con upsert
+    state.bandMetadata = { name: state.currentBandId, logoUrl: null, createdBy: user.id };
+    try {
+      await window.supabaseClient.from('bands').upsert({
+        id: state.currentBandId,
+        name: state.currentBandId,
+        created_by: user.id
+      }, { onConflict: 'id' });
+    } catch (e) {
+      console.warn("No se pudo crear la banda en Supabase:", e);
+    }
+  }
 
   await loadSongsFromDB();
   await loadMembersFromDB();
@@ -1005,12 +1021,29 @@ async function loadUserProfile(user) {
   const overlay = document.getElementById("auth-guard-overlay");
   if (overlay) overlay.style.display = "none";
 
-  // Suscribirse a cambios en tiempo real del perfil
+  // Suscribirse a cambios en tiempo real del perfil de usuario
   if (window._supabaseUserChannel) window._supabaseUserChannel.unsubscribe();
   window._supabaseUserChannel = window.supabaseClient
     .channel(`user-profile-${user.id}`)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` }, () => {
       loadUserProfile(user);
+    })
+    .subscribe();
+
+  // Suscribirse a cambios en tiempo real de la banda (sincronización multi-dispositivo)
+  if (window._supabaseBandChannel) window._supabaseBandChannel.unsubscribe();
+  window._supabaseBandChannel = window.supabaseClient
+    .channel(`band-changes-${state.currentBandId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bands', filter: `id=eq.${state.currentBandId}` }, (payload) => {
+      if (payload.new && payload.new.name) {
+        state.bandMetadata.name = payload.new.name;
+        if (payload.new.logo_url !== undefined) state.bandMetadata.logoUrl = payload.new.logo_url;
+        updateBandUI();
+        const nameInput = document.getElementById("band-settings-name");
+        if (nameInput && document.activeElement !== nameInput) {
+          nameInput.value = state.bandMetadata.name;
+        }
+      }
     })
     .subscribe();
 
@@ -7047,7 +7080,7 @@ function handleLogoUpload(event) {
 async function saveBandSettings() {
   const nameInput = document.getElementById("band-settings-name");
   if (!nameInput || !nameInput.value.trim()) {
-    alert("El nombre de la banda es requerido.");
+    alert("El nombre del grupo es requerido.");
     return;
   }
 
@@ -7056,15 +7089,34 @@ async function saveBandSettings() {
 
   if (window.supabaseClient && state.currentBandId) {
     try {
-      const { error } = await window.supabaseClient
+      // 1. Usar upsert para garantizar creación/actualización en la DB
+      const { data, error } = await window.supabaseClient
         .from('bands')
-        .update({
-          name: state.bandMetadata.name,
-          logo_url: state.bandMetadata.logoUrl || null
-        })
-        .eq('id', state.currentBandId);
+        .upsert({
+          id: state.currentBandId,
+          name: newName,
+          logo_url: state.bandMetadata.logoUrl || null,
+          created_by: state.bandMetadata.createdBy || (state.currentUser ? state.currentUser.id : null)
+        }, { onConflict: 'id' })
+        .select();
 
       if (error) throw error;
+
+      if (data && data.length > 0) {
+        state.bandMetadata.name = data[0].name || newName;
+        if (data[0].logo_url !== undefined) state.bandMetadata.logoUrl = data[0].logo_url;
+      } else {
+        // Fallback update por si RLS select está restringido
+        const { error: updateErr } = await window.supabaseClient
+          .from('bands')
+          .update({
+            name: newName,
+            logo_url: state.bandMetadata.logoUrl || null
+          })
+          .eq('id', state.currentBandId);
+
+        if (updateErr) throw updateErr;
+      }
 
       updateBandUI();
       alert("¡Configuración del grupo guardada con éxito!");
@@ -7317,7 +7369,17 @@ async function switchActiveGroup(bandId) {
 
     if (error) throw error;
 
-    const mBand = document.getElementById("modal-band-settings"); if (mBand) mBand.classList.remove("open");
+    state.currentBandId = bandId;
+    try { localStorage.setItem("coop_current_band_id", bandId); } catch (e) { }
+
+    await loadUserProfile(state.currentUser);
+
+    const mBand = document.getElementById("modal-band-settings");
+    if (mBand) mBand.classList.remove("open");
+
+    if (typeof triggerEnsayoToast === 'function') {
+      triggerEnsayoToast(`Cambiado al grupo "${state.bandMetadata.name || bandId}"`);
+    }
   } catch (e) {
     alert("Error al cambiar de grupo: " + e.message);
   }
