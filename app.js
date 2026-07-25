@@ -8282,23 +8282,40 @@ function renderAudioPane(song, lines) {
       <div class="notes-audio-grid">
         <!-- 1. Audio Importado / Referencias -->
         <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.15);">
-          <div style="font-size: 14px; font-weight: 700; color: var(--neon-cyan); display: flex; align-items: center; justify-content: space-between;">
-            <span><i class="ti ti-music"></i> 1. Temas de Referencia</span>
-            <button class="btn-small" onclick="addReferenceAudioPrompt()" style="font-size: 10px; padding: 4px 8px; cursor: pointer;">+ Agregar</button>
+          <div style="font-size: 14px; font-weight: 700; color: var(--neon-cyan); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <span><i class="ti ti-music"></i> 1. Audios de Referencia</span>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <input type="file" id="rehearsal-audio-file-input" accept="audio/*" style="display:none" onchange="uploadReferenceAudioFile(event)">
+              <button class="btn-small btn-primary" onclick="document.getElementById('rehearsal-audio-file-input').click()" style="font-size: 11px; padding: 5px 10px; cursor: pointer; display: flex; align-items: center; gap: 4px; background: var(--neon-cyan); color: #000; font-weight: bold; border: none; border-radius: 6px;">
+                <i class="ti ti-upload"></i> Subir Audio (MP3/WAV)
+              </button>
+              <button class="btn-small" onclick="addReferenceAudioPrompt()" style="font-size: 10px; padding: 5px 8px; cursor: pointer;">+ URL</button>
+            </div>
           </div>
-          <div id="reference-audios-list" style="display: flex; flex-direction: column; gap: 8px; flex: 1; max-height: 180px; overflow-y: auto;">
+
+          <div id="reference-audios-list" style="display: flex; flex-direction: column; gap: 8px; flex: 1; max-height: 220px; overflow-y: auto;">
             ${(song.audios || []).map((aud, i) => `
-              <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.15); border-radius: 8px;">
-                <div style="display: flex; flex-direction: column; gap: 2px; max-width: 75%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.15); border-radius: 8px;">
+                <div style="display: flex; flex-direction: column; gap: 2px; max-width: 60%;">
                   <span style="font-size: 12px; font-weight: bold; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${aud.name}</span>
-                  <a href="${aud.url}" target="_blank" style="font-size: 10px; color: var(--neon-cyan); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: underline;">${aud.url}</a>
+                  ${aud.bpm ? `<span style="font-size: 10px; color: var(--neon-cyan); font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="ti ti-metronome"></i> ${aud.bpm} BPM detectado</span>` : ''}
+                  <a href="${aud.url}" target="_blank" style="font-size: 9px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: underline;">${aud.url.startsWith('blob:') ? 'Archivo local' : aud.url}</a>
                 </div>
-                <div style="display: flex; gap: 6px;">
-                  <button class="btn-small" onclick="playAudioUrl('${aud.url}', '${aud.name}')" style="padding: 3px 6px; font-size: 9px; cursor: pointer;"><i class="ti ti-player-play"></i></button>
-                  <button class="btn-small btn-danger" onclick="deleteReferenceAudio(${i})" style="padding: 3px 6px; font-size: 9px; background: rgba(255,0,0,0.2); cursor: pointer;"><i class="ti ti-trash"></i></button>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                  ${aud.bpm ? `<button class="btn-small" onclick="applyBpmToSong(${aud.bpm})" style="padding: 3px 6px; font-size: 9px; background: rgba(0,229,255,0.15); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); border-radius: 4px; cursor: pointer;" title="Aplicar ${aud.bpm} BPM a este tema">Usar BPM</button>` : ''}
+                  <button class="btn-small" onclick="playAudioUrl('${aud.url}', '${aud.name}')" style="padding: 4px 8px; font-size: 10px; cursor: pointer; background: rgba(0,229,255,0.2); color: var(--neon-cyan); border: 1px solid rgba(0,229,255,0.4); border-radius: 4px; font-weight: bold;"><i class="ti ti-player-play"></i> Reproducir</button>
+                  <button class="btn-small btn-danger" onclick="deleteReferenceAudio(${i})" style="padding: 4px 6px; font-size: 10px; background: rgba(255,0,0,0.2); cursor: pointer;"><i class="ti ti-trash"></i></button>
                 </div>
               </div>
-            `).join("") || `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">No hay pistas de referencia. Añade enlaces de YouTube, Spotify o archivos de audio.</p>`}
+            `).join("") || `
+              <div style="text-align: center; padding: 24px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px dashed var(--border-soft);">
+                <i class="ti ti-cloud-upload" style="font-size: 32px; color: var(--neon-cyan); display: block; margin-bottom: 8px;"></i>
+                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">No hay archivos de audio de referencia cargados para este tema.</p>
+                <button class="btn btn-primary" onclick="document.getElementById('rehearsal-audio-file-input').click()" style="font-size: 11px; padding: 8px 16px; background: var(--neon-cyan); color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">
+                  <i class="ti ti-upload"></i> Subir Archivo MP3 / WAV
+                </button>
+              </div>
+            `}
           </div>
         </div>
         
@@ -8510,6 +8527,100 @@ window.closeEnsayoAudioPlayer = function () {
   }
   if (container) {
     container.style.display = "none";
+  }
+};
+
+window.uploadReferenceAudioFile = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('audio/')) {
+    alert('Por favor selecciona un archivo de audio válido (MP3, WAV, OGG, M4A, etc.)');
+    return;
+  }
+
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song) {
+    alert('No hay ninguna canción activa seleccionada.');
+    return;
+  }
+
+  triggerEnsayoToast('📂 Procesando archivo de audio...');
+
+  let audioUrl = null;
+  let detectedBpm = null;
+
+  // 1. Intentar subir a Supabase Storage si está disponible
+  if (window.SongsService && typeof window.SongsService.uploadSongAudio === 'function') {
+    try {
+      triggerEnsayoToast('☁️ Subiendo audio a Supabase Storage...');
+      audioUrl = await window.SongsService.uploadSongAudio(song.id, file);
+    } catch (err) {
+      console.warn('Subida a Supabase falló, usando URL local:', err);
+    }
+  }
+
+  // Fallback a Blob URL local si no está en la nube
+  if (!audioUrl) {
+    audioUrl = URL.createObjectURL(file);
+  }
+
+  // 2. Analizar BPM
+  if (window.BpmDetector) {
+    try {
+      triggerEnsayoToast('⚡ Analizando BPM del audio...');
+      const result = await window.BpmDetector.analyzeFile(file);
+      if (result && result.bpm) {
+        detectedBpm = result.bpm;
+      }
+    } catch (err) {
+      console.warn('Error al detectar BPM:', err);
+    }
+  }
+
+  // 3. Registrar audio de referencia
+  if (!song.audios) song.audios = [];
+  song.audios.push({
+    name: file.name,
+    url: audioUrl,
+    bpm: detectedBpm,
+    date: new Date().toLocaleDateString()
+  });
+
+  // 4. Ofrecer actualizar el BPM si se detectó
+  if (detectedBpm) {
+    const shouldUpdate = confirm(`Audio "${file.name}" cargado.\n\n⚡ BPM Detectado: ${detectedBpm} BPM.\n¿Deseas actualizar el tempo del tema a ${detectedBpm} BPM?`);
+    if (shouldUpdate) {
+      song.bpm = detectedBpm;
+      if (typeof updateBpm === 'function') {
+        updateBpm(detectedBpm);
+      }
+    }
+  }
+
+  // 5. Guardar
+  saveLocalStorage();
+  if (window.SongsService) {
+    window.SongsService.saveSong(song).catch(err => console.error("Error al guardar canción:", err));
+  }
+
+  triggerEnsayoToast(`✅ Archivo de audio "${file.name}" agregado con éxito`);
+  renderRehearsalRoom();
+};
+
+window.applyBpmToSong = function(bpm) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (song) {
+    song.bpm = bpm;
+    if (typeof updateBpm === 'function') {
+      updateBpm(bpm);
+    }
+    saveLocalStorage();
+    if (window.SongsService) {
+      window.SongsService.saveSong(song).catch(err => console.error("Error al guardar BPM:", err));
+    }
+    triggerEnsayoToast(`⚡ Tempo actualizado a ${bpm} BPM en "${song.title}"`);
+    renderRehearsalRoom();
   }
 };
 
