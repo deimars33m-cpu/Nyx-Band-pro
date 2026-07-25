@@ -890,6 +890,13 @@
                 </button>
               </div>
 
+              <!-- Botón directo de guardado -->
+              <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
+                <button type="button" onclick="saveSongFromForm()" style="background: linear-gradient(135deg, var(--neon-cyan), #00b0ff); color: #000; font-weight: 800; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 10px rgba(0,229,255,0.3);">
+                  <i class="ti ti-device-floppy"></i> 💾 Guardar Tema en Repertorio
+                </button>
+              </div>
+
               <!-- Spinner de análisis -->
               <div id="bpm-analyzing-spinner" style="display:none; text-align:center; padding:12px;">
                 <div class="analyzing-pulse"></div>
@@ -1100,13 +1107,13 @@
     </button>
   </nav>
 
-  <script src="chords.js?v=2.9"></script>
+  <script src="chords.js?v=3.0"></script>
   <!-- SDK de Supabase desde CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js?v=4.5"></script>
-  <script src="songsService.js?v=4.5"></script>
-  <script src="bpmDetector.js?v=1.4"></script>
-  <script src="app.js?v=4.5"></script>
+  <script src="supabase.js?v=4.6"></script>
+  <script src="songsService.js?v=4.6"></script>
+  <script src="bpmDetector.js?v=1.5"></script>
+  <script src="app.js?v=4.6"></script>
 </body>
 
 </html>

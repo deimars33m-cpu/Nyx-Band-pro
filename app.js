@@ -1582,35 +1582,45 @@ function saveSongFromForm() {
   }
 
   const songId = document.getElementById("form-song-id").value;
-  const title = document.getElementById("song-title").value;
-  const artist = document.getElementById("song-artist").value;
-  const bpm = parseInt(document.getElementById("song-bpm").value) || 120;
-  const key = document.getElementById("song-key").value;
-  const timeSig = document.getElementById("song-timesig").value;
-  const status = document.getElementById("song-status").value;
+  let title = (document.getElementById("song-title").value || "").trim();
+  let artist = (document.getElementById("song-artist").value || "").trim();
+  const bpm = parseInt(document.getElementById("song-bpm").value) || (audioRefState ? audioRefState.bpm : 120) || 120;
+  const key = document.getElementById("song-key").value || "C";
+  const timeSig = document.getElementById("song-timesig").value || "4/4";
+  const status = document.getElementById("song-status").value || "todo";
   const rhythm = "↓ ↑ ↓ ↑";
   const rawLyrics = document.getElementById("song-lyrics").value;
   const bracketConverted = convertTraditionalToBracket(rawLyrics.trim());
 
-  // Auto-etiquetar automáticamente si no contiene cabeceras estructuradas, para que el usuario no tenga que pulsar botones
-  let lyrics = bracketConverted;
-  const linesOfLyrics = bracketConverted.split("\n");
-  const hasHeaders = linesOfLyrics.some(l => isSectionHeader(l));
-  if (!hasHeaders) {
-    lyrics = autoTagStanzas(bracketConverted);
+  // Sincronizar desde metaTitle y metaArtist si los inputs ocultos no recibieron blur
+  if (!title || title === "Título del Tema") {
+    if (metaTitle && metaTitle.textContent && metaTitle.textContent.trim() !== "Título del Tema") {
+      title = metaTitle.textContent.trim();
+    }
+  }
+  if (!artist || artist === "Artista o Banda") {
+    if (metaArtist && metaArtist.textContent && metaArtist.textContent.trim() !== "Artista o Banda") {
+      artist = metaArtist.textContent.trim();
+    }
   }
 
-  if (!title || title.trim() === "" || title === "Título del Tema") {
-    alert("Por favor, completa el título del tema.");
-    return;
+  // Fallbacks automáticos si los campos siguen vacíos
+  if (!title && audioRefState && audioRefState.file) {
+    title = audioRefState.file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
   }
-  if (!artist || artist.trim() === "" || artist === "Artista o Banda") {
-    alert("Por favor, completa el artista del tema.");
-    return;
-  }
+  if (!title) title = "Nuevo Tema";
+  if (!artist) artist = "Referencia Audio";
+
+  // Auto-etiquetar automáticamente si no contiene cabeceras estructuradas
+  let lyrics = bracketConverted;
   if (!lyrics || lyrics.trim() === "") {
-    alert("Por favor, escribe la letra del tema.");
-    return;
+    lyrics = "[Intro]\n(Audio de referencia / Instrumental)";
+  } else {
+    const linesOfLyrics = bracketConverted.split("\n");
+    const hasHeaders = linesOfLyrics.some(l => isSectionHeader(l));
+    if (!hasHeaders) {
+      lyrics = autoTagStanzas(bracketConverted);
+    }
   }
 
   let songToSave;
@@ -1698,6 +1708,10 @@ function saveSongFromForm() {
     window.SongsService.saveSong(songToSave).catch(err => {
       console.error("Error al guardar canción en Supabase:", err);
     });
+  }
+
+  if (typeof triggerEnsayoToast === 'function') {
+    triggerEnsayoToast(`✅ Tema "${songToSave.title}" guardado con éxito`);
   }
 
   document.getElementById("modal-add-song").classList.remove("open");
@@ -8123,6 +8137,30 @@ async function handleAudioFileSelected(event) {
   audioRefState.file = file;
   audioRefState.url = URL.createObjectURL(file);
   
+  // Auto-completar título, artista y letra por defecto si están vacíos
+  const titleInput = document.getElementById("song-title");
+  const metaTitle = document.getElementById("meta-title");
+  const cleanFileName = file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+
+  if (titleInput && (!titleInput.value || titleInput.value.trim() === "" || titleInput.value === "Título del Tema")) {
+    titleInput.value = cleanFileName;
+    if (metaTitle) updateTextElement(metaTitle, cleanFileName);
+  }
+
+  const artistInput = document.getElementById("song-artist");
+  const metaArtist = document.getElementById("meta-artist");
+  if (artistInput && (!artistInput.value || artistInput.value.trim() === "" || artistInput.value === "Artista o Banda")) {
+    artistInput.value = "Referencia Audio";
+    if (metaArtist) updateTextElement(metaArtist, "Referencia Audio");
+  }
+
+  const richEditor = document.getElementById("editor-rich-lyrics");
+  if (richEditor && (!richEditor.innerText || richEditor.innerText.trim() === "")) {
+    richEditor.innerHTML = parseTextToRichLyrics("[Intro]\n(Audio de referencia cargado: " + file.name + ")");
+    const serialized = serializeRichLyrics();
+    document.getElementById("song-lyrics").value = serialized;
+  }
+
   // Mostrar panel de estado
   const statusPanel = document.getElementById('audio-import-status');
   const fileNameEl = document.getElementById('audio-file-name');
