@@ -2890,17 +2890,35 @@ function saveDesktopLyrics(song, lines, structure) {
     newLyrics += lineTextWithChords + "\n";
   });
 
+  // Sincronizar también notas globales, tareas de ensayo y notas de línea si están activas
+  const globalNotesEl = document.getElementById("desktop-global-notes-textarea");
+  if (globalNotesEl) {
+    song.notas_globales = globalNotesEl.value;
+  }
+  const tasksEl = document.getElementById("desktop-rehearsal-tasks-textarea");
+  if (tasksEl) {
+    song.tareas_ensayo = tasksEl.value;
+  }
+  const lineNotesEl = document.getElementById("desktop-line-notes-textarea");
+  if (lineNotesEl) {
+    const idx = state.lineaActivaIndex || 0;
+    if (!song.lineNotes) song.lineNotes = {};
+    song.lineNotes[idx] = lineNotesEl.value;
+  }
+
   song.lyrics = newLyrics.trim();
   saveLocalStorage();
 
-  // Guardar también en Firebase si está activo
+  // Guardar también en Supabase la canción completa con notas, audios y acordes
   if (window.SongsService) {
     window.SongsService.saveSong(song).catch(err => {
-      console.error("Error al guardar canción desde ensayo en Firebase:", err);
+      console.error("Error al guardar canción completa desde ensayo en Supabase:", err);
     });
   }
 
-  triggerEnsayoToast("Letra y acordes guardados correctamente");
+  if (typeof triggerEnsayoToast === 'function') {
+    triggerEnsayoToast("✅ Todo guardado: Letra, Acordes, Notas y Audios de Referencia");
+  }
 }
 
 function duplicateDesktopLine(song, idx) {
@@ -3176,6 +3194,9 @@ function saveMetronomeParamsToSong() {
     song.timeSig = `${beats}/${unit}`;
 
     saveLocalStorage();
+    if (window.SongsService) {
+      window.SongsService.saveSong(song).catch(err => console.error("Error guardando metrónomo en Supabase:", err));
+    }
     renderApp();
 
     // Proporcionar un feedback visual temporal (cambio de texto o alerta)
