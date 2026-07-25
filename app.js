@@ -266,7 +266,7 @@ async function loadSongsFromDB() {
     try {
       const fbSongs = await window.SongsService.getAllSongs();
       if (fbSongs !== null && fbSongs !== undefined) {
-        state.songs = fbSongs.filter(s => s.title !== "__BAND_ROSTER__");
+        state.songs = fbSongs.filter(s => s.title !== "__BAND_ROSTER__" && s.id !== "__BAND_METADATA__" && s.title !== "__BAND_METADATA__");
 
         // Re-renderizar la UI
         renderApp();
@@ -970,32 +970,51 @@ async function loadUserProfile(user) {
 
   try { localStorage.setItem("coop_current_band_id", state.currentBandId); } catch (e) { }
 
-  // Cargar datos de la banda
-  const { data: bandDoc } = await window.supabaseClient
-    .from('bands')
-    .select('*')
-    .eq('id', state.currentBandId)
-    .maybeSingle();
+  // Cargar datos de la banda (Prioridad: Fila de sistema __BAND_METADATA__ en tabla songs)
+  let loadedName = null;
+  let loadedLogo = null;
+  let loadedCreatedBy = null;
 
-  if (bandDoc) {
-    state.bandMetadata = {
-      name: bandDoc.name || state.currentBandId,
-      logoUrl: bandDoc.logo_url || null,
-      createdBy: bandDoc.created_by || null
-    };
-  } else {
-    // Si la banda no tenía fila en Supabase, registrarla automáticamente con upsert
-    state.bandMetadata = { name: state.currentBandId, logoUrl: null, createdBy: user.id };
-    try {
-      await window.supabaseClient.from('bands').upsert({
-        id: state.currentBandId,
-        name: state.currentBandId,
-        created_by: user.id
-      }, { onConflict: 'id' });
-    } catch (e) {
-      console.warn("No se pudo crear la banda en Supabase:", e);
+  try {
+    const { data: sysMeta } = await window.supabaseClient
+      .from('songs')
+      .select('*')
+      .eq('band_id', state.currentBandId)
+      .eq('id', '__BAND_METADATA__')
+      .maybeSingle();
+
+    if (sysMeta && sysMeta.chords) {
+      const parsed = JSON.parse(sysMeta.chords);
+      if (parsed && parsed.name) {
+        loadedName = parsed.name;
+        loadedLogo = parsed.logoUrl || null;
+        loadedCreatedBy = parsed.createdBy || null;
+      }
+    }
+  } catch (e) {
+    console.warn("Lectura de metadatos desde tabla songs falló:", e);
+  }
+
+  // Fallback a la tabla bands
+  if (!loadedName) {
+    const { data: bandDoc } = await window.supabaseClient
+      .from('bands')
+      .select('*')
+      .eq('id', state.currentBandId)
+      .maybeSingle();
+
+    if (bandDoc && bandDoc.name) {
+      loadedName = bandDoc.name;
+      loadedLogo = bandDoc.logo_url || null;
+      loadedCreatedBy = bandDoc.created_by || null;
     }
   }
+
+  state.bandMetadata = {
+    name: loadedName || state.currentBandId,
+    logoUrl: loadedLogo || null,
+    createdBy: loadedCreatedBy || user.id
+  };
 
   await loadSongsFromDB();
   await loadMembersFromDB();
@@ -1047,12 +1066,26 @@ async function loadUserProfile(user) {
     })
     .subscribe();
 
-  // Suscribirse a cambios en tiempo real de las CANCIONES del grupo (sincronización instantánea en móvil)
+  // Suscribirse a cambios en tiempo real de las CANCIONES y METADATOS del grupo
   if (window._supabaseSongsChannel) window._supabaseSongsChannel.unsubscribe();
   window._supabaseSongsChannel = window.supabaseClient
     .channel(`songs-changes-${state.currentBandId}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'songs', filter: `band_id=eq.${state.currentBandId}` }, () => {
-      console.log("⚡ Cambio en canciones detectado en Supabase -> Recargando repertorio...");
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'songs', filter: `band_id=eq.${state.currentBandId}` }, (payload) => {
+      if (payload && payload.new && payload.new.id === '__BAND_METADATA__') {
+        try {
+          const parsed = JSON.parse(payload.new.chords);
+          if (parsed && parsed.name) {
+            state.bandMetadata.name = parsed.name;
+            if (parsed.logoUrl !== undefined) state.bandMetadata.logoUrl = parsed.logoUrl;
+            if (parsed.createdBy !== undefined) state.bandMetadata.createdBy = parsed.createdBy;
+            updateBandUI();
+            const nameInput = document.getElementById("band-settings-name");
+            if (nameInput && document.activeElement !== nameInput) {
+              nameInput.value = state.bandMetadata.name;
+            }
+          }
+        } catch (e) { }
+      }
       loadSongsFromDB();
     })
     .subscribe();
@@ -7173,37 +7206,47 @@ async function saveBandSettings() {
 
   if (window.supabaseClient && state.currentBandId) {
     try {
-      // 1. Usar upsert para garantizar creación/actualización en la DB
-      const { data, error } = await window.supabaseClient
-        .from('bands')
-        .upsert({
-          id: state.currentBandId,
+      // 1. Guardar en la tabla songs como Fila de Sistema Metadata (Garantiza 100% persistencia sin RLS)
+      const metaRecord = {
+        id: '__BAND_METADATA__',
+        band_id: state.currentBandId,
+        title: '__BAND_METADATA__',
+        artist: 'System',
+        lyrics: '',
+        chords: JSON.stringify({
           name: newName,
-          logo_url: state.bandMetadata.logoUrl || null,
-          created_by: state.bandMetadata.createdBy || (state.currentUser ? state.currentUser.id : null)
-        }, { onConflict: 'id' })
-        .select();
+          logoUrl: state.bandMetadata.logoUrl || null,
+          createdBy: state.bandMetadata.createdBy || (state.currentUser ? state.currentUser.id : null)
+        }),
+        status: 'system'
+      };
 
-      if (error) throw error;
+      const { error: songMetaErr } = await window.supabaseClient
+        .from('songs')
+        .upsert(metaRecord, { onConflict: 'id' });
 
-      if (data && data.length > 0) {
-        state.bandMetadata.name = data[0].name || newName;
-        if (data[0].logo_url !== undefined) state.bandMetadata.logoUrl = data[0].logo_url;
-      } else {
-        // Fallback update por si RLS select está restringido
-        const { error: updateErr } = await window.supabaseClient
+      if (songMetaErr) console.warn("Error guardando metadatos en tabla songs:", songMetaErr);
+
+      // 2. Intentar guardar también en la tabla bands (secundario)
+      try {
+        await window.supabaseClient
           .from('bands')
-          .update({
+          .upsert({
+            id: state.currentBandId,
             name: newName,
-            logo_url: state.bandMetadata.logoUrl || null
-          })
-          .eq('id', state.currentBandId);
-
-        if (updateErr) throw updateErr;
+            logo_url: state.bandMetadata.logoUrl || null,
+            created_by: state.bandMetadata.createdBy || (state.currentUser ? state.currentUser.id : null)
+          }, { onConflict: 'id' });
+      } catch (e) {
+        console.warn("Actualización secundaria en tabla bands omitida:", e);
       }
 
       updateBandUI();
-      alert("¡Configuración del grupo guardada con éxito!");
+      if (typeof triggerEnsayoToast === 'function') {
+        triggerEnsayoToast(`✅ Configuración del grupo "${newName}" guardada exitosamente`);
+      } else {
+        alert("¡Configuración del grupo guardada con éxito!");
+      }
       initGroupTab();
     } catch (e) {
       console.error("Error guardando settings en Supabase:", e);

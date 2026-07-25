@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nyx-band-pro-cache-v4.6';
+const CACHE_NAME = 'nyx-band-pro-cache-v4.7';
 const ASSETS = [
   '/',
   '/index.html',
