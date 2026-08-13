@@ -7508,6 +7508,7 @@ async function createNewBandFlow() {
       .from('bands')
       .insert({
         id: bandIdCode,
+        code: bandIdCode,
         name: proposedName.trim(),
         created_by: state.currentUser.id
       });
@@ -7613,6 +7614,7 @@ async function regenerateBandInviteCode() {
       // 2. Crear nueva banda
       const { error: newBandError } = await window.supabaseClient.from('bands').insert({
         id: nuevoCodigo,
+        code: nuevoCodigo,
         name: bandData.name,
         logo_url: bandData.logo_url,
         created_by: bandData.created_by
@@ -7711,6 +7713,7 @@ async function onboardingCreateBand() {
       .from('bands')
       .insert({
         id: bandIdCode,
+        code: bandIdCode,
         name: proposedName,
         created_by: state.currentUser.id
       });

@@ -167,6 +167,7 @@
       .from('bands')
       .insert({
         id: bandIdCode,
+        code: bandIdCode,
         name: proposedName,
         created_by: user.id
       });
