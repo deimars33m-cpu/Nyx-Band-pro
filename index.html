@@ -422,6 +422,31 @@
                 <span class="formula-badge badge-alteration" id="badge-alteration" style="display:none;"></span>
                 <span class="formula-badge badge-bass" id="badge-bass" style="display:none;"></span>
               </div>
+
+              <!-- Botón para aplicar al mástil -->
+              <button
+                id="btn-apply-fretboard"
+                onclick="applyChordToFretboard()"
+                style="
+                  margin-top: 14px;
+                  width: 100%;
+                  padding: 12px 0;
+                  border: none;
+                  border-radius: 10px;
+                  background: linear-gradient(135deg, #00e5ff, #00ff99);
+                  color: #000;
+                  font-weight: 800;
+                  font-size: 15px;
+                  letter-spacing: 1px;
+                  cursor: pointer;
+                  box-shadow: 0 0 18px rgba(0,229,255,0.5);
+                  transition: transform 0.15s, box-shadow 0.15s;
+                "
+                onmouseover="this.style.transform='scale(1.03)'"
+                onmouseout="this.style.transform='scale(1)'"
+              >
+                🎸 CALCULAR ACORDE EN MÁSTIL
+              </button>
             </div>
 
             <!-- Columna 2: Visualizador Central -->

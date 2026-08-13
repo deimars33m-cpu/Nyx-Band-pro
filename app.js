@@ -4595,11 +4595,70 @@ function handleWheelScroll(type) {
         const newChordName = getChordNameFromBuilder();
         state.currentChord = newChordName;
         
-        renderBuilderChord();
+        // Actualizar SOLO el nombre y las notas del acorde, NO el mástil.
+        // El mástil se actualiza manualmente con el botón "CALCULAR ACORDE EN MÁSTIL"
+        const chordNameTitle = document.getElementById("chord-name-title");
+        if (chordNameTitle) {
+          let root = newChordName.substring(0, 1);
+          if (newChordName.length > 1 && (newChordName[1] === '#' || newChordName[1] === 'b')) root = newChordName.substring(0, 2);
+          const type2 = newChordName.substring(root.length);
+          const color = state.currentInstrument === "guitar" ? "var(--neon-cyan)" : "var(--neon-orange)";
+          chordNameTitle.innerHTML = `<span style="color:#fff;font-size:36px;font-weight:800;">${root}</span><span style="color:${color};font-size:20px;font-weight:700;margin-left:2px;vertical-align:top;">${type2}</span>`;
+        }
+        const chordNotesList = document.getElementById("chord-notes-list");
+        if (chordNotesList && typeof window.getChordNotesFromEngine === "function") {
+          const notes = window.getChordNotesFromEngine(state.builder);
+          chordNotesList.innerHTML = notes.map(n => `<span class="note-bubble">${n}</span>`).join("");
+        }
+        
+        // Indicador visual: el botón pulsa para llamar la atención
+        const btn = document.getElementById("btn-apply-fretboard");
+        if (btn) {
+          btn.style.animation = "none";
+          setTimeout(() => { btn.style.animation = "pulse-glow 0.6s ease"; }, 10);
+        }
       }
     }
   }, 80);
 }
+
+// Aplica el acorde actual al mástil completo (llamado por el botón)
+window.applyChordToFretboard = function() {
+  if (typeof window.getChordNotesFromEngine !== "function") return;
+  
+  const notes = window.getChordNotesFromEngine(state.builder);
+  
+  // Reiniciar selección del mástil para que muestre el auto-voicing sugerido
+  if (typeof window.generateAutoVoicing === "function") {
+    const autoVoicing = window.generateAutoVoicing(notes);
+    if (typeof window.loadFretboardFromInput === "function") {
+      window.loadFretboardFromInput(autoVoicing);
+    }
+    // Actualizar el input del editor
+    const input = document.getElementById("chord-string-input");
+    if (input) input.value = autoVoicing;
+  }
+  
+  // Renderizar el mástil completo
+  if (typeof window.renderInteractiveFretboard === "function") {
+    window.renderInteractiveFretboard(notes);
+  }
+  
+  // Redibujar el SVG del acorde también
+  renderBuilderChord();
+  
+  // Animación de confirmación en el botón
+  const btn = document.getElementById("btn-apply-fretboard");
+  if (btn) {
+    const orig = btn.textContent;
+    btn.textContent = "✅ ¡Aplicado!";
+    btn.style.background = "linear-gradient(135deg, #00ff99, #00e5ff)";
+    setTimeout(() => {
+      btn.textContent = "🎸 CALCULAR ACORDE EN MÁSTIL";
+      btn.style.background = "linear-gradient(135deg, #00e5ff, #00ff99)";
+    }, 1500);
+  }
+};
 
 function alignWheelsToState() {
   const wheels = ['root', 'quality', 'extension', 'ninth', 'eleventh', 'thirteenth', 'alteration', 'bass'];
