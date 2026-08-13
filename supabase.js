@@ -3,7 +3,7 @@
 // Reemplaza estas credenciales con las de tu proyecto real de Supabase.
 
 const supabaseUrl = "https://xomcsdcsvmvuqzrckcfw.supabase.co"; // Tu URL del nuevo proyecto NYX
-const supabaseAnonKey = "sb_publishable_2bi7wNhutAxXz8guiZYPqg_cCD5yHJ2"; // Tu clave pública anónima del nuevo proyecto
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvbWNzZGNzdm12dXF6cmNrY2Z3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwMDk4NTksImV4cCI6MjEwMDU4NTg1OX0.VZGED4q_ry8Fizwn7f_Uv73a3gQEJdkXX7g6hpF-9Ro"; // Tu clave pública anónima del nuevo proyecto
 
 let supabaseInstance = null;
 
