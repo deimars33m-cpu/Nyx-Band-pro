@@ -205,6 +205,13 @@ const SongsService = {
       return data.publicUrl;
     } catch (error) {
       console.error("Error al subir audio a Supabase:", error);
+      
+      // Si el error es porque el bucket no existe
+      if (error.message && error.message.includes("Bucket not found")) {
+        alert("¡ATENCIÓN CRÍTICA!\n\nNo se pudo guardar el archivo de audio porque el Storage Bucket 'song-audio' no existe en tu base de datos de Supabase.\n\nPor favor, entra al Dashboard de Supabase -> Storage y crea un nuevo bucket PÚBLICO llamado exactamente: song-audio\n\nSin este bucket, los audios desaparecerán al refrescar la página.");
+      } else {
+        alert("Error al subir archivo de audio: " + error.message);
+      }
       throw error;
     }
   },

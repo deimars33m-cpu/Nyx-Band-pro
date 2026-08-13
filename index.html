@@ -9,8 +9,35 @@
   <meta http-equiv="Expires" content="0" />
   <title>NYX Band-Pro - Repertorio Colaborativo</title>
 
+  <!-- AUTO CACHE BUSTER PARA FORZAR ACTUALIZACION (v4.9) -->
+  <script>
+    (function() {
+      const CURRENT_APP_VERSION = "5.0";
+      const savedVersion = localStorage.getItem("nyx_app_version");
+      
+      if (savedVersion !== CURRENT_APP_VERSION) {
+        console.warn("Nueva versión detectada. Limpiando caché...");
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) {
+              registration.unregister();
+            }
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            for (let name of names) caches.delete(name);
+          });
+        }
+        localStorage.setItem("nyx_app_version", CURRENT_APP_VERSION);
+        // Recargar la página una sola vez forzando la red
+        window.location.reload(true);
+      }
+    })();
+  </script>
+
   <!-- CSS Global -->
-  <link rel="stylesheet" href="index.css?v=7.9">
+  <link rel="stylesheet" href="index.css?v=4.9">
   <!-- Tabler Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.36.0/tabler-icons.min.css">
 
@@ -295,12 +322,48 @@
                     <div class="drum-wheel-item" data-val="maj7">maj7</div>
                     <div class="drum-wheel-item" data-val="7">7</div>
                     <div class="drum-wheel-item" data-val="m7">m7</div>
+                    <div class="drum-wheel-spacer"></div>
+                    <div class="drum-wheel-spacer"></div>
+                  </div>
+                </div>
+
+                <!-- 4. 9th -->
+                <div class="drum-wheel-wrapper">
+                  <div class="drum-wheel-label">9th</div>
+                  <div class="drum-wheel" id="wheel-ninth" onscroll="handleWheelScroll('ninth')">
+                    <div class="drum-wheel-spacer"></div>
+                    <div class="drum-wheel-spacer"></div>
+                    <div class="drum-wheel-item" data-val="NONE">NONE</div>
                     <div class="drum-wheel-item" data-val="maj9">maj9</div>
                     <div class="drum-wheel-item" data-val="9">9</div>
                     <div class="drum-wheel-item" data-val="m9">m9</div>
+                    <div class="drum-wheel-spacer"></div>
+                    <div class="drum-wheel-spacer"></div>
+                  </div>
+                </div>
+
+                <!-- 5. 11th -->
+                <div class="drum-wheel-wrapper">
+                  <div class="drum-wheel-label">11th</div>
+                  <div class="drum-wheel" id="wheel-eleventh" onscroll="handleWheelScroll('eleventh')">
+                    <div class="drum-wheel-spacer"></div>
+                    <div class="drum-wheel-spacer"></div>
+                    <div class="drum-wheel-item" data-val="NONE">NONE</div>
                     <div class="drum-wheel-item" data-val="maj11">maj11</div>
                     <div class="drum-wheel-item" data-val="11">11</div>
                     <div class="drum-wheel-item" data-val="m11">m11</div>
+                    <div class="drum-wheel-spacer"></div>
+                    <div class="drum-wheel-spacer"></div>
+                  </div>
+                </div>
+
+                <!-- 6. 13th -->
+                <div class="drum-wheel-wrapper">
+                  <div class="drum-wheel-label">13th</div>
+                  <div class="drum-wheel" id="wheel-thirteenth" onscroll="handleWheelScroll('thirteenth')">
+                    <div class="drum-wheel-spacer"></div>
+                    <div class="drum-wheel-spacer"></div>
+                    <div class="drum-wheel-item" data-val="NONE">NONE</div>
                     <div class="drum-wheel-item" data-val="maj13">maj13</div>
                     <div class="drum-wheel-item" data-val="13">13</div>
                     <div class="drum-wheel-item" data-val="m13">m13</div>
@@ -309,7 +372,7 @@
                   </div>
                 </div>
  
-                <!-- 4. add -->
+                <!-- 7. add -->
                 <div class="drum-wheel-wrapper">
                   <div class="drum-wheel-label">add</div>
                   <div class="drum-wheel" id="wheel-alteration" onscroll="handleWheelScroll('alteration')">
@@ -328,7 +391,7 @@
                   </div>
                 </div>
  
-                <!-- 5. extended -->
+                <!-- 8. extended -->
                 <div class="drum-wheel-wrapper">
                   <div class="drum-wheel-label">extended</div>
                   <div class="drum-wheel" id="wheel-bass" onscroll="handleWheelScroll('bass')">
@@ -350,9 +413,12 @@
 
               <!-- Fórmulas Activas / Resumen de Parámetros -->
               <div class="chord-formula-badges" style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px;">
-                <span class="formula-badge badge-root" id="badge-root">C</span>
+                <span class="formula-badge badge-root" id="badge-root">Tónica: C</span>
                 <span class="formula-badge badge-quality" id="badge-quality">Mayor</span>
                 <span class="formula-badge badge-extension" id="badge-extension" style="display:none;"></span>
+                <span class="formula-badge badge-ninth" id="badge-ninth" style="display:none;"></span>
+                <span class="formula-badge badge-eleventh" id="badge-eleventh" style="display:none;"></span>
+                <span class="formula-badge badge-thirteenth" id="badge-thirteenth" style="display:none;"></span>
                 <span class="formula-badge badge-alteration" id="badge-alteration" style="display:none;"></span>
                 <span class="formula-badge badge-bass" id="badge-bass" style="display:none;"></span>
               </div>
@@ -377,6 +443,15 @@
                   <!-- SVG inyectado por chords.js -->
                 </div>
                 <div id="chord-voicing-dots-container"></div>
+              </div>
+
+              <!-- Mástil Interactivo -->
+              <div class="interactive-fretboard-container glass" style="margin-top: 20px; padding: 16px; overflow-x: auto;">
+                <div class="panel-title" style="margin-bottom: 8px;">Mástil Interactivo (Arma tu Voicing)</div>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">Haz clic en las notas iluminadas para seleccionar dónde colocarás tus dedos.</p>
+                <div class="fretboard-wrapper" id="interactive-fretboard" style="position: relative; min-width: 600px; height: 180px; background: #222; border-radius: 4px; border: 1px solid #444;">
+                  <!-- Se renderiza por JS -->
+                </div>
               </div>
 
               <!-- Editor Total de Acorde -->
@@ -1045,6 +1120,9 @@
 
 
   <!-- MODAL DE ONBOARDING OBLIGATORIO -->
+  <!-- Contenedor para el Modal de Notas por Verso Móvil -->
+  <div id="mobile-line-notes-modal-container"></div>
+
   <div id="modal-onboarding" class="modal-backdrop"
     style="display: none; z-index: 2000; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);">
     <div class="modal-content glass" style="max-width: 500px; text-align: center; padding: 40px 20px;">
@@ -1107,13 +1185,14 @@
     </button>
   </nav>
 
+  <script src="chordEngine.js?v=1.0"></script>
   <script src="chords.js?v=3.2"></script>
   <!-- SDK de Supabase desde CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js?v=4.8"></script>
-  <script src="songsService.js?v=4.8"></script>
+  <script src="supabase.js?v=4.9"></script>
+  <script src="songsService.js?v=4.9"></script>
   <script src="bpmDetector.js?v=1.7"></script>
-  <script src="app.js?v=4.8"></script>
+  <script src="app.js?v=4.9"></script>
 </body>
 
 </html>

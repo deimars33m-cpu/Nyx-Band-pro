@@ -2,8 +2,8 @@
 // Configuración de Supabase
 // Reemplaza estas credenciales con las de tu proyecto real de Supabase.
 
-const supabaseUrl = "https://ozzxvackrzbwheizczmi.supabase.co"; // Tu URL del proyecto (Ej: https://xxxx.supabase.co)
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96enh2YWNrcnpid2hlaXpjem1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTUwMjUsImV4cCI6MjA5OTI5MTAyNX0.UaEzglE6XZEgGTqAN8lbZx07vLoiCC8OJP0e9xYvkcU"; // Tu clave pública anónima (Anon Key)
+const supabaseUrl = "https://xomcsdcsvmvuqzrckcfw.supabase.co"; // Tu URL del nuevo proyecto NYX
+const supabaseAnonKey = "sb_publishable_2bi7wNhutAxXz8guiZYPqg_cCD5yHJ2"; // Tu clave pública anónima del nuevo proyecto
 
 let supabaseInstance = null;
 

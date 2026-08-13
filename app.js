@@ -231,6 +231,9 @@ let state = {
     root: "C",
     quality: "M",
     extension: "NONE",
+    ninth: "NONE",
+    eleventh: "NONE",
+    thirteenth: "NONE",
     alteration: "NONE",
     bass: "NONE"
   },
@@ -2539,7 +2542,36 @@ function bindRehearsalEvents(structure, lines, song) {
   });
 
   // Line click (activate line or multi-select with CTRL or touching line number/dot)
+  let longPressTimer = null;
   document.querySelectorAll(".lyric-line-editor").forEach(el => {
+    
+    // ---- EVENTOS TOUCH (Long Press Móvil) ----
+    const handleTouchStart = (e) => {
+      if (e.target.closest(".btn-line-menu") || e.target.closest(".line-dropdown-menu") || e.target.closest(".line-indicators")) return;
+      if (e.target.tagName === "BUTTON" || e.target.tagName === "I" || e.target.tagName === "INPUT" || e.target.closest(".lyric-controls")) return;
+      const idx = parseInt(el.getAttribute("data-index"));
+      
+      longPressTimer = setTimeout(() => {
+        if (navigator.vibrate) navigator.vibrate(50);
+        if (window.openMobileLineNotesModal) window.openMobileLineNotesModal(idx);
+      }, 3000); // 3 segundos solicitados
+    };
+
+    const handleTouchEnd = () => {
+      if (longPressTimer) clearTimeout(longPressTimer);
+    };
+
+    el.addEventListener("touchstart", handleTouchStart, { passive: true });
+    el.addEventListener("touchend", handleTouchEnd);
+    el.addEventListener("touchmove", handleTouchEnd);
+    el.addEventListener("touchcancel", handleTouchEnd);
+
+    // Para pruebas en PC
+    el.addEventListener("mousedown", handleTouchStart);
+    el.addEventListener("mouseup", handleTouchEnd);
+    el.addEventListener("mouseleave", handleTouchEnd);
+
+    // Evento de clic normal
     el.addEventListener("click", e => {
       if (e.target.closest(".btn-line-menu") || e.target.closest(".line-dropdown-menu") || e.target.closest(".line-indicators")) return;
       if (e.target.tagName === "BUTTON" || e.target.tagName === "I" || e.target.tagName === "INPUT" || e.target.closest(".lyric-controls")) return;
@@ -4570,7 +4602,7 @@ function handleWheelScroll(type) {
 }
 
 function alignWheelsToState() {
-  const wheels = ['root', 'quality', 'extension', 'alteration', 'bass'];
+  const wheels = ['root', 'quality', 'extension', 'ninth', 'eleventh', 'thirteenth', 'alteration', 'bass'];
   wheels.forEach(w => {
     const el = document.getElementById(`wheel-${w}`);
     if (el) {
@@ -4597,6 +4629,9 @@ function getChordNameFromBuilder() {
   const root = state.builder.root;
   const quality = state.builder.quality;
   const ext = state.builder.extension;
+  const ninth = state.builder.ninth;
+  const eleventh = state.builder.eleventh;
+  const thirteenth = state.builder.thirteenth;
   const alt = state.builder.alteration;
   const bass = state.builder.bass;
   
@@ -4627,6 +4662,10 @@ function getChordNameFromBuilder() {
     }
   }
   
+  if (ninth && ninth !== 'NONE') name += ninth;
+  if (eleventh && eleventh !== 'NONE') name += eleventh;
+  if (thirteenth && thirteenth !== 'NONE') name += thirteenth;
+  
   if (alt && alt !== 'NONE') {
     name += alt;
   }
@@ -4642,6 +4681,9 @@ function updateBuilderBadges() {
   const rootB = document.getElementById("badge-root");
   const qualB = document.getElementById("badge-quality");
   const extB = document.getElementById("badge-extension");
+  const ninthB = document.getElementById("badge-ninth");
+  const eleventhB = document.getElementById("badge-eleventh");
+  const thirteenthB = document.getElementById("badge-thirteenth");
   const altB = document.getElementById("badge-alteration");
   const bassB = document.getElementById("badge-bass");
   
@@ -4652,32 +4694,23 @@ function updateBuilderBadges() {
     qualB.textContent = `Tríada: ${maps[state.builder.quality] || state.builder.quality}`;
   }
   
-  if (extB) {
-    if (state.builder.extension !== 'NONE') {
-      extB.textContent = `Ext: ${state.builder.extension}`;
-      extB.style.display = "inline-block";
-    } else {
-      extB.style.display = "none";
+  const setBadge = (el, val, prefix) => {
+    if (el) {
+      if (val !== 'NONE') {
+        el.textContent = `${prefix}: ${val}`;
+        el.style.display = "inline-block";
+      } else {
+        el.style.display = "none";
+      }
     }
-  }
+  };
   
-  if (altB) {
-    if (state.builder.alteration !== 'NONE') {
-      altB.textContent = `Alt: ${state.builder.alteration}`;
-      altB.style.display = "inline-block";
-    } else {
-      altB.style.display = "none";
-    }
-  }
-  
-  if (bassB) {
-    if (state.builder.bass !== 'NONE') {
-      bassB.textContent = `Bajo: ${state.builder.bass}`;
-      bassB.style.display = "inline-block";
-    } else {
-      bassB.style.display = "none";
-    }
-  }
+  setBadge(extB, state.builder.extension, '7th');
+  setBadge(ninthB, state.builder.ninth, '9th');
+  setBadge(eleventhB, state.builder.eleventh, '11th');
+  setBadge(thirteenthB, state.builder.thirteenth, '13th');
+  setBadge(altB, state.builder.alteration, 'Alt');
+  setBadge(bassB, state.builder.bass, 'Bajo');
 }
 
 // Renderizadores de Sub-Pestañas
@@ -4693,8 +4726,13 @@ function renderBuilderChord() {
   const isCustom = customChords[chordName] !== undefined;
   
   if (!chord && !isCustom) {
-    // Generar un acorde vacío personalizable
-    chord = { notes: getChordNotes(chordName), guitar: "xxxxxx" };
+    // Generar un acorde usando el autovoicer si es posible
+    let autoGuitar = "xxxxxx";
+    if (state.libSubtab === "builder" && typeof window.generateAutoVoicing === "function" && typeof window.getChordNotesFromEngine === "function") {
+      const notes = window.getChordNotesFromEngine(state.builder);
+      autoGuitar = window.generateAutoVoicing(notes);
+    }
+    chord = { notes: getChordNotes(chordName), guitar: autoGuitar };
   } else if (isCustom) {
     chord = { notes: getChordNotes(chordName), guitar: customChords[chordName] };
   }
@@ -4716,8 +4754,18 @@ function renderBuilderChord() {
   }
   
   if (chordNotesList) {
-    const notes = getChordNotes(chordName);
+    let notes = [];
+    if (state.libSubtab === "builder" && typeof window.getChordNotesFromEngine === "function") {
+      notes = window.getChordNotesFromEngine(state.builder);
+    } else {
+      notes = getChordNotes(chordName);
+    }
     chordNotesList.innerHTML = notes.map(n => `<span class="note-bubble">${n}</span>`).join("");
+    
+    // Renderizar Fretboard interactivo si estamos en modo guitarra
+    if (state.currentInstrument === "guitar" && typeof window.renderInteractiveFretboard === "function") {
+      window.renderInteractiveFretboard(notes);
+    }
   }
   
   if (playBtn) playBtn.textContent = "🔊 Escuchar Acorde";
@@ -4740,7 +4788,8 @@ function renderBuilderChord() {
     // Rellenar input del editor en vivo
     const input = document.getElementById("chord-string-input");
     if (input) {
-      const val = customChords[chordName] || (CHORD_DATABASE[chordName] ? (typeof CHORD_DATABASE[chordName] === "string" ? CHORD_DATABASE[chordName] : CHORD_DATABASE[chordName].guitar) : "xxxxxx");
+      // Usar la propiedad guitar del objeto chord que calculamos arriba
+      let val = chord ? chord.guitar : "xxxxxx";
       
       if (typeof val === "string") {
         input.value = val;
@@ -4748,6 +4797,15 @@ function renderBuilderChord() {
         input.value = val.frets.map(f => (f === -1 ? "x" : f.toString())).join("");
       } else {
         input.value = "xxxxxx";
+      }
+      
+      // Sincronizar el fretboard interactivo con el string actual
+      if (typeof window.loadFretboardFromInput === "function") {
+        window.loadFretboardFromInput(input.value);
+        // Volvemos a renderizar para que muestre los círculos verdes de selección
+        if (state.libSubtab === "builder" && typeof window.getChordNotesFromEngine === "function") {
+          window.renderInteractiveFretboard(window.getChordNotesFromEngine(state.builder));
+        }
       }
     }
   } else {
@@ -9388,6 +9446,110 @@ document.addEventListener("click", () => {
 });
 
 // --- REGISTRO DEL SERVICE WORKER (PWA) ---
+// ==========================================
+// MÓDULO MÓVIL: NOTAS POR VERSO (LONG PRESS)
+// ==========================================
+window.openMobileLineNotesModal = function(lineIdx) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song) return;
+
+  const lines = typeof parseLyricsToEnsayoModel === 'function' ? parseLyricsToEnsayoModel(song.lyrics) : [];
+  const line = lines[lineIdx];
+  if (!line) return;
+
+  const currentNote = song.lineNotes && song.lineNotes[lineIdx] ? song.lineNotes[lineIdx] : "";
+  const currentAudios = song.lineAudios && song.lineAudios[lineIdx] ? song.lineAudios[lineIdx] : [];
+
+  const modalContainer = document.getElementById("mobile-line-notes-modal-container");
+  if (!modalContainer) return;
+
+  modalContainer.innerHTML = `
+    <div id="mobile-line-notes-modal" class="modal-backdrop" style="display:flex; z-index: 2500; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); flex-direction:column; padding: 20px;">
+      <div class="modal-content glass" style="width: 100%; max-width: 500px; padding: 20px; display: flex; flex-direction: column; gap: 16px; margin: auto; position: relative;">
+        <button class="btn-close" onclick="closeMobileLineNotesModal()" style="position: absolute; top: 12px; right: 12px; background: none; border: none; color: #fff; font-size: 20px; cursor: pointer;">&times;</button>
+        
+        <h3 style="color: var(--neon-cyan); margin: 0; font-size: 16px;">Verso ${lineIdx + 1}</h3>
+        <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; font-size: 14px; font-style: italic; color: #ccc;">
+          "${line.texto}"
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="font-size: 12px; color: var(--neon-cyan); font-weight: bold;"><i class="ti ti-file-text"></i> Nota de Texto</label>
+          <textarea id="mobile-line-note-textarea" rows="4" style="width: 100%; padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-soft); color: #fff; font-family: inherit; resize: none;" placeholder="Escribe una nota para este verso...">${currentNote}</textarea>
+          <button class="btn btn-primary" onclick="saveMobileLineNote(${lineIdx})" style="width: 100%; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <i class="ti ti-device-floppy"></i> Guardar Nota
+          </button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+          <label style="font-size: 12px; color: var(--neon-magenta); font-weight: bold;"><i class="ti ti-microphone"></i> Ideas de Arreglo (Audio)</label>
+          
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${currentAudios.map((aud, audIdx) => `
+              <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,62,165,0.1); padding: 8px 12px; border-radius: 8px;">
+                <span style="font-size: 12px; color: #fff; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${aud.name}</span>
+                <div style="display: flex; gap: 8px;">
+                  <button onclick="playAudioUrl('${aud.url}', '${aud.name}')" style="background:none; border:none; color: var(--neon-cyan); cursor:pointer;"><i class="ti ti-player-play"></i></button>
+                  <button onclick="deleteMobileLineAudio(${lineIdx}, ${audIdx})" style="background:none; border:none; color: #ff4444; cursor:pointer;"><i class="ti ti-trash"></i></button>
+                </div>
+              </div>
+            `).join('')}
+            ${currentAudios.length === 0 ? `<div style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 10px;">Sin audios guardados en este verso.</div>` : ''}
+          </div>
+          
+          <button id="btn-mobile-record-audio-${lineIdx}" class="btn btn-secondary" onclick="toggleLineAudioRecording(${lineIdx})" style="width: 100%; padding: 10px; border-color: var(--neon-magenta); color: var(--neon-magenta); margin-top: 8px; font-weight: bold;">
+            🔴 Grabar Idea de Audio
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+window.closeMobileLineNotesModal = function() {
+  const modalContainer = document.getElementById("mobile-line-notes-modal-container");
+  if (modalContainer) modalContainer.innerHTML = "";
+  renderRehearsalRoom(); // Refrescar indicadores visuales
+};
+
+window.saveMobileLineNote = function(lineIdx) {
+  const textarea = document.getElementById("mobile-line-note-textarea");
+  if (!textarea) return;
+  const note = textarea.value;
+  
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song) return;
+
+  if (!song.lineNotes) song.lineNotes = {};
+  song.lineNotes[lineIdx] = note;
+
+  saveLocalStorage();
+  if (window.SongsService) {
+    window.SongsService.saveSong(song).catch(err => console.error(err));
+  }
+  
+  triggerEnsayoToast('Nota de texto guardada en Supabase');
+  closeMobileLineNotesModal();
+};
+
+window.deleteMobileLineAudio = function(lineIdx, audIdx) {
+  if (confirm("¿Seguro que deseas borrar este audio de referencia?")) {
+    const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+    if (song && song.lineAudios && song.lineAudios[lineIdx]) {
+      song.lineAudios[lineIdx].splice(audIdx, 1);
+      if (song.lineAudios[lineIdx].length === 0) {
+        delete song.lineAudios[lineIdx];
+      }
+      saveLocalStorage();
+      if (window.SongsService) {
+        window.SongsService.saveSong(song).catch(err => console.error("Error al borrar idea de audio:", err));
+      }
+      openMobileLineNotesModal(lineIdx); // Refrescar modal
+    }
+  }
+};
+
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
