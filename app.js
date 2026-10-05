@@ -2171,10 +2171,14 @@ function renderRehearsalRoom() {
 
         let indicatorsHtml = `<div class="line-indicators" style="display:flex; gap:6px; align-items:center; margin-right: 8px;">`;
         if (hasTextNotes) {
-          indicatorsHtml += `<i class="ti ti-file-text" style="color: var(--neon-cyan); font-size:12px; text-shadow: 0 0 4px var(--neon-cyan);" title="Tiene notas de texto"></i>`;
+          indicatorsHtml += `<button onclick="event.stopPropagation(); openMobileLineNotesModal(${idx})" style="background:none; border:none; padding:0; cursor:pointer;" title="Ver nota de texto"><i class="ti ti-file-text" style="color: var(--neon-cyan); font-size:13px; text-shadow: 0 0 4px var(--neon-cyan);"></i></button>`;
         }
         if (hasAudioNotes) {
-          indicatorsHtml += `<i class="ti ti-microphone" style="color: var(--neon-magenta); font-size:12px; text-shadow: 0 0 4px var(--neon-magenta);" title="Tiene ideas de arreglo grabadas"></i>`;
+          const firstAud = song.lineAudios[idx][0];
+          indicatorsHtml += `
+            <button onclick="event.stopPropagation(); playLineAudio(${idx})" class="btn-line-audio-chip" style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; background:rgba(255,62,165,0.22); border:1px solid var(--neon-magenta); border-radius:12px; color:#fff; font-size:10px; cursor:pointer; font-weight:bold; box-shadow: 0 0 8px rgba(255,62,165,0.3);" title="Reproducir idea de arreglo de este verso">
+              <i class="ti ti-player-play" style="color:var(--neon-magenta); font-size:10px;"></i> 🎵 Idea (${song.lineAudios[idx].length})
+            </button>`;
         }
         indicatorsHtml += `</div>`;
 
@@ -2194,7 +2198,8 @@ function renderRehearsalRoom() {
             <!-- 3 puntos al final a la derecha -->
             <div class="line-menu-container" style="position: relative;">
               <button class="btn-line-menu" onclick="toggleLineMenu(event, ${idx})" style="background:none; border:none; color:var(--text-dim); padding:4px 8px; cursor:pointer; font-size:14px; outline:none;"><i class="ti ti-dots-vertical"></i></button>
-              <div class="line-dropdown-menu" id="line-dropdown-${idx}" style="display:none; position:absolute; right:0; top:24px; background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:8px; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,0.5); width:125px;">
+              <div class="line-dropdown-menu" id="line-dropdown-${idx}" style="display:none; position:absolute; right:0; top:24px; background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:8px; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,0.5); width:140px;">
+                <button onclick="event.stopPropagation(); openMobileLineNotesModal(${idx}); closeAllLineMenus();" style="width:100%; text-align:left; background:none; border:none; color:var(--neon-magenta); padding:8px 12px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;"><i class="ti ti-microphone"></i> Grabar/Ver Idea (${hasAudioNotes ? song.lineAudios[idx].length : 0})</button>
                 <button onclick="event.stopPropagation(); openEditStanzaModal(${idx}); closeAllLineMenus();" style="width:100%; text-align:left; background:none; border:none; color:var(--neon-cyan); padding:8px 12px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;"><i class="ti ti-edit"></i> Editar Estrofa</button>
                 <button onclick="event.stopPropagation(); duplicateDesktopLine(state.songs.find(s => String(s.id) === String(state.activeSongId)), ${idx}); closeAllLineMenus();" style="width:100%; text-align:left; background:none; border:none; color:var(--text-main); padding:8px 12px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;"><i class="ti ti-copy"></i> Duplicar</button>
                 <button onclick="event.stopPropagation(); deleteDesktopLine(state.songs.find(s => String(s.id) === String(state.activeSongId)), ${idx}); closeAllLineMenus();" style="width:100%; text-align:left; background:none; border:none; color:#E24B4A; padding:8px 12px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;"><i class="ti ti-trash"></i> Eliminar</button>
@@ -8679,6 +8684,48 @@ document.addEventListener('click', function(e) {
   audioEl.currentTime = percent * audioEl.duration;
 });
 
+// =========================================================================
+// MÓDULO DE AUDIO MULTI-DISPOSITIVO EN LA NUBE (SUPABASE STORAGE)
+// =========================================================================
+
+// Helper universal para detectar formato de grabación compatible
+function getAudioRecorderOptions() {
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/aac',
+    'audio/ogg'
+  ];
+  for (const t of types) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) {
+      return { mimeType: t };
+    }
+  }
+  return {};
+}
+
+// Formateador de tiempo mm:ss
+function formatRecordTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+// Variables globales para la grabación
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecordingRehearsal = false;
+let isRecordingLineAudio = false;
+let isRecordingReference = false;
+let recordingLineIndex = null;
+let rehearsalRecordTimer = null;
+let rehearsalRecordSeconds = 0;
+let lineRecordTimer = null;
+let lineRecordSeconds = 0;
+let refRecordTimer = null;
+let refRecordSeconds = 0;
+
 function renderAudioPane(song, lines) {
   return `
     <div class="audio-editor-pane pane-responsive-padding">
@@ -8688,12 +8735,15 @@ function renderAudioPane(song, lines) {
         <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.15);">
           <div style="font-size: 14px; font-weight: 700; color: var(--neon-cyan); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
             <span><i class="ti ti-music"></i> 1. Audios de Referencia</span>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <input type="file" id="rehearsal-audio-file-input" accept="audio/*" style="display:none" onchange="uploadReferenceAudioFile(event)">
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+              <input type="file" id="rehearsal-audio-file-input" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac" style="display:none" onchange="uploadReferenceAudioFile(event)">
               <button class="btn-small btn-primary" onclick="document.getElementById('rehearsal-audio-file-input').click()" style="font-size: 11px; padding: 5px 10px; cursor: pointer; display: flex; align-items: center; gap: 4px; background: var(--neon-cyan); color: #000; font-weight: bold; border: none; border-radius: 6px;">
-                <i class="ti ti-upload"></i> Subir Audio (MP3/WAV)
+                <i class="ti ti-upload"></i> Subir MP3/Audio
               </button>
-              <button class="btn-small" onclick="addReferenceAudioPrompt()" style="font-size: 10px; padding: 5px 8px; cursor: pointer;">+ URL</button>
+              <button id="btn-record-reference" class="btn-small" onclick="toggleReferenceRecording()" style="font-size: 11px; padding: 5px 10px; cursor: pointer; display: flex; align-items: center; gap: 4px; background: rgba(0,229,255,0.15); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); border-radius: 6px; font-weight: bold;">
+                <i class="ti ti-microphone"></i> Grabar Ref
+              </button>
+              <button class="btn-small" onclick="addReferenceAudioPrompt()" style="font-size: 10px; padding: 5px 8px; cursor: pointer; background: rgba(255,255,255,0.05); color: var(--text-dim); border: 1px solid var(--border-soft); border-radius: 6px;">+ URL</button>
             </div>
           </div>
 
@@ -8702,8 +8752,10 @@ function renderAudioPane(song, lines) {
               <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.15); border-radius: 8px;">
                 <div style="display: flex; flex-direction: column; gap: 2px; max-width: 60%;">
                   <span style="font-size: 12px; font-weight: bold; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${aud.name}</span>
-                  ${aud.bpm ? `<span style="font-size: 10px; color: var(--neon-cyan); font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="ti ti-metronome"></i> ${aud.bpm} BPM detectado</span>` : ''}
-                  <a href="${aud.url}" target="_blank" style="font-size: 9px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: underline;">${aud.url.startsWith('blob:') ? 'Archivo local' : aud.url}</a>
+                  <div style="display:flex; gap:6px; align-items:center;">
+                    ${aud.bpm ? `<span style="font-size: 10px; color: var(--neon-cyan); font-weight: 700; display: inline-flex; align-items: center; gap: 3px;"><i class="ti ti-metronome"></i> ${aud.bpm} BPM</span>` : ''}
+                    <span style="font-size: 9px; color: var(--neon-lime); background: rgba(0,255,153,0.1); padding: 1px 4px; border-radius: 3px;">☁️ Sincronizado</span>
+                  </div>
                 </div>
                 <div style="display: flex; gap: 5px; align-items: center;">
                   ${aud.bpm ? `<button class="btn-small" onclick="applyBpmToSong(${aud.bpm})" style="padding: 3px 6px; font-size: 9px; background: rgba(0,229,255,0.15); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); border-radius: 4px; cursor: pointer;" title="Aplicar ${aud.bpm} BPM a este tema">Usar BPM</button>` : ''}
@@ -8714,10 +8766,15 @@ function renderAudioPane(song, lines) {
             `).join("") || `
               <div style="text-align: center; padding: 24px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px dashed var(--border-soft);">
                 <i class="ti ti-cloud-upload" style="font-size: 32px; color: var(--neon-cyan); display: block; margin-bottom: 8px;"></i>
-                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">No hay archivos de audio de referencia cargados para este tema.</p>
-                <button class="btn btn-primary" onclick="document.getElementById('rehearsal-audio-file-input').click()" style="font-size: 11px; padding: 8px 16px; background: var(--neon-cyan); color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">
-                  <i class="ti ti-upload"></i> Subir Archivo MP3 / WAV
-                </button>
+                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">No hay audios de referencia guardados para este tema.</p>
+                <div style="display:flex; justify-content:center; gap:8px;">
+                  <button class="btn btn-primary" onclick="document.getElementById('rehearsal-audio-file-input').click()" style="font-size: 11px; padding: 8px 14px; background: var(--neon-cyan); color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">
+                    <i class="ti ti-upload"></i> Subir Archivo MP3 / Audio
+                  </button>
+                  <button class="btn" onclick="toggleReferenceRecording()" style="font-size: 11px; padding: 8px 14px; background: rgba(0,229,255,0.2); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); font-weight: bold; border-radius: 8px; cursor: pointer;">
+                    <i class="ti ti-microphone"></i> Grabar con Micro
+                  </button>
+                </div>
               </div>
             `}
           </div>
@@ -8725,201 +8782,116 @@ function renderAudioPane(song, lines) {
         
         <!-- 2. Grabaciones de Ensayos -->
         <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.15);">
-          <div style="font-size: 14px; font-weight: 700; color: var(--neon-lime); display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-size: 14px; font-weight: 700; color: var(--neon-lime); display: flex; align-items: center; justify-content: space-between; flex-wrap:wrap; gap:8px;">
             <span><i class="ti ti-microphone"></i> 2. Grabaciones de Ensayos</span>
-            <button id="btn-record-rehearsal" class="btn-small" onclick="toggleRehearsalRecording()" style="font-size: 10px; padding: 4px 8px; color: white; background: var(--magenta); border: none; cursor: pointer;">🔴 Grabar</button>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input type="file" id="rehearsal-take-file-input" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac" style="display:none" onchange="uploadRehearsalAudioFile(event)">
+              <button class="btn-small" onclick="document.getElementById('rehearsal-take-file-input').click()" style="font-size: 10px; padding: 5px 8px; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid var(--border-soft); border-radius: 6px; cursor:pointer;">
+                <i class="ti ti-upload"></i> Subir Toma
+              </button>
+              <button id="btn-record-rehearsal" class="btn-small" onclick="toggleRehearsalRecording()" style="font-size: 11px; padding: 5px 10px; color: white; background: var(--magenta); border: none; border-radius:6px; cursor: pointer; font-weight:bold;">🔴 Grabar Toma</button>
+            </div>
           </div>
           <div id="rehearsal-recordings-list" style="display: flex; flex-direction: column; gap: 8px; flex: 1; max-height: 180px; overflow-y: auto;">
             ${(song.grabaciones_ensayo || []).map((rec, i) => `
               <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: rgba(255, 62, 165, 0.05); border: 1px solid rgba(255, 62, 165, 0.15); border-radius: 8px;">
-                <div style="display: flex; flex-direction: column; gap: 2px;">
-                  <span style="font-size: 12px; font-weight: bold; color: var(--text-main);">${rec.name}</span>
-                  <span style="font-size: 10px; color: var(--text-dim);">${rec.date}</span>
+                <div style="display: flex; flex-direction: column; gap: 2px; max-width:60%;">
+                  <span style="font-size: 12px; font-weight: bold; color: var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${rec.name}</span>
+                  <div style="display:flex; gap:6px; font-size:10px; color:var(--text-dim);">
+                    <span>${rec.date}</span>
+                    ${rec.duration ? `<span style="color:var(--neon-lime);">⏱️ ${rec.duration}</span>` : ''}
+                    <span style="color:var(--neon-lime);">☁️ Cloud</span>
+                  </div>
                 </div>
                 <div style="display: flex; gap: 6px;">
-                  <button class="btn-small" onclick="playAudioUrl('${rec.url}', '${rec.name}')" style="padding: 3px 6px; font-size: 9px; cursor: pointer;"><i class="ti ti-player-play"></i></button>
-                  <button class="btn-small btn-danger" onclick="deleteRehearsalRecording(${i})" style="padding: 3px 6px; font-size: 9px; background: rgba(255,0,0,0.2); cursor: pointer;"><i class="ti ti-trash"></i></button>
+                  <button class="btn-small" onclick="playAudioUrl('${rec.url}', '${rec.name}')" style="padding: 4px 8px; font-size: 10px; cursor: pointer; background: rgba(0,229,255,0.2); color: var(--neon-cyan); border: 1px solid rgba(0,229,255,0.4); border-radius: 4px; font-weight: bold;"><i class="ti ti-player-play"></i> Escuchar</button>
+                  <button class="btn-small btn-danger" onclick="deleteRehearsalRecording(${i})" style="padding: 4px 6px; font-size: 10px; background: rgba(255,0,0,0.2); cursor: pointer;"><i class="ti ti-trash"></i></button>
                 </div>
               </div>
-            `).join("") || `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">No hay grabaciones de ensayo registradas. ¡Haz clic en Grabar para comenzar!</p>`}
+            `).join("") || `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">No hay grabaciones de ensayo registradas. ¡Haz clic en "Grabar Toma" para comenzar!</p>`}
           </div>
         </div>
       </div>
       
       <!-- 3. Notas de Audio / Ideas por Verso -->
-      <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.15);">
-        <div style="font-size: 14px; font-weight: 700; color: var(--neon-magenta); display: flex; align-items: center; gap: 8px;">
-          <i class="ti ti-playlist"></i> 3. Ideas de Arreglos anexadas a Versos
+      <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.15); margin-top: 14px;">
+        <div style="font-size: 14px; font-weight: 700; color: var(--neon-magenta); display: flex; align-items: center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+          <span><i class="ti ti-playlist"></i> 3. Ideas de Arreglos anexadas a Versos</span>
+          <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">Se graban desde la vista "Acordes y Letras"</span>
         </div>
         <div style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto;">
           ${Object.keys(song.lineAudios || {}).map(lineKey => {
-    const idx = parseInt(lineKey);
-    const line = lines[idx];
-    const auds = song.lineAudios[idx] || [];
-    if (auds.length === 0 || !line) return "";
-    return auds.map((aud, audIdx) => `
+            const idx = parseInt(lineKey);
+            const line = lines[idx];
+            const auds = song.lineAudios[idx] || [];
+            if (auds.length === 0 || !line) return "";
+            return auds.map((aud, audIdx) => `
               <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-soft); border-radius: 8px;">
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                  <span style="font-size: 10px; font-weight: 700; color: var(--neon-magenta); text-transform: uppercase;">Línea ${idx + 1} (${line.texto.slice(0, 30)}...)</span>
+                <div style="display: flex; flex-direction: column; gap: 4px; max-width:60%;">
+                  <span style="font-size: 10px; font-weight: 700; color: var(--neon-magenta); text-transform: uppercase;">Verso ${idx + 1} (${line.texto.slice(0, 30)}...)</span>
                   <span style="font-size: 12px; font-weight: bold; color: var(--text-main);">${aud.name}</span>
+                  <div style="display:flex; gap:6px; font-size:9px; color:var(--text-dim);">
+                    ${aud.author ? `<span style="color:var(--neon-cyan);">👤 ${aud.author}</span>` : ''}
+                    <span>📅 ${aud.date || ''}</span>
+                    <span style="color:var(--neon-lime);">☁️ Cloud</span>
+                  </div>
                 </div>
                 <div style="display: flex; gap: 6px;">
-                  <button class="btn-small" onclick="playAudioUrl('${aud.url}', '${aud.name}')" style="padding: 3px 6px; font-size: 9px; cursor: pointer;"><i class="ti ti-player-play"></i></button>
-                  <button class="btn-small btn-danger" onclick="deleteLineAudio(${idx}, ${audIdx})" style="padding: 3px 6px; font-size: 9px; background: rgba(255,0,0,0.2); cursor: pointer;"><i class="ti ti-trash"></i></button>
-                  <button class="btn-small" onclick="selectAndGoToLine(${idx})" style="padding: 3px 6px; font-size: 9px; cursor: pointer;">Ir al Verso</button>
+                  <button class="btn-small" onclick="playAudioUrl('${aud.url}', 'Verso ${idx + 1}: ${aud.name}')" style="padding: 4px 8px; font-size: 10px; cursor: pointer; background: rgba(255,62,165,0.2); color: #fff; border: 1px solid var(--neon-magenta); border-radius: 4px; font-weight: bold;"><i class="ti ti-player-play"></i> Escuchar</button>
+                  <button class="btn-small btn-danger" onclick="deleteLineAudio(${idx}, ${audIdx})" style="padding: 4px 6px; font-size: 10px; background: rgba(255,0,0,0.2); cursor: pointer;"><i class="ti ti-trash"></i></button>
+                  <button class="btn-small" onclick="selectAndGoToLine(${idx})" style="padding: 4px 8px; font-size: 10px; cursor: pointer; background: rgba(0,229,255,0.15); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); border-radius: 4px;">Ir al Verso</button>
                 </div>
               </div>
             `).join("");
-  }).filter(Boolean).join("") || `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">No hay notas de audio asociadas a ningún verso aún. Graba ideas de arreglo en la barra lateral derecha mientras ensayas.</p>`}
+          }).filter(Boolean).join("") || `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">No hay notas de audio asociadas a ningún verso aún. Puedes grabar ideas desde la pestaña "Acordes y Letras" manteniendo presionado el verso o usando el menú lateral.</p>`}
         </div>
       </div>
       
       <!-- REPRODUCTOR DE AUDIO INTEGRADO -->
-      <div id="ensayo-audio-player-container" style="display:none; align-items:center; justify-content:space-between; padding:12px 20px; background:rgba(0,0,0,0.4); border:1px solid var(--neon-cyan); border-radius:10px; gap:15px; margin-top: 10px;">
-        <div style="display:flex; flex-direction:column; gap:2px; flex:1;">
-          <span style="font-size:10px; text-transform:uppercase; color:var(--neon-cyan); font-weight:700;">Reproduciendo ahora</span>
-          <span id="audio-player-title" style="font-size:13px; font-weight:bold; color:white;">Nombre del audio</span>
+      <div id="ensayo-audio-player-container" style="display:none; align-items:center; justify-content:space-between; padding:12px 20px; background:rgba(0,0,0,0.6); border:1px solid var(--neon-cyan); border-radius:10px; gap:15px; margin-top: 14px; box-shadow: 0 0 20px rgba(0,229,255,0.2);">
+        <div style="display:flex; flex-direction:column; gap:2px; min-width: 140px; max-width: 200px;">
+          <span style="font-size:10px; text-transform:uppercase; color:var(--neon-cyan); font-weight:700;">Reproduciendo audio</span>
+          <span id="audio-player-title" style="font-size:13px; font-weight:bold; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Nombre del audio</span>
         </div>
-        <audio id="ensayo-global-audio-element" controls style="height:32px; flex:2;"></audio>
-        <button class="btn-small btn-danger" onclick="closeEnsayoAudioPlayer()" style="padding: 6px 12px; font-size: 11px; cursor: pointer;">Cerrar</button>
+        <audio id="ensayo-global-audio-element" controls style="height:36px; flex:2; outline:none; border-radius:8px;"></audio>
+        <button class="btn-small btn-danger" onclick="closeEnsayoAudioPlayer()" style="padding: 6px 12px; font-size: 11px; cursor: pointer; font-weight:bold;">Cerrar</button>
       </div>
     </div>
   `;
 }
 
-// Variables globales para la grabación
-let mediaRecorder = null;
-let audioChunks = [];
-let isRecordingRehearsal = false;
-let isRecordingLineAudio = false;
-let recordingLineIndex = null;
-
-window.toggleRehearsalRecording = async function () {
-  const btn = document.getElementById("btn-record-rehearsal");
-  if (!btn) return;
-
-  if (isRecordingRehearsal) {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-    }
-  } else {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunks = [];
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = event => {
-        audioChunks.push(event.data);
-      };
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-
-        const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
-        if (song) {
-          if (!song.grabaciones_ensayo) song.grabaciones_ensayo = [];
-          const now = new Date();
-          const count = song.grabaciones_ensayo.length + 1;
-          song.grabaciones_ensayo.push({
-            name: `Ensayo ${now.toLocaleDateString()} - Toma ${count}`,
-            url: audioUrl,
-            date: now.toLocaleString()
-          });
-
-          saveLocalStorage();
-          if (window.SongsService) {
-            window.SongsService.saveSong(song).catch(err => console.error("Error al guardar grabacion en Supabase:", err));
-          }
-          renderRehearsalRoom();
-        }
-        isRecordingRehearsal = false;
-      };
-
-      mediaRecorder.start();
-      isRecordingRehearsal = true;
-      btn.innerHTML = "⏹️ Detener";
-      btn.style.background = "#E24B4A";
-      triggerEnsayoToast("Grabando ensayo...");
-    } catch (err) {
-      console.error("Error al acceder al micrófono:", err);
-      alert("No se pudo acceder al micrófono para grabar.");
-    }
-  }
-};
-
-window.toggleLineAudioRecording = async function (lineIdx) {
-  const btn = document.getElementById("btn-record-line-audio");
-  if (!btn) return;
-
-  if (isRecordingLineAudio) {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-    }
-  } else {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunks = [];
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = event => {
-        audioChunks.push(event.data);
-      };
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-
-        const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
-        if (song) {
-          if (!song.lineAudios) song.lineAudios = {};
-          if (!song.lineAudios[lineIdx]) song.lineAudios[lineIdx] = [];
-
-          const count = song.lineAudios[lineIdx].length + 1;
-          song.lineAudios[lineIdx].push({
-            name: `Idea de Arreglo ${count}`,
-            url: audioUrl
-          });
-
-          saveLocalStorage();
-          if (window.SongsService) {
-            window.SongsService.saveSong(song).catch(err => console.error("Error al guardar idea de audio en Supabase:", err));
-          }
-          renderRehearsalRoom();
-        }
-        isRecordingLineAudio = false;
-        recordingLineIndex = null;
-      };
-
-      mediaRecorder.start();
-      isRecordingLineAudio = true;
-      recordingLineIndex = lineIdx;
-      btn.innerHTML = "⏹️ Detener Grabación";
-      btn.style.background = "#E24B4A";
-      triggerEnsayoToast(`Grabando arreglo para la Línea ${lineIdx + 1}...`);
-    } catch (err) {
-      console.error("Error al acceder al micrófono:", err);
-      alert("No se pudo acceder al micrófono para grabar.");
-    }
-  }
-};
+// -------------------------------------------------------------
+// FUNCIONES DE REPRODUCCIÓN Y CONTROL DE AUDIO
+// -------------------------------------------------------------
 
 window.playAudioUrl = function (url, name) {
+  if (!url) return;
   const container = document.getElementById("ensayo-audio-player-container");
   const title = document.getElementById("audio-player-title");
   const player = document.getElementById("ensayo-global-audio-element");
 
   if (container && title && player) {
-    title.textContent = name;
+    title.textContent = name || "Audio";
     player.src = url;
     container.style.display = "flex";
     player.play().catch(err => {
       console.warn("Autoplay bloqueado o URL inválida:", err);
     });
   } else {
-    // Si no está en el panel central, usar un Audio flotante
     const audio = new Audio(url);
     audio.play().catch(() => {
       window.open(url, '_blank');
     });
-    triggerEnsayoToast(`Reproduciendo: ${name}`);
+    triggerEnsayoToast(`Reproduciendo: ${name || 'Audio'}`);
   }
+};
+
+window.playLineAudio = function(lineIdx) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song || !song.lineAudios || !song.lineAudios[lineIdx] || song.lineAudios[lineIdx].length === 0) return;
+  const auds = song.lineAudios[lineIdx];
+  const lastAud = auds[auds.length - 1];
+  playAudioUrl(lastAud.url, `Verso ${lineIdx + 1}: ${lastAud.name}`);
 };
 
 window.closeEnsayoAudioPlayer = function () {
@@ -8934,11 +8906,15 @@ window.closeEnsayoAudioPlayer = function () {
   }
 };
 
+// -------------------------------------------------------------
+// SECCIÓN 1: AUDIOS DE REFERENCIA (SUBIDA Y GRABACIÓN)
+// -------------------------------------------------------------
+
 window.uploadReferenceAudioFile = async function(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  if (!file.type.startsWith('audio/')) {
+  if (!file.type.startsWith('audio/') && !file.name.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/i)) {
     alert('Por favor selecciona un archivo de audio válido (MP3, WAV, OGG, M4A, etc.)');
     return;
   }
@@ -8949,27 +8925,27 @@ window.uploadReferenceAudioFile = async function(event) {
     return;
   }
 
-  triggerEnsayoToast('📂 Procesando archivo de audio...');
+  triggerEnsayoToast('☁️ Subiendo audio de referencia a Supabase...');
 
   let audioUrl = null;
   let detectedBpm = null;
 
-  // 1. Intentar subir a Supabase Storage si está disponible
-  if (window.SongsService && typeof window.SongsService.uploadSongAudio === 'function') {
-    try {
-      triggerEnsayoToast('☁️ Subiendo audio a Supabase Storage...');
-      audioUrl = await window.SongsService.uploadSongAudio(song.id, file);
-    } catch (err) {
-      console.warn('Subida a Supabase falló, usando URL local:', err);
+  try {
+    if (window.SongsService && typeof window.SongsService.uploadAudioBlob === 'function') {
+      audioUrl = await window.SongsService.uploadAudioBlob(song.id, 'references', file, file.name);
     }
+  } catch (err) {
+    console.error('Subida a Supabase falló:', err);
+    alert('Error al subir el archivo a Supabase: ' + err.message);
+    return;
   }
 
-  // Fallback a Blob URL local si no está en la nube
   if (!audioUrl) {
-    audioUrl = URL.createObjectURL(file);
+    alert('No se pudo subir el archivo de audio a Supabase Storage.');
+    return;
   }
 
-  // 2. Analizar BPM
+  // Analizar BPM
   if (window.BpmDetector) {
     try {
       triggerEnsayoToast('⚡ Analizando BPM del audio...');
@@ -8982,7 +8958,6 @@ window.uploadReferenceAudioFile = async function(event) {
     }
   }
 
-  // 3. Registrar audio de referencia
   if (!song.audios) song.audios = [];
   song.audios.push({
     name: file.name,
@@ -8991,9 +8966,8 @@ window.uploadReferenceAudioFile = async function(event) {
     date: new Date().toLocaleDateString()
   });
 
-  // 4. Ofrecer actualizar el BPM si se detectó
   if (detectedBpm) {
-    const shouldUpdate = confirm(`Audio "${file.name}" cargado.\n\n⚡ BPM Detectado: ${detectedBpm} BPM.\n¿Deseas actualizar el tempo del tema a ${detectedBpm} BPM?`);
+    const shouldUpdate = confirm(`Audio "${file.name}" subido a la nube.\n\n⚡ BPM Detectado: ${detectedBpm} BPM.\n¿Deseas actualizar el tempo del tema a ${detectedBpm} BPM?`);
     if (shouldUpdate) {
       song.bpm = detectedBpm;
       if (typeof updateBpm === 'function') {
@@ -9002,14 +8976,140 @@ window.uploadReferenceAudioFile = async function(event) {
     }
   }
 
-  // 5. Guardar
   saveLocalStorage();
   if (window.SongsService) {
-    window.SongsService.saveSong(song).catch(err => console.error("Error al guardar canción:", err));
+    await window.SongsService.saveSong(song).catch(err => console.error("Error al guardar canción:", err));
   }
 
-  triggerEnsayoToast(`✅ Archivo de audio "${file.name}" agregado con éxito`);
+  triggerEnsayoToast(`✅ Archivo de audio "${file.name}" sincronizado en Supabase`);
   renderRehearsalRoom();
+};
+
+window.toggleReferenceRecording = async function() {
+  const btn = document.getElementById("btn-record-reference");
+  if (!btn) return;
+
+  if (isRecordingReference) {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    if (refRecordTimer) {
+      clearInterval(refRecordTimer);
+      refRecordTimer = null;
+    }
+    btn.innerHTML = "⏳ Subiendo...";
+    btn.disabled = true;
+  } else {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      const options = getAudioRecorderOptions();
+      mediaRecorder = options.mimeType ? new MediaRecorder(stream, options) : new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = event => {
+        if (event.data && event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('webm') ? 'webm' : 'mp3';
+        const audioBlob = new Blob(audioChunks, { type: mimeType });
+
+        const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+        if (song && audioBlob.size > 0) {
+          try {
+            triggerEnsayoToast('☁️ Subiendo referencia a Supabase...');
+            const count = (song.audios || []).length + 1;
+            const filename = `referencia_${count}_${Date.now()}.${ext}`;
+
+            let cloudUrl = null;
+            if (window.SongsService && typeof window.SongsService.uploadAudioBlob === 'function') {
+              cloudUrl = await window.SongsService.uploadAudioBlob(song.id, 'references', audioBlob, filename);
+            }
+
+            if (!cloudUrl) throw new Error("No se pudo obtener URL pública de Supabase");
+
+            if (!song.audios) song.audios = [];
+            song.audios.push({
+              name: `Referencia Grabada ${count}`,
+              url: cloudUrl,
+              date: new Date().toLocaleDateString()
+            });
+
+            saveLocalStorage();
+            if (window.SongsService) {
+              await window.SongsService.saveSong(song);
+            }
+            triggerEnsayoToast('✅ Referencia guardada y sincronizada en Supabase');
+          } catch (uploadErr) {
+            console.error("Error al subir referencia:", uploadErr);
+            alert("Error al subir referencia a Supabase: " + uploadErr.message);
+          }
+          renderRehearsalRoom();
+        }
+        isRecordingReference = false;
+        refRecordSeconds = 0;
+      };
+
+      mediaRecorder.start(250);
+      isRecordingReference = true;
+      refRecordSeconds = 0;
+      btn.disabled = false;
+      btn.innerHTML = "⏹️ Parar (00:00)";
+      btn.style.background = "#E24B4A";
+      btn.style.color = "#fff";
+
+      refRecordTimer = setInterval(() => {
+        refRecordSeconds++;
+        btn.innerHTML = `⏹️ Parar (${formatRecordTime(refRecordSeconds)})`;
+      }, 1000);
+
+      triggerEnsayoToast("🔴 Grabando audio de referencia...");
+    } catch (err) {
+      console.error("Error al acceder al micrófono:", err);
+      alert("No se pudo acceder al micrófono para grabar.");
+    }
+  }
+};
+
+window.deleteReferenceAudio = async function (index) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song || !song.audios || !song.audios[index]) return;
+
+  if (confirm(`¿Seguro que deseas eliminar el audio "${song.audios[index].name}"?`)) {
+    const aud = song.audios[index];
+    song.audios.splice(index, 1);
+    saveLocalStorage();
+    if (window.SongsService) {
+      if (aud.url && window.SongsService.deleteAudioByUrl) {
+        window.SongsService.deleteAudioByUrl(aud.url).catch(() => {});
+      }
+      await window.SongsService.saveSong(song).catch(err => console.error(err));
+    }
+    triggerEnsayoToast('Audio de referencia eliminado');
+    renderRehearsalRoom();
+  }
+};
+
+window.addReferenceAudioPrompt = function () {
+  const name = prompt("Escribe el nombre del tema de referencia (Ej: Boyz II Men - Yesterday):");
+  if (!name) return;
+  const url = prompt("Pega el enlace o URL del audio (Ej: YouTube, Spotify, o archivo online):");
+  if (!url) return;
+
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (song) {
+    if (!song.audios) song.audios = [];
+    song.audios.push({ name, url, date: new Date().toLocaleDateString() });
+    saveLocalStorage();
+    if (window.SongsService) {
+      window.SongsService.saveSong(song).catch(err => console.error("Error al guardar pista de referencia:", err));
+    }
+    renderRehearsalRoom();
+  }
 };
 
 window.applyBpmToSong = function(bpm) {
@@ -9028,59 +9128,295 @@ window.applyBpmToSong = function(bpm) {
   }
 };
 
-window.addReferenceAudioPrompt = function () {
-  const name = prompt("Escribe el nombre del tema de referencia (Ej: Boyz II Men - Yesterday):");
-  if (!name) return;
-  const url = prompt("Pega el enlace o URL del audio (Ej: YouTube, Spotify, o archivo online):");
-  if (!url) return;
+// -------------------------------------------------------------
+// SECCIÓN 2: GRABACIONES DE ENSAYO (TOMAS COMPLETAS)
+// -------------------------------------------------------------
 
-  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
-  if (song) {
-    if (!song.audios) song.audios = [];
-    song.audios.push({ name, url });
-    saveLocalStorage();
-    if (window.SongsService) {
-      window.SongsService.saveSong(song).catch(err => console.error("Error al guardar pista de referencia:", err));
+window.toggleRehearsalRecording = async function () {
+  const btn = document.getElementById("btn-record-rehearsal");
+  if (!btn) return;
+
+  if (isRecordingRehearsal) {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
     }
-    renderRehearsalRoom();
+    if (rehearsalRecordTimer) {
+      clearInterval(rehearsalRecordTimer);
+      rehearsalRecordTimer = null;
+    }
+    btn.innerHTML = "⏳ Subiendo toma...";
+    btn.disabled = true;
+  } else {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      const options = getAudioRecorderOptions();
+      mediaRecorder = options.mimeType ? new MediaRecorder(stream, options) : new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = event => {
+        if (event.data && event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('webm') ? 'webm' : 'mp3';
+        const audioBlob = new Blob(audioChunks, { type: mimeType });
+
+        const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+        if (song && audioBlob.size > 0) {
+          try {
+            triggerEnsayoToast('☁️ Subiendo toma a Supabase Storage...');
+            const now = new Date();
+            const count = (song.grabaciones_ensayo || []).length + 1;
+            const filename = `toma_${count}_${Date.now()}.${ext}`;
+
+            let cloudUrl = null;
+            if (window.SongsService && typeof window.SongsService.uploadAudioBlob === 'function') {
+              cloudUrl = await window.SongsService.uploadAudioBlob(song.id, 'rehearsals', audioBlob, filename);
+            }
+
+            if (!cloudUrl) {
+              throw new Error("No se pudo obtener la URL de almacenamiento en Supabase.");
+            }
+
+            if (!song.grabaciones_ensayo) song.grabaciones_ensayo = [];
+            song.grabaciones_ensayo.push({
+              name: `Toma ${count} (${now.toLocaleDateString()})`,
+              url: cloudUrl,
+              date: now.toLocaleString(),
+              duration: formatRecordTime(rehearsalRecordSeconds)
+            });
+
+            saveLocalStorage();
+            if (window.SongsService) {
+              await window.SongsService.saveSong(song);
+            }
+            triggerEnsayoToast('✅ ¡Toma subida y sincronizada en Supabase!');
+          } catch (uploadErr) {
+            console.error("Error al guardar toma en Supabase:", uploadErr);
+            alert("Error al subir grabación a Supabase: " + uploadErr.message);
+          }
+          renderRehearsalRoom();
+        }
+        isRecordingRehearsal = false;
+        rehearsalRecordSeconds = 0;
+      };
+
+      mediaRecorder.start(250);
+      isRecordingRehearsal = true;
+      rehearsalRecordSeconds = 0;
+      btn.disabled = false;
+      btn.innerHTML = "⏹️ Detener (00:00)";
+      btn.style.background = "#E24B4A";
+      btn.style.color = "#fff";
+
+      rehearsalRecordTimer = setInterval(() => {
+        rehearsalRecordSeconds++;
+        btn.innerHTML = `⏹️ Detener (${formatRecordTime(rehearsalRecordSeconds)})`;
+      }, 1000);
+
+      triggerEnsayoToast("🔴 Grabando toma de ensayo...");
+    } catch (err) {
+      console.error("Error al acceder al micrófono:", err);
+      alert("No se pudo acceder al micrófono para grabar. Verifica los permisos del navegador.");
+    }
   }
 };
 
-window.deleteReferenceAudio = function (index) {
+window.uploadRehearsalAudioFile = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
-  if (song && song.audios) {
-    song.audios.splice(index, 1);
+  if (!song) return;
+
+  triggerEnsayoToast('☁️ Subiendo archivo de toma a Supabase...');
+
+  try {
+    let cloudUrl = null;
+    if (window.SongsService && typeof window.SongsService.uploadAudioBlob === 'function') {
+      cloudUrl = await window.SongsService.uploadAudioBlob(song.id, 'rehearsals', file, file.name);
+    }
+    if (!cloudUrl) throw new Error("No se pudo obtener URL de Supabase");
+
+    const now = new Date();
+    const count = (song.grabaciones_ensayo || []).length + 1;
+    if (!song.grabaciones_ensayo) song.grabaciones_ensayo = [];
+    song.grabaciones_ensayo.push({
+      name: file.name.replace(/\.[^/.]+$/, '') || `Toma ${count}`,
+      url: cloudUrl,
+      date: now.toLocaleString()
+    });
+
     saveLocalStorage();
     if (window.SongsService) {
-      window.SongsService.saveSong(song).catch(err => console.error("Error al borrar referencia:", err));
+      await window.SongsService.saveSong(song);
     }
+    triggerEnsayoToast('✅ Toma agregada y sincronizada en Supabase');
     renderRehearsalRoom();
+  } catch (err) {
+    console.error("Error al subir archivo de ensayo:", err);
+    alert("Error al subir archivo: " + err.message);
   }
 };
 
-window.deleteRehearsalRecording = function (index) {
+window.deleteRehearsalRecording = async function (index) {
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
-  if (song && song.grabaciones_ensayo) {
+  if (!song || !song.grabaciones_ensayo || !song.grabaciones_ensayo[index]) return;
+
+  if (confirm(`¿Seguro que deseas eliminar la grabación "${song.grabaciones_ensayo[index].name}"?`)) {
+    const rec = song.grabaciones_ensayo[index];
     song.grabaciones_ensayo.splice(index, 1);
     saveLocalStorage();
     if (window.SongsService) {
-      window.SongsService.saveSong(song).catch(err => console.error("Error al borrar grabacion:", err));
+      if (rec.url && window.SongsService.deleteAudioByUrl) {
+        window.SongsService.deleteAudioByUrl(rec.url).catch(() => {});
+      }
+      await window.SongsService.saveSong(song).catch(err => console.error(err));
     }
+    triggerEnsayoToast('Grabación eliminada');
     renderRehearsalRoom();
   }
 };
 
-window.deleteLineAudio = function (lineIdx, audIdx) {
+// -------------------------------------------------------------
+// SECCIÓN 3: IDEAS DE ARREGLOS VINCULADAS A VERSOS
+// -------------------------------------------------------------
+
+window.toggleLineAudioRecording = async function (lineIdx) {
+  const btn = document.getElementById("btn-record-line-audio") || document.getElementById(`btn-mobile-record-audio-${lineIdx}`);
+
+  if (isRecordingLineAudio) {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    if (lineRecordTimer) {
+      clearInterval(lineRecordTimer);
+      lineRecordTimer = null;
+    }
+    if (btn) {
+      btn.innerHTML = "⏳ Subiendo idea...";
+      btn.disabled = true;
+    }
+  } else {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      const options = getAudioRecorderOptions();
+      mediaRecorder = options.mimeType ? new MediaRecorder(stream, options) : new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = event => {
+        if (event.data && event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('webm') ? 'webm' : 'mp3';
+        const audioBlob = new Blob(audioChunks, { type: mimeType });
+
+        const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+        if (song && audioBlob.size > 0) {
+          try {
+            triggerEnsayoToast('☁️ Subiendo idea de arreglo a Supabase...');
+            const now = new Date();
+            const count = (song.lineAudios && song.lineAudios[lineIdx] ? song.lineAudios[lineIdx].length : 0) + 1;
+            const filename = `verso_${lineIdx + 1}_idea_${count}_${Date.now()}.${ext}`;
+
+            let cloudUrl = null;
+            if (window.SongsService && typeof window.SongsService.uploadAudioBlob === 'function') {
+              cloudUrl = await window.SongsService.uploadAudioBlob(song.id, 'arrangements', audioBlob, filename);
+            }
+
+            if (!cloudUrl) {
+              throw new Error("No se pudo obtener la URL de almacenamiento en Supabase.");
+            }
+
+            if (!song.lineAudios) song.lineAudios = {};
+            if (!song.lineAudios[lineIdx]) song.lineAudios[lineIdx] = [];
+
+            const authorName = (state.currentUser && state.currentUser.user_metadata && state.currentUser.user_metadata.nombre) 
+              ? state.currentUser.user_metadata.nombre 
+              : ((state.currentUser && state.currentUser.email) ? state.currentUser.email.split('@')[0] : 'Músico');
+
+            song.lineAudios[lineIdx].push({
+              name: `Idea ${count} (${authorName})`,
+              url: cloudUrl,
+              date: now.toLocaleString(),
+              author: authorName
+            });
+
+            saveLocalStorage();
+            if (window.SongsService) {
+              await window.SongsService.saveSong(song);
+            }
+            triggerEnsayoToast('✅ ¡Idea de arreglo guardada y sincronizada!');
+          } catch (uploadErr) {
+            console.error("Error al guardar idea de arreglo en Supabase:", uploadErr);
+            alert("Error al subir idea a Supabase: " + uploadErr.message);
+          }
+
+          // Si el modal móvil está abierto, refrescarlo
+          const modal = document.getElementById("mobile-line-notes-modal");
+          if (modal && typeof window.openMobileLineNotesModal === 'function') {
+            openMobileLineNotesModal(lineIdx);
+          }
+          renderRehearsalRoom();
+        }
+        isRecordingLineAudio = false;
+        recordingLineIndex = null;
+        lineRecordSeconds = 0;
+      };
+
+      mediaRecorder.start(250);
+      isRecordingLineAudio = true;
+      recordingLineIndex = lineIdx;
+      lineRecordSeconds = 0;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = "⏹️ Detener (00:00)";
+        btn.style.background = "#E24B4A";
+        btn.style.color = "#fff";
+      }
+
+      lineRecordTimer = setInterval(() => {
+        lineRecordSeconds++;
+        if (btn) {
+          btn.innerHTML = `⏹️ Detener (${formatRecordTime(lineRecordSeconds)})`;
+        }
+      }, 1000);
+
+      triggerEnsayoToast(`🔴 Grabando arreglo para Verso ${lineIdx + 1}...`);
+    } catch (err) {
+      console.error("Error al acceder al micrófono:", err);
+      alert("No se pudo acceder al micrófono para grabar. Verifica los permisos del navegador.");
+    }
+  }
+};
+
+window.deleteLineAudio = async function (lineIdx, audIdx) {
   const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
-  if (song && song.lineAudios && song.lineAudios[lineIdx]) {
+  if (!song || !song.lineAudios || !song.lineAudios[lineIdx] || !song.lineAudios[lineIdx][audIdx]) return;
+
+  if (confirm(`¿Seguro que deseas eliminar esta idea de arreglo?`)) {
+    const aud = song.lineAudios[lineIdx][audIdx];
     song.lineAudios[lineIdx].splice(audIdx, 1);
     if (song.lineAudios[lineIdx].length === 0) {
       delete song.lineAudios[lineIdx];
     }
     saveLocalStorage();
     if (window.SongsService) {
-      window.SongsService.saveSong(song).catch(err => console.error("Error al borrar idea de audio:", err));
+      if (aud.url && window.SongsService.deleteAudioByUrl) {
+        window.SongsService.deleteAudioByUrl(aud.url).catch(() => {});
+      }
+      await window.SongsService.saveSong(song).catch(err => console.error(err));
     }
+    triggerEnsayoToast('Idea de arreglo eliminada');
     renderRehearsalRoom();
   }
 };
@@ -9644,19 +9980,24 @@ window.saveMobileLineNote = function(lineIdx) {
   closeMobileLineNotesModal();
 };
 
-window.deleteMobileLineAudio = function(lineIdx, audIdx) {
-  if (confirm("¿Seguro que deseas borrar este audio de referencia?")) {
+window.deleteMobileLineAudio = async function(lineIdx, audIdx) {
+  if (confirm("¿Seguro que deseas borrar esta idea de audio?")) {
     const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
     if (song && song.lineAudios && song.lineAudios[lineIdx]) {
+      const aud = song.lineAudios[lineIdx][audIdx];
       song.lineAudios[lineIdx].splice(audIdx, 1);
       if (song.lineAudios[lineIdx].length === 0) {
         delete song.lineAudios[lineIdx];
       }
       saveLocalStorage();
       if (window.SongsService) {
-        window.SongsService.saveSong(song).catch(err => console.error("Error al borrar idea de audio:", err));
+        if (aud && aud.url && window.SongsService.deleteAudioByUrl) {
+          window.SongsService.deleteAudioByUrl(aud.url).catch(() => {});
+        }
+        await window.SongsService.saveSong(song).catch(err => console.error("Error al borrar idea de audio:", err));
       }
       openMobileLineNotesModal(lineIdx); // Refrescar modal
+      renderRehearsalRoom();
     }
   }
 };

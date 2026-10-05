@@ -178,42 +178,79 @@ const SongsService = {
     }
   },
 
-  // Subir archivo de audio de la canción a Supabase Storage
-  async uploadSongAudio(songId, file) {
+  // Subir cualquier blob o archivo de audio a Supabase Storage con ruta categorizada única
+  async uploadAudioBlob(songId, category, blob, filename = 'audio.mp3') {
     const bandId = this._getBandId();
     const supabase = window.supabaseClient;
     if (!supabase) {
-      throw new Error("Supabase no disponible");
+      throw new Error("Supabase no está disponible");
     }
 
     try {
-      const extension = file.name.split('.').pop();
-      const filePath = `${bandId}/${songId}.${extension}`;
+      const cleanName = (filename || 'audio.mp3')
+        .replace(/[^a-zA-Z0-9._-]/g, '_')
+        .toLowerCase();
+      const ext = cleanName.split('.').pop() || 'mp3';
+      const base = cleanName.replace(/\.[^/.]+$/, '');
+      const uniquePath = `${bandId}/${songId}/${category || 'general'}/${Date.now()}_${base}.${ext}`;
 
-      const { error: uploadError } = await supabase
+      const contentType = blob.type || (ext === 'mp3' ? 'audio/mpeg' : ext === 'wav' ? 'audio/wav' : 'audio/webm');
+
+      const { data: uploadData, error: uploadError } = await supabase
         .storage
         .from('song-audio')
-        .upload(filePath, file, { upsert: true });
+        .upload(uniquePath, blob, {
+          contentType: contentType,
+          upsert: true
+        });
 
       if (uploadError) throw uploadError;
 
       const { data } = supabase
         .storage
         .from('song-audio')
-        .getPublicUrl(filePath);
+        .getPublicUrl(uniquePath);
 
       return data.publicUrl;
     } catch (error) {
-      console.error("Error al subir audio a Supabase:", error);
-      
-      // Si el error es porque el bucket no existe
+      console.error("Error al subir audio a Supabase Storage:", error);
       if (error.message && error.message.includes("Bucket not found")) {
-        alert("¡ATENCIÓN CRÍTICA!\n\nNo se pudo guardar el archivo de audio porque el Storage Bucket 'song-audio' no existe en tu base de datos de Supabase.\n\nPor favor, entra al Dashboard de Supabase -> Storage y crea un nuevo bucket PÚBLICO llamado exactamente: song-audio\n\nSin este bucket, los audios desaparecerán al refrescar la página.");
-      } else {
-        alert("Error al subir archivo de audio: " + error.message);
+        alert("¡ATENCIÓN CRÍTICA!\n\nNo se pudo guardar el archivo de audio porque el Storage Bucket 'song-audio' no existe en tu base de datos de Supabase.\n\nPor favor crea un bucket PÚBLICO llamado: song-audio");
       }
       throw error;
     }
+  },
+
+  // Eliminar archivo de audio en Supabase Storage a partir de su URL pública
+  async deleteAudioByUrl(url) {
+    if (!url || typeof url !== 'string' || !url.includes('/song-audio/')) return false;
+    const supabase = window.supabaseClient;
+    if (!supabase) return false;
+
+    try {
+      const parts = url.split('/song-audio/');
+      if (parts.length < 2) return false;
+      const relativePath = decodeURIComponent(parts[1].split('?')[0]);
+
+      const { error } = await supabase
+        .storage
+        .from('song-audio')
+        .remove([relativePath]);
+
+      if (error) {
+        console.warn("Advertencia al eliminar audio de Storage:", error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn("No se pudo eliminar archivo de Storage:", err);
+      return false;
+    }
+  },
+
+  // Subir archivo de audio de la canción a Supabase Storage (compatibilidad)
+  async uploadSongAudio(songId, file) {
+    return this.uploadAudioBlob(songId, 'references', file, file.name);
   },
 
   // Obtener URL pública del audio de una canción
