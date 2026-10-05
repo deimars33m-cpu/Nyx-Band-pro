@@ -350,7 +350,7 @@ async function loadFavoriteChordsFromDB() {
         .maybeSingle();
       if (error) throw error;
 
-      state.favoritesChords = (data && data.list) ? data.list : [];
+      state.favoritesChords = (data && Array.isArray(data.list)) ? data.list : [];
       renderDictionary();
     } catch (e) {
       console.error("Error al cargar acordes favoritos de Supabase:", e);
@@ -4830,7 +4830,7 @@ function renderBuilderChord() {
   if (playBtn) playBtn.textContent = "🔊 Escuchar Acorde";
   
   if (favHeart) {
-    const isFav = state.favoritesChords.includes(chordName);
+    const isFav = Array.isArray(state.favoritesChords) && state.favoritesChords.includes(chordName);
     if (isFav) {
       favHeart.classList.add("active");
       favHeart.innerHTML = "❤️";
@@ -5442,8 +5442,60 @@ function parseChordName(chordName) {
   
   let quality = "M";
   let extension = "NONE";
+  let ninth = "NONE";
+  let eleventh = "NONE";
+  let thirteenth = "NONE";
   let alteration = "NONE";
-  
+
+  // Extensiones avanzadas
+  if (rest.includes("maj13")) {
+    thirteenth = "maj13";
+    rest = rest.replace("maj13", "");
+  } else if (rest.includes("m13")) {
+    quality = "m";
+    thirteenth = "m13";
+    rest = rest.replace("m13", "");
+  } else if (rest.includes("13")) {
+    thirteenth = "13";
+    rest = rest.replace("13", "");
+  } else if (rest.includes("b13")) {
+    thirteenth = "b13";
+    rest = rest.replace("b13", "");
+  }
+
+  if (rest.includes("maj11")) {
+    eleventh = "maj11";
+    rest = rest.replace("maj11", "");
+  } else if (rest.includes("m11")) {
+    quality = "m";
+    eleventh = "m11";
+    rest = rest.replace("m11", "");
+  } else if (rest.includes("#11")) {
+    eleventh = "#11";
+    rest = rest.replace("#11", "");
+  } else if (rest.includes("11")) {
+    eleventh = "11";
+    rest = rest.replace("11", "");
+  }
+
+  if (rest.includes("maj9")) {
+    ninth = "maj9";
+    rest = rest.replace("maj9", "");
+  } else if (rest.includes("m9")) {
+    quality = "m";
+    ninth = "m9";
+    rest = rest.replace("m9", "");
+  } else if (rest.includes("b9")) {
+    ninth = "b9";
+    rest = rest.replace("b9", "");
+  } else if (rest.includes("#9")) {
+    ninth = "#9";
+    rest = rest.replace("#9", "");
+  } else if (rest.includes("9")) {
+    ninth = "9";
+    rest = rest.replace("9", "");
+  }
+
   if (rest.includes("6add9")) {
     alteration = "6add9";
     rest = rest.replace("6add9", "");
@@ -5467,11 +5519,11 @@ function parseChordName(chordName) {
     rest = "";
   }
   
-  const extensions = ["maj7", "mmaj7", "maj9", "maj11", "maj13", "m7", "m9", "m11", "m13", "7", "9", "11", "13"];
-  for (const ext of extensions) {
+  const extensions7 = ["maj7", "mmaj7", "m7", "7"];
+  for (const ext of extensions7) {
     if (rest.includes(ext)) {
       extension = ext;
-      if (ext.startsWith("m") && ext !== "maj7") {
+      if (ext === "m7" || ext === "mmaj7") {
         quality = "m";
       }
       rest = rest.replace(ext, "");
@@ -5492,17 +5544,15 @@ function parseChordName(chordName) {
   } else if (rest === "m6") {
     quality = "m";
     alteration = "6";
-  } else if (rest === "9") {
-    extension = "9";
-  } else if (rest === "m9") {
-    quality = "m";
-    extension = "9";
   }
   
   return {
     root,
     quality,
     extension,
+    ninth,
+    eleventh,
+    thirteenth,
     alteration,
     bass
   };

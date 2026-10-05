@@ -47,13 +47,13 @@ window.calculateChordIntervals = function(builder) {
   }
 
   // 2. 7ma (Extension)
-  if (builder.extension !== "NONE") {
+  if (builder && builder.extension && typeof builder.extension === "string" && builder.extension !== "NONE") {
     if (builder.extension.includes("maj7")) intervals.add("7");
     else if (builder.extension.includes("m7") || builder.extension === "7") intervals.add("b7");
   }
 
   // 3. 9na
-  if (builder.ninth !== "NONE") {
+  if (builder && builder.ninth && typeof builder.ninth === "string" && builder.ninth !== "NONE") {
     if (builder.ninth.includes("maj9")) { intervals.add("7"); intervals.add("9"); }
     else if (builder.ninth === "9" || builder.ninth === "m9") { intervals.add("b7"); intervals.add("9"); }
     else if (builder.ninth === "b9") { intervals.add("b7"); intervals.add("b9"); }
@@ -61,14 +61,14 @@ window.calculateChordIntervals = function(builder) {
   }
 
   // 4. 11va
-  if (builder.eleventh !== "NONE") {
+  if (builder && builder.eleventh && typeof builder.eleventh === "string" && builder.eleventh !== "NONE") {
     if (builder.eleventh.includes("maj11")) { intervals.add("7"); intervals.add("9"); intervals.add("11"); }
     else if (builder.eleventh === "11" || builder.eleventh === "m11") { intervals.add("b7"); intervals.add("9"); intervals.add("11"); }
     else if (builder.eleventh === "#11") { intervals.add("b7"); intervals.add("9"); intervals.add("#11"); }
   }
 
   // 5. 13va
-  if (builder.thirteenth !== "NONE") {
+  if (builder && builder.thirteenth && typeof builder.thirteenth === "string" && builder.thirteenth !== "NONE") {
     if (builder.thirteenth.includes("maj13")) { intervals.add("7"); intervals.add("9"); intervals.add("11"); intervals.add("13"); }
     else if (builder.thirteenth === "13" || builder.thirteenth === "m13") { intervals.add("b7"); intervals.add("9"); intervals.add("11"); intervals.add("13"); }
     else if (builder.thirteenth === "b13") { intervals.add("b7"); intervals.add("9"); intervals.add("11"); intervals.add("b13"); }
@@ -83,17 +83,18 @@ window.calculateChordIntervals = function(builder) {
 
 // Toma el estado del constructor y devuelve un array con los nombres de las notas absolutas
 window.getChordNotesFromEngine = function(builder) {
-  const rootNote = builder.root;
+  if (!builder) builder = {};
+  const rootNote = builder.root || "C";
   const intervals = window.calculateChordIntervals(builder);
   
   let notes = intervals.map(inv => addInterval(rootNote, INTERVALS_TO_SEMITONES[inv]));
   
-  if (builder.alteration !== "NONE") {
+  if (builder.alteration && typeof builder.alteration === "string" && builder.alteration !== "NONE") {
     const addNote = builder.alteration.replace("add", "").trim();
     if (!notes.includes(addNote)) notes.push(addNote);
   }
 
-  if (builder.bass !== "NONE") {
+  if (builder.bass && typeof builder.bass === "string" && builder.bass !== "NONE") {
     const bassNote = builder.bass.replace("/", "").trim();
     if (!notes.includes(bassNote)) notes.unshift(bassNote);
   }
