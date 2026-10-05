@@ -1,12 +1,16 @@
-const CACHE_NAME = 'nyx-band-pro-cache-v5.1';
+const CACHE_NAME = 'nyx-band-pro-cache-v5.2';
 const ASSETS = [
   '/',
   '/index.html',
+  '/auth.html',
   '/index.css',
   '/app.js',
+  '/auth.js',
   '/supabase.js',
   '/songsService.js',
   '/chords.js',
+  '/chordEngine.js',
+  '/bpmDetector.js',
   '/icon.svg',
   '/manifest.json'
 ];
@@ -14,7 +18,6 @@ const ASSETS = [
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(async cache => {
-      // Usar un bucle para evitar que un solo error (ej. redirección 308) cancele todo el caché
       for (let asset of ASSETS) {
         try {
           await cache.add(asset);
@@ -43,14 +46,40 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) {
+  if (e.request.method !== 'GET') return;
+
+  // Solo interceptar peticiones del mismo origen
+  if (!e.request.url.startsWith(self.location.origin)) {
     return;
   }
-  
+
+  // Si es una navegación (abrir la página en el navegador)
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request)
+        .then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200) {
+            const cacheCopy = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(e.request, cacheCopy));
+          }
+          return networkResponse;
+        })
+        .catch(async () => {
+          // Si no hay red o falló, buscar en caché
+          const cached = await caches.match(e.request, { ignoreSearch: true });
+          if (cached) return cached;
+          const fallback = await caches.match('/index.html') || await caches.match('/');
+          return fallback || Response.error();
+        })
+    );
+    return;
+  }
+
+  // Para otros assets (css, js, imagenes)
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then(cachedResponse => {
       if (cachedResponse) {
-        // Actualización en segundo plano
+        // Actualizar en segundo plano sin bloquear
         fetch(e.request).then(networkResponse => {
           if (networkResponse && networkResponse.status === 200) {
             caches.open(CACHE_NAME).then(cache => cache.put(e.request, networkResponse));
@@ -58,18 +87,15 @@ self.addEventListener('fetch', e => {
         }).catch(() => {});
         return cachedResponse;
       }
-      
-      // Si no está en caché, buscar en red
+
       return fetch(e.request).then(networkResponse => {
         if (networkResponse && networkResponse.status === 200) {
           const cacheCopy = networkResponse.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(e.request, cacheCopy));
         }
         return networkResponse;
-      }).catch(err => {
-        console.error('Fetch falló para:', e.request.url, err);
-        // Podríamos retornar un offline.html aquí si lo tuviéramos
-        throw err;
+      }).catch(() => {
+        return Response.error();
       });
     })
   );
