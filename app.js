@@ -1574,7 +1574,6 @@ function openSongInRehearsal(eventOrId, optionalSongId) {
 
     if (window.MultiTrackEngine) {
       window.MultiTrackEngine.stop();
-      return;
     }
 
     state.activeSongId = songId;
@@ -1600,6 +1599,7 @@ function openSongInRehearsal(eventOrId, optionalSongId) {
     console.error("Error in openSongInRehearsal:", err);
   }
 }
+window.openSongInRehearsal = openSongInRehearsal;
 
 // --- GUARDAR O EDITAR CANCIÓN ---
 function saveSongFromForm() {
@@ -10093,7 +10093,8 @@ function getTrackTypeLabel(type) {
   }
 }
 
-window.setupMultiTrackMixer = function (song) {
+function setupMultiTrackMixer(song) {
+window.setupMultiTrackMixer = setupMultiTrackMixer;
   if (!song || !window.MultiTrackEngine) return;
 
   const currentTracks = song.multitracks || [];
@@ -10160,7 +10161,8 @@ window.setupMultiTrackMixer = function (song) {
   }
 };
 
-window.renderMultiTrackPane = function (song) {
+function renderMultiTrackPane(song) {
+window.renderMultiTrackPane = renderMultiTrackPane;
   const tracks = song.multitracks || [];
   const isPlaying = window.MultiTrackEngine ? window.MultiTrackEngine.isPlaying() : false;
   const curTime = window.MultiTrackEngine ? window.MultiTrackEngine.getCurrentTime() : 0;
