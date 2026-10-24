@@ -3564,6 +3564,29 @@ textarea {
   flex-shrink: 0;
 }
 
+/* Line selector handle (área inicial izquierda para seleccionar línea sin fallos) */
+.line-selector-handle {
+  position: absolute;
+  left: -42px;
+  top: 0;
+  bottom: 0;
+  width: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+  z-index: 12;
+  user-select: none;
+}
+.line-selector-handle:hover .line-number {
+  opacity: 1;
+  color: var(--cyan) !important;
+  text-shadow: 0 0 4px var(--cyan);
+}
+.line-selector-handle:hover .line-dot {
+  transform: scale(1.3);
+}
+
 /* Line number */
 .line-number {
   position: absolute;

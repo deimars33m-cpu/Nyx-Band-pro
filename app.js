@@ -2037,6 +2037,10 @@ function renderRehearsalRoom() {
     const room = document.getElementById("rehearsal-room-content");
     if (!room) return;
 
+    // Preservar la posicion exacta de scroll de la hoja de acordes/letra
+    const prevScrollEl = document.getElementById("lyrics-editor-scroll");
+    const prevScrollTop = prevScrollEl ? prevScrollEl.scrollTop : null;
+
     if (!state.activeSongId) {
       room.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:center; height:100%; background:var(--bg-stage);">
@@ -2216,9 +2220,11 @@ function renderRehearsalRoom() {
 
         return `
         <div class="lyric-line-editor ${isActive ? 'active' : ''} ${isSelected ? 'selected' : ''}" id="ensayo-line-${idx}" data-index="${idx}" style="display:flex; justify-content:space-between; align-items:center; width:100%; position:relative;">
-          <div style="flex:1; position:relative; min-width:0; padding-right:15px;">
+          <div class="line-selector-handle" data-index="${idx}" title="Seleccionar línea para asignar integrantes">
             <span class="line-number">${idx + 1}</span>
             ${dotsHtml}
+          </div>
+          <div style="flex:1; position:relative; min-width:0; padding-right:15px;">
             ${chordRow}
             <div class="lyric-text-display" style="white-space:pre-wrap; word-break:break-word;">${line.texto}</div>
             ${lineNotes}
@@ -2530,6 +2536,14 @@ function renderRehearsalRoom() {
     </div>`;
 
     bindRehearsalEvents(structure, lines, song);
+
+    // Restaurar inmediatamente la posicion de scroll para evitar saltos indeseados
+    if (prevScrollTop !== null) {
+      const newScrollEl = document.getElementById("lyrics-editor-scroll");
+      if (newScrollEl) {
+        newScrollEl.scrollTop = prevScrollTop;
+      }
+    }
   } catch (err) {
     console.error("Error in renderRehearsalRoom:", err);
   }
@@ -2618,13 +2632,15 @@ function bindRehearsalEvents(structure, lines, song) {
       if (e.target.tagName === "BUTTON" || e.target.tagName === "I" || e.target.tagName === "INPUT" || e.target.closest(".lyric-controls")) return;
       const idx = parseInt(el.getAttribute("data-index"));
 
-      const isSelectionTrigger = e.target.classList.contains("line-number") ||
+      const isSelectionTrigger = e.target.closest(".line-selector-handle") ||
+        e.target.classList.contains("line-number") ||
         e.target.classList.contains("line-dot") ||
         e.target.closest(".line-performers-dots") ||
         e.target.classList.contains("line-dot-mini");
 
       if (isSelectionTrigger || e.ctrlKey) {
         e.preventDefault();
+        e.stopPropagation();
         if (!state.selectedLineIndices) state.selectedLineIndices = [];
         const pos = state.selectedLineIndices.indexOf(idx);
         if (pos > -1) {
@@ -2632,6 +2648,7 @@ function bindRehearsalEvents(structure, lines, song) {
         } else {
           state.selectedLineIndices.push(idx);
         }
+        // Re-renderizar preservando 100% la posicion de scroll sin saltos
         renderRehearsalRoom();
       } else {
         state.selectedLineIndices = []; // Limpiar selección múltiple
@@ -2639,7 +2656,17 @@ function bindRehearsalEvents(structure, lines, song) {
         const line = lines[idx];
         if (line) state.seccionActivaId = line.seccionId;
         renderRehearsalRoom();
-        scrollToEnsayoLine(idx);
+        // Solo ajustar scroll si la línea no está completamente visible
+        const container = document.getElementById("lyrics-editor-scroll");
+        const lineEl = document.getElementById("ensayo-line-" + idx);
+        if (container && lineEl) {
+          const cRect = container.getBoundingClientRect();
+          const lRect = lineEl.getBoundingClientRect();
+          const isOutOfView = (lRect.top < cRect.top + 20) || (lRect.bottom > cRect.bottom - 20);
+          if (isOutOfView) {
+            scrollToEnsayoLine(idx);
+          }
+        }
       }
     });
   });
