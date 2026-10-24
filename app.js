@@ -1912,13 +1912,40 @@ function triggerEnsayoToast(msg) {
   setTimeout(() => toast.remove(), 3000);
 }
 
-function scrollToEnsayoLine(index) {
-  const el = document.getElementById(`ensayo-line-${index}`);
+function scrollToEnsayoLine(index, alignTop = false) {
   const container = document.getElementById("lyrics-editor-scroll");
-  if (el && container) {
-    const offsetTop = el.offsetTop - container.clientHeight / 2 + el.clientHeight / 2;
+  if (!container) return;
+  const el = document.getElementById(`ensayo-line-${index}`);
+  if (el) {
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const currentScrollTop = container.scrollTop;
+    let targetScrollTop;
+    if (alignTop) {
+      targetScrollTop = currentScrollTop + (elRect.top - containerRect.top) - 14;
+    } else {
+      targetScrollTop = currentScrollTop + (elRect.top - containerRect.top) - (container.clientHeight / 2) + (elRect.height / 2);
+    }
     container.scrollTo({
-      top: Math.max(0, offsetTop),
+      top: Math.max(0, targetScrollTop),
+      behavior: "smooth"
+    });
+  }
+}
+
+function scrollToEnsayoSection(sectionId, lineIndex) {
+  const container = document.getElementById("lyrics-editor-scroll");
+  if (!container) return;
+  const blockEl = sectionId ? document.getElementById(`stanza-block-${sectionId}`) : null;
+  const lineEl = (lineIndex !== undefined && lineIndex !== null) ? document.getElementById(`ensayo-line-${lineIndex}`) : null;
+  const targetEl = blockEl || lineEl;
+  if (targetEl) {
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+    const currentScrollTop = container.scrollTop;
+    const targetScrollTop = currentScrollTop + (targetRect.top - containerRect.top) - 12;
+    container.scrollTo({
+      top: Math.max(0, targetScrollTop),
       behavior: "smooth"
     });
   }
@@ -2220,10 +2247,11 @@ function renderRehearsalRoom() {
         ${block.nombre} ${block.notes ? `// <span style="font-style:italic; font-weight:normal; text-transform:none; color:var(--text-dim); font-size:10px;">${block.notes}</span>` : ""}
       </div>`;
 
+      const isCurrentStanza = state.seccionActivaId === block.seccionId;
       return `
-      <div class="stanza-block" style="position:relative; padding-left:14px; margin-bottom:24px;">
+      <div class="stanza-block ${isCurrentStanza ? 'active-stanza' : ''}" id="stanza-block-${block.seccionId}" data-section-id="${block.seccionId}" style="position:relative; padding-left:14px; margin-bottom:28px;">
         <!-- Línea vertical neon que delimita la estrofa -->
-        <div class="stanza-cable" style="position:absolute; left:0; top:0; bottom:0; width:2px; background:${secColor}; box-shadow:0 0 6px ${secColor}; opacity:0.4; border-radius:2px;"></div>
+        <div class="stanza-cable ${isCurrentStanza ? 'active-cable' : ''}" style="position:absolute; left:0; top:0; bottom:0; width:2px; background:${secColor}; box-shadow:0 0 ${isCurrentStanza ? '12px' : '6px'} ${secColor}; opacity:${isCurrentStanza ? '1' : '0.4'}; border-radius:2px;"></div>
         ${blockHeader}
         <div class="stanza-lines" style="display:flex; flex-direction:column;">
           ${blockLinesHtml}
@@ -2537,7 +2565,7 @@ function bindRehearsalEvents(structure, lines, song) {
     });
   });
 
-  // Section items (sidebar, mobile chips)
+  // Section items (sidebar, mobile chips) - Salto visual a la estrofa seleccionada
   document.querySelectorAll(".section-item, .section-tab-chip").forEach(el => {
     el.addEventListener("click", () => {
       const id = el.getAttribute("data-id");
@@ -2547,7 +2575,9 @@ function bindRehearsalEvents(structure, lines, song) {
         state.lineaActivaIndex = targetSec.lineaInicio;
         state.tiempoActual = (targetSec.lineaInicio / lines.length) * duration;
         renderRehearsalRoom();
-        scrollToEnsayoLine(targetSec.lineaInicio);
+        requestAnimationFrame(() => {
+          scrollToEnsayoSection(id, targetSec.lineaInicio);
+        });
       }
     });
   });
@@ -2677,14 +2707,30 @@ function bindRehearsalEvents(structure, lines, song) {
     btnPrev.addEventListener("click", () => {
       const idx = Math.max(0, currentSecIdx - 1);
       const sec = structure[idx];
-      if (sec) { state.seccionActivaId = sec.id; state.lineaActivaIndex = sec.lineaInicio; state.tiempoActual = (sec.lineaInicio / lines.length) * duration; renderRehearsalRoom(); scrollToEnsayoLine(sec.lineaInicio); }
+      if (sec) {
+        state.seccionActivaId = sec.id;
+        state.lineaActivaIndex = sec.lineaInicio;
+        state.tiempoActual = (sec.lineaInicio / lines.length) * duration;
+        renderRehearsalRoom();
+        requestAnimationFrame(() => {
+          scrollToEnsayoSection(sec.id, sec.lineaInicio);
+        });
+      }
     });
   }
   if (btnNext) {
     btnNext.addEventListener("click", () => {
       const idx = Math.min(structure.length - 1, currentSecIdx + 1);
       const sec = structure[idx];
-      if (sec) { state.seccionActivaId = sec.id; state.lineaActivaIndex = sec.lineaInicio; state.tiempoActual = (sec.lineaInicio / lines.length) * duration; renderRehearsalRoom(); scrollToEnsayoLine(sec.lineaInicio); }
+      if (sec) {
+        state.seccionActivaId = sec.id;
+        state.lineaActivaIndex = sec.lineaInicio;
+        state.tiempoActual = (sec.lineaInicio / lines.length) * duration;
+        renderRehearsalRoom();
+        requestAnimationFrame(() => {
+          scrollToEnsayoSection(sec.id, sec.lineaInicio);
+        });
+      }
     });
   }
 
@@ -9451,8 +9497,15 @@ window.deleteLineAudio = async function (lineIdx, audIdx) {
 window.selectAndGoToLine = function (idx) {
   state.ensayoActiveTab = "chords";
   state.lineaActivaIndex = idx;
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  const lines = (song && song.letra) ? song.letra : [];
+  if (lines[idx] && lines[idx].seccionId) {
+    state.seccionActivaId = lines[idx].seccionId;
+  }
   renderRehearsalRoom();
-  scrollToEnsayoLine(idx);
+  requestAnimationFrame(() => {
+    scrollToEnsayoLine(idx, true);
+  });
 };
 
 
