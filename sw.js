@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nyx-band-pro-cache-v5.4';
+const CACHE_NAME = 'nyx-band-pro-cache-v5.5';
 const ASSETS = [
   '/',
   '/index.html',
@@ -11,6 +11,7 @@ const ASSETS = [
   '/chords.js',
   '/chordEngine.js',
   '/bpmDetector.js',
+  '/multiTrackEngine.js',
   '/icon.svg',
   '/manifest.json'
 ];

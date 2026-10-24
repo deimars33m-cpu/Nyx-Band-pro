@@ -45,6 +45,7 @@ const SongsService = {
           notas_globales: metadata.notas_globales || null,
           tareas_ensayo: metadata.tareas_ensayo || null,
           audios: metadata.audios || null,
+          multitracks: metadata.multitracks || [],
           image: metadata.image || "",
           audioRef: metadata.audioRef || null,
           chordTimeline: metadata.chordTimeline || null,
@@ -86,6 +87,7 @@ const SongsService = {
           notas_globales: song.notas_globales || null,
           tareas_ensayo: song.tareas_ensayo || null,
           audios: song.audios || null,
+          multitracks: song.multitracks || [],
           image: song.image || "",
           audioRef: song.audioRef || null,
           chordTimeline: song.chordTimeline || null
@@ -158,6 +160,7 @@ const SongsService = {
           notas_globales: song.notas_globales || null,
           tareas_ensayo: song.tareas_ensayo || null,
           audios: song.audios || null,
+          multitracks: song.multitracks || [],
           image: song.image || "",
           audioRef: song.audioRef || null,
           chordTimeline: song.chordTimeline || null

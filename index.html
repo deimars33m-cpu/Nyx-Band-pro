@@ -9,10 +9,10 @@
   <meta http-equiv="Expires" content="0" />
   <title>NYX Band-Pro - Repertorio Colaborativo</title>
 
-  <!-- AUTO CACHE BUSTER PARA FORZAR ACTUALIZACION (v4.9) -->
+  <!-- AUTO CACHE BUSTER PARA FORZAR ACTUALIZACION (v5.5) -->
   <script>
     (function() {
-      const CURRENT_APP_VERSION = "5.0";
+      const CURRENT_APP_VERSION = "5.5";
       const savedVersion = localStorage.getItem("nyx_app_version");
       
       if (savedVersion !== CURRENT_APP_VERSION) {
@@ -37,7 +37,7 @@
   </script>
 
   <!-- CSS Global -->
-  <link rel="stylesheet" href="index.css?v=4.9">
+  <link rel="stylesheet" href="index.css?v=5.5">
   <!-- Tabler Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.36.0/tabler-icons.min.css">
 
@@ -1148,6 +1148,72 @@
   <!-- Contenedor para el Modal de Notas por Verso Móvil -->
   <div id="mobile-line-notes-modal-container"></div>
 
+  <!-- MODAL: Grabar Pista Multipista -->
+  <div id="modal-multitrack-record" class="modal-backdrop" style="display:none; z-index: 2100; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);">
+    <div class="modal-content glass" style="max-width: 480px; width: 92%; padding: 24px; border-radius: 16px; border: 1px solid rgba(255, 62, 165, 0.3); box-shadow: 0 0 30px rgba(255, 62, 165, 0.2);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+        <h3 style="font-size: 18px; color: #fff; display: flex; align-items: center; gap: 8px;">
+          <i class="ti ti-microphone" style="color: var(--neon-magenta);"></i> Grabar Nueva Pista
+        </h3>
+        <button class="btn-icon-subtle" onclick="closeMultiTrackRecordModal()" style="font-size: 18px; color: var(--text-dim); background:none; border:none; cursor:pointer;">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div>
+          <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Nombre de la Pista</label>
+          <input type="text" id="mt-rec-name" placeholder="Ej: Voz Principal, Guitarra Solo, Coros..."
+                 style="width: 100%; padding: 10px 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-soft); border-radius: 8px; color: #fff; font-size: 13px;">
+        </div>
+
+        <div>
+          <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Tipo de Instrumento / Voz</label>
+          <select id="mt-rec-type" style="width: 100%; padding: 10px 12px; background: #12121a; border: 1px solid var(--border-soft); border-radius: 8px; color: #fff; font-size: 13px;">
+            <option value="voice">🎤 Voz / Coros</option>
+            <option value="guitar">🎸 Guitarra</option>
+            <option value="bass">🎸 Bajo</option>
+            <option value="drums">🥁 Batería / Percusión</option>
+            <option value="keys">🎹 Teclados / Sintetizador</option>
+            <option value="other">🎵 Otro Instrumento / Arreglo</option>
+          </select>
+        </div>
+
+        <div style="background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.15); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 10px;">
+          <input type="checkbox" id="mt-rec-monitor" checked style="width: 18px; height: 18px; accent-color: var(--neon-cyan); cursor: pointer;">
+          <label for="mt-rec-monitor" style="font-size: 11px; color: var(--text-main); cursor: pointer; line-height: 1.4;">
+            <strong>🎧 Monitoreo:</strong> Escuchar las pistas existentes mientras grabo.<br>
+            <span style="font-size: 10px; color: var(--text-dim);">Recomendado: usa auriculares para no captar el sonido del altavoz.</span>
+          </label>
+        </div>
+
+        <!-- Recording Indicator / Time Display -->
+        <div id="mt-rec-status-box" style="text-align: center; padding: 20px 10px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px dashed var(--border-soft); display: flex; flex-direction: column; align-items: center; gap: 8px;">
+          <div id="mt-rec-pulse-indicator" style="width: 14px; height: 14px; border-radius: 50%; background: #666; transition: all 0.3s;"></div>
+          <div id="mt-rec-timer" style="font-size: 24px; font-weight: bold; font-family: 'JetBrains Mono', monospace; color: #fff;">00:00</div>
+          <div id="mt-rec-status-text" style="font-size: 12px; color: var(--text-dim);">Presiona "Iniciar Grabación" para comenzar</div>
+        </div>
+
+        <!-- Preview Audio Container (Hidden until recorded) -->
+        <div id="mt-rec-preview-box" style="display: none; flex-direction: column; gap: 8px;">
+          <label style="font-size: 12px; color: var(--neon-lime);">Toma grabada:</label>
+          <audio id="mt-rec-preview-audio" controls style="width: 100%; height: 36px;"></audio>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 10px; margin-top: 6px;">
+          <button id="mt-btn-start-record" class="btn" onclick="startMultiTrackRecording()" style="flex: 1; padding: 12px; background: #E24B4A; color: #fff; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <i class="ti ti-microphone"></i> Iniciar Grabación
+          </button>
+          <button id="mt-btn-stop-record" class="btn" onclick="stopMultiTrackRecording()" style="display: none; flex: 1; padding: 12px; background: #d32f2f; color: #fff; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; align-items: center; justify-content: center; gap: 6px;">
+            <i class="ti ti-player-stop"></i> Detener Grabación
+          </button>
+          <button id="mt-btn-save-record" class="btn btn-primary" onclick="saveMultiTrackRecording()" style="display: none; flex: 1; padding: 12px; background: var(--neon-cyan); color: #000; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; align-items: center; justify-content: center; gap: 6px;">
+            <i class="ti ti-cloud-upload"></i> Guardar Pista
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-onboarding" class="modal-backdrop"
     style="display: none; z-index: 2000; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);">
     <div class="modal-content glass" style="max-width: 500px; text-align: center; padding: 40px 20px;">
@@ -1210,14 +1276,15 @@
     </button>
   </nav>
 
-  <script src="chordEngine.js?v=5.3"></script>
-  <script src="chords.js?v=5.3"></script>
+  <script src="chordEngine.js?v=5.5"></script>
+  <script src="chords.js?v=5.5"></script>
   <!-- SDK de Supabase desde CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js?v=5.4"></script>
-  <script src="songsService.js?v=5.4"></script>
-  <script src="bpmDetector.js?v=5.4"></script>
-  <script src="app.js?v=5.4"></script>
+  <script src="supabase.js?v=5.5"></script>
+  <script src="songsService.js?v=5.5"></script>
+  <script src="bpmDetector.js?v=5.5"></script>
+  <script src="multiTrackEngine.js?v=5.5"></script>
+  <script src="app.js?v=5.5"></script>
 </body>
 
 </html>

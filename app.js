@@ -1572,6 +1572,11 @@ function openSongInRehearsal(eventOrId, optionalSongId) {
       return;
     }
 
+    if (window.MultiTrackEngine) {
+      window.MultiTrackEngine.stop();
+      return;
+    }
+
     state.activeSongId = songId;
     state.transposeOffset = 0;
     state.autoscrollActivo = true;
@@ -2331,6 +2336,7 @@ function renderRehearsalRoom() {
               <button class="editor-tab ${state.ensayoActiveTab === 'chords' ? 'active' : ''}" onclick="setEnsayoTab('chords')"><i class="ti ti-music" style="font-size:11px;"></i> Acordes &amp; Letra</button>
               <button class="editor-tab ${state.ensayoActiveTab === 'notes' ? 'active' : ''}" onclick="setEnsayoTab('notes')"><i class="ti ti-file-text" style="font-size:11px;"></i> Notas</button>
               <button class="editor-tab ${state.ensayoActiveTab === 'audio' ? 'active' : ''}" onclick="setEnsayoTab('audio')"><i class="ti ti-volume-2" style="font-size:11px;"></i> Audio</button>
+              <button class="editor-tab ${state.ensayoActiveTab === 'multitrack' ? 'active' : ''}" onclick="setEnsayoTab('multitrack')"><i class="ti ti-adjustments-horizontal" style="font-size:11px;"></i> Multipista</button>
             </div>
             <div style="display:flex; gap: 4px;">
               <button class="btn btn-secondary" onclick="toggleFullscreenRehearsal()" style="padding: 4px 10px; font-size: 11px; border: 1px solid rgba(41, 240, 214, 0.3); background: rgba(41, 240, 214, 0.08); display: flex; align-items: center; gap: 4px; border-radius: 6px; cursor: pointer; color: var(--neon-cyan); outline: none;">
@@ -2348,7 +2354,7 @@ function renderRehearsalRoom() {
                 ${linesHtml}
               </div>
             </div>
-          ` : state.ensayoActiveTab === 'notes' ? renderNotesPane(song, lines) : renderAudioPane(song, lines)}
+          ` : state.ensayoActiveTab === 'notes' ? renderNotesPane(song, lines) : state.ensayoActiveTab === 'multitrack' ? renderMultiTrackPane(song) : renderAudioPane(song, lines)}
         </div>
 
         <!-- RIGHT SIDEBAR (desktop) -->
@@ -2825,6 +2831,11 @@ function bindRehearsalEvents(structure, lines, song) {
   }
   if (btnEditSave) {
     btnEditSave.addEventListener("click", saveStanzaChanges);
+  }
+
+  // Inicializar o refrescar vistas de la pestaña Multipista
+  if (state.ensayoActiveTab === "multitrack" && typeof setupMultiTrackMixer === "function") {
+    setupMultiTrackMixer(song);
   }
 }
 
@@ -8730,6 +8741,22 @@ function renderAudioPane(song, lines) {
   return `
     <div class="audio-editor-pane pane-responsive-padding">
       
+      <!-- Banner al Estudio Multipista -->
+      <div class="glass-panel" style="padding: 14px 18px; border-radius: 12px; border: 1px solid rgba(0, 229, 255, 0.3); background: linear-gradient(135deg, rgba(0, 229, 255, 0.08), rgba(255, 62, 165, 0.08)); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(0, 229, 255, 0.2); display: flex; align-items: center; justify-content: center; color: var(--neon-cyan); font-size: 20px;">
+            <i class="ti ti-adjustments-horizontal"></i>
+          </div>
+          <div>
+            <div style="font-size: 13px; font-weight: 700; color: #fff;">Estudio de Mezcla Multipista</div>
+            <div style="font-size: 11px; color: var(--text-dim);">Reproduce y graba voces e instrumentos simultáneamente con control de volumen y paneo estéreo.</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="setEnsayoTab('multitrack')" style="font-size: 11px; padding: 7px 14px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+          <i class="ti ti-headphones"></i> Abrir Multipista (${(song.multitracks || []).length} pistas)
+        </button>
+      </div>
+      
       <div class="notes-audio-grid">
         <!-- 1. Audio Importado / Referencias -->
         <div class="glass-panel" style="padding: 16px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.15);">
@@ -9998,6 +10025,746 @@ window.deleteMobileLineAudio = async function(lineIdx, audIdx) {
       }
       openMobileLineNotesModal(lineIdx); // Refrescar modal
       renderRehearsalRoom();
+    }
+  }
+};
+
+
+// ================================================================
+// --- MOTOR Y VISTA MULTIPISTA (MIXER Y REPRODUCCIÓN SIMULTÁNEA) ---
+// ================================================================
+
+let currentLoadedSongId = null;
+let recordedTrackBlob = null;
+let recordedTrackExt = 'webm';
+let recordedTrackDuration = 0;
+let debounceSaveSongTimer = null;
+
+function escapeMtHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function debounceSaveSong(song) {
+  saveLocalStorage();
+  if (debounceSaveSongTimer) clearTimeout(debounceSaveSongTimer);
+  debounceSaveSongTimer = setTimeout(async () => {
+    if (window.SongsService && song) {
+      try {
+        await window.SongsService.saveSong(song);
+      } catch (e) {
+        console.warn("Error guardando ajustes de mezcla:", e);
+      }
+    }
+  }, 1200);
+}
+
+function formatPanDisplay(val) {
+  const p = parseInt(val) || 0;
+  if (p === 0) return "Centro (0)";
+  if (p < 0) return `${Math.abs(p)}% Izq (L)`;
+  return `${p}% Der (R)`;
+}
+
+function getTrackIconClass(type) {
+  switch (type) {
+    case 'voice': return 'ti ti-microphone';
+    case 'guitar': return 'ti ti-guitar';
+    case 'bass': return 'ti ti-waveform';
+    case 'drums': return 'ti ti-drum';
+    case 'keys': return 'ti ti-piano';
+    default: return 'ti ti-music';
+  }
+}
+
+function getTrackTypeLabel(type) {
+  switch (type) {
+    case 'voice': return 'Voz';
+    case 'guitar': return 'Guitarra';
+    case 'bass': return 'Bajo';
+    case 'drums': return 'Batería';
+    case 'keys': return 'Teclado';
+    default: return 'Instrumento';
+  }
+}
+
+window.setupMultiTrackMixer = function (song) {
+  if (!song || !window.MultiTrackEngine) return;
+
+  const currentTracks = song.multitracks || [];
+  const engineTracks = window.MultiTrackEngine.getTracks();
+
+  if (currentLoadedSongId !== song.id || engineTracks.length !== currentTracks.length) {
+    window.MultiTrackEngine.loadSongTracks(currentTracks);
+    currentLoadedSongId = song.id;
+  }
+
+  window.MultiTrackEngine.clearListeners();
+
+  window.MultiTrackEngine.onTimeUpdate(data => {
+    const curEl = document.getElementById("mt-time-current");
+    const totEl = document.getElementById("mt-time-total");
+    const scrub = document.getElementById("mt-master-scrubber");
+    if (curEl) curEl.textContent = formatTime(data.currentTime);
+    if (totEl) totEl.textContent = formatTime(data.duration);
+    if (scrub && !scrub.dataset.dragging && data.duration > 0) {
+      scrub.value = (data.currentTime / data.duration) * 100;
+    }
+  });
+
+  window.MultiTrackEngine.onStateChange(data => {
+    const playBtn = document.getElementById("mt-btn-play");
+    if (playBtn) {
+      playBtn.innerHTML = data.isPlaying
+        ? `<i class="ti ti-player-pause"></i>`
+        : `<i class="ti ti-player-play"></i>`;
+      if (data.isPlaying) {
+        playBtn.classList.add("playing");
+      } else {
+        playBtn.classList.remove("playing");
+      }
+    }
+
+    (data.tracks || []).forEach(t => {
+      const strip = document.getElementById(`channel-strip-${t.id}`);
+      const btnMute = document.getElementById(`btn-mute-${t.id}`);
+      const btnSolo = document.getElementById(`btn-solo-${t.id}`);
+      const statusLabel = document.getElementById(`status-label-${t.id}`);
+      if (strip) {
+        strip.classList.toggle("is-muted", !!t.muted);
+        strip.classList.toggle("is-solo", !!t.solo);
+      }
+      if (btnMute) btnMute.classList.toggle("active", !!t.muted);
+      if (btnSolo) btnSolo.classList.toggle("active", !!t.solo);
+      if (statusLabel) {
+        statusLabel.innerHTML = t.solo
+          ? '<span class="status-solo">SOLO</span>'
+          : t.muted
+          ? '<span class="status-mute">MUTE</span>'
+          : '<span class="status-active">ACTIVA</span>';
+      }
+    });
+  });
+
+  const scrub = document.getElementById("mt-master-scrubber");
+  if (scrub) {
+    scrub.onmousedown = () => { scrub.dataset.dragging = "true"; };
+    scrub.ontouchstart = () => { scrub.dataset.dragging = "true"; };
+    scrub.onmouseup = () => { delete scrub.dataset.dragging; };
+    scrub.ontouchend = () => { delete scrub.dataset.dragging; };
+  }
+};
+
+window.renderMultiTrackPane = function (song) {
+  const tracks = song.multitracks || [];
+  const isPlaying = window.MultiTrackEngine ? window.MultiTrackEngine.isPlaying() : false;
+  const curTime = window.MultiTrackEngine ? window.MultiTrackEngine.getCurrentTime() : 0;
+  const duration = window.MultiTrackEngine ? window.MultiTrackEngine.getDuration() : 0;
+  const progressPercent = duration > 0 ? (curTime / duration) * 100 : 0;
+
+  return `
+    <div class="multitrack-pane pane-responsive-padding">
+      <!-- HEADER CARD -->
+      <div class="mixer-header-card glass-panel">
+        <div class="mixer-header-info">
+          <div class="mixer-title-row">
+            <h3 style="display:flex; align-items:center; gap:8px; font-size:16px; color:#fff;">
+              <i class="ti ti-adjustments-horizontal" style="color:var(--neon-cyan);"></i> Mesa de Mezcla Multipista
+            </h3>
+            <span class="mixer-badge-tracks">${tracks.length} ${tracks.length === 1 ? 'Pista' : 'Pistas'}</span>
+          </div>
+          <p class="mixer-subtitle">
+            Reproduce y graba voces e instrumentos simultáneamente en sincronía estéreo. Ajusta el volumen y paneo independiente de cada pista sin límites.
+          </p>
+        </div>
+        <div class="mixer-header-actions">
+          <input type="file" id="mt-file-input" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac" style="display:none" onchange="handleMultiTrackFileUpload(event)">
+          <button class="btn btn-secondary btn-upload-track" onclick="document.getElementById('mt-file-input').click()">
+            <i class="ti ti-upload"></i> Subir Audio (MP3/WAV)
+          </button>
+          <button class="btn btn-primary btn-record-track" onclick="openMultiTrackRecordModal()">
+            <i class="ti ti-microphone"></i> Grabar Pista
+          </button>
+        </div>
+      </div>
+
+      <!-- MASTER TRANSPORT BAR -->
+      <div class="mixer-master-bar glass-panel">
+        <div class="master-transport-left">
+          <button id="mt-btn-play" class="btn-master-play ${isPlaying ? 'playing' : ''}" onclick="onMultiTrackTogglePlay()" title="${isPlaying ? 'Pausar todo' : 'Reproducir todo simultáneamente'}">
+            <i class="${isPlaying ? 'ti ti-player-pause' : 'ti ti-player-play'}"></i>
+          </button>
+          <button id="mt-btn-stop" class="btn-master-stop" onclick="onMultiTrackStop()" title="Detener y reiniciar al inicio">
+            <i class="ti ti-player-stop"></i>
+          </button>
+          <div class="master-time-box">
+            <span id="mt-time-current">${formatTime(curTime)}</span>
+            <span class="time-sep">/</span>
+            <span id="mt-time-total">${formatTime(duration)}</span>
+          </div>
+        </div>
+
+        <div class="master-scrubber-container">
+          <input type="range" id="mt-master-scrubber" class="master-scrubber-slider" min="0" max="100" step="0.1" value="${progressPercent}"
+                 oninput="onMultiTrackScrubberInput(this.value)"
+                 onchange="onMultiTrackScrubberChange(this.value)">
+        </div>
+
+        <div class="master-volume-box">
+          <i class="ti ti-volume" style="color:var(--neon-cyan); font-size: 16px;"></i>
+          <span class="master-vol-label">Master:</span>
+          <input type="range" id="mt-master-volume" min="0" max="100" value="100"
+                 oninput="onMultiTrackMasterVolumeChange(this.value)" class="master-vol-slider">
+          <span id="mt-master-volume-val" class="volume-val-badge">100%</span>
+        </div>
+      </div>
+
+      <!-- CHANNELS GRID OR EMPTY STATE -->
+      ${tracks.length === 0 ? renderMultiTrackEmptyState() : renderMultiTrackChannels(tracks)}
+    </div>
+  `;
+};
+
+function renderMultiTrackEmptyState() {
+  return `
+    <div class="mixer-empty-state glass-panel">
+      <div class="empty-icon-wrap">
+        <i class="ti ti-headphones"></i>
+      </div>
+      <h4>Aún no hay pistas en este tema</h4>
+      <p>
+        Crea tu mezcla de estudio: graba pistas independientes con tu micrófono (voces, coros, guitarra, bajo, etc.) o sube archivos de audio (MP3, WAV) para reproducirlos todos juntos en perfecta sincronía.
+      </p>
+      <div class="empty-actions">
+        <button class="btn btn-primary" onclick="openMultiTrackRecordModal()">
+          <i class="ti ti-microphone"></i> Grabar Primera Pista
+        </button>
+        <button class="btn btn-secondary" onclick="document.getElementById('mt-file-input').click()">
+          <i class="ti ti-upload"></i> Subir Archivo de Audio
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderMultiTrackChannels(tracks) {
+  return `
+    <div class="mixer-tracks-grid">
+      ${tracks.map(t => {
+        const vol = t.volume !== undefined ? t.volume : 80;
+        const pan = t.pan !== undefined ? t.pan : 0;
+        return `
+          <div class="channel-strip ${t.muted ? 'is-muted' : ''} ${t.solo ? 'is-solo' : ''}" id="channel-strip-${t.id}">
+            <!-- Header de la pista -->
+            <div class="channel-header">
+              <div class="channel-icon-badge ${t.type || 'instrument'}">
+                <i class="${getTrackIconClass(t.type)}"></i>
+              </div>
+              <div class="channel-name-col">
+                <div class="channel-name-row">
+                  <span class="channel-name" title="Clic para renombrar pista" onclick="renameMultiTrack('${t.id}')">
+                    ${escapeMtHtml(t.name || 'Pista')}
+                  </span>
+                  <button class="btn-icon-subtle btn-rename-track" onclick="renameMultiTrack('${t.id}')" title="Renombrar">
+                    <i class="ti ti-pencil"></i>
+                  </button>
+                </div>
+                <div class="channel-meta">
+                  <span class="channel-type-tag">${getTrackTypeLabel(t.type)}</span>
+                  ${t.duration ? `<span class="channel-dur">⏱️ ${formatTime(t.duration)}</span>` : ''}
+                  <span class="channel-sync">☁️ Supabase</span>
+                </div>
+              </div>
+              <button class="btn-icon-subtle btn-delete-track" onclick="deleteMultiTrack('${t.id}')" title="Eliminar pista">
+                <i class="ti ti-trash"></i>
+              </button>
+            </div>
+
+            <!-- Botones Mute & Solo -->
+            <div class="channel-mute-solo-row">
+              <button class="btn-channel-btn btn-mute ${t.muted ? 'active' : ''}" 
+                      id="btn-mute-${t.id}"
+                      onclick="toggleMultiTrackMute('${t.id}')" 
+                      title="Silenciar pista (Mute)">
+                M
+              </button>
+              <button class="btn-channel-btn btn-solo ${t.solo ? 'active' : ''}" 
+                      id="btn-solo-${t.id}"
+                      onclick="toggleMultiTrackSolo('${t.id}')" 
+                      title="Aislar pista (Solo)">
+                S
+              </button>
+              <div class="channel-status-label" id="status-label-${t.id}">
+                ${t.solo ? '<span class="status-solo">SOLO</span>' : t.muted ? '<span class="status-mute">MUTE</span>' : '<span class="status-active">ACTIVA</span>'}
+              </div>
+            </div>
+
+            <!-- Control de Volumen -->
+            <div class="channel-control-group volume-group">
+              <div class="control-header">
+                <span class="control-title"><i class="ti ti-volume-2"></i> Volumen</span>
+                <span class="control-value-pill" id="vol-val-${t.id}">${vol}%</span>
+              </div>
+              <div class="fader-slider-wrap">
+                <input type="range" class="channel-fader-input" min="0" max="100" value="${vol}"
+                       id="vol-input-${t.id}"
+                       oninput="onTrackVolumeInput('${t.id}', this.value)"
+                       onchange="onTrackVolumeCommit('${t.id}', this.value)">
+              </div>
+            </div>
+
+            <!-- Control de Paneo Estéreo -->
+            <div class="channel-control-group pan-group">
+              <div class="control-header">
+                <span class="control-title"><i class="ti ti-arrows-left-right"></i> Paneo Estéreo</span>
+                <div class="pan-value-wrap">
+                  <span class="control-value-pill pan-pill" id="pan-val-${t.id}">${formatPanDisplay(pan)}</span>
+                  <button class="btn-pan-center" onclick="resetTrackPan('${t.id}')" title="Centrar estéreo">C</button>
+                </div>
+              </div>
+              <div class="pan-slider-wrap">
+                <span class="pan-marker left">L</span>
+                <input type="range" class="channel-pan-input" min="-100" max="100" step="1" value="${pan}"
+                       id="pan-input-${t.id}"
+                       oninput="onTrackPanInput('${t.id}', this.value)"
+                       onchange="onTrackPanCommit('${t.id}', this.value)">
+                <span class="pan-marker right">R</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+window.onMultiTrackTogglePlay = async function () {
+  if (!window.MultiTrackEngine) return;
+  await window.MultiTrackEngine.togglePlay();
+};
+
+window.onMultiTrackStop = function () {
+  if (!window.MultiTrackEngine) return;
+  window.MultiTrackEngine.stop();
+  const scrub = document.getElementById("mt-master-scrubber");
+  if (scrub) scrub.value = 0;
+  const curEl = document.getElementById("mt-time-current");
+  if (curEl) curEl.textContent = "00:00";
+};
+
+window.onMultiTrackScrubberInput = function (percent) {
+  if (!window.MultiTrackEngine) return;
+  const dur = window.MultiTrackEngine.getDuration();
+  const time = (parseFloat(percent) / 100) * dur;
+  const curEl = document.getElementById("mt-time-current");
+  if (curEl) curEl.textContent = formatTime(time);
+};
+
+window.onMultiTrackScrubberChange = function (percent) {
+  if (!window.MultiTrackEngine) return;
+  const dur = window.MultiTrackEngine.getDuration();
+  const time = (parseFloat(percent) / 100) * dur;
+  window.MultiTrackEngine.seek(time);
+};
+
+window.onMultiTrackMasterVolumeChange = function (val) {
+  if (!window.MultiTrackEngine) return;
+  window.MultiTrackEngine.setMasterVolume(val);
+  const badge = document.getElementById("mt-master-volume-val");
+  if (badge) badge.textContent = `${val}%`;
+};
+
+window.toggleMultiTrackMute = function (trackId) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song || !song.multitracks) return;
+  const trk = song.multitracks.find(t => String(t.id) === String(trackId));
+  if (!trk) return;
+
+  trk.muted = !trk.muted;
+  if (window.MultiTrackEngine) {
+    window.MultiTrackEngine.setTrackMute(trackId, trk.muted);
+  }
+  debounceSaveSong(song);
+};
+
+window.toggleMultiTrackSolo = function (trackId) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song || !song.multitracks) return;
+  const trk = song.multitracks.find(t => String(t.id) === String(trackId));
+  if (!trk) return;
+
+  trk.solo = !trk.solo;
+  if (window.MultiTrackEngine) {
+    window.MultiTrackEngine.setTrackSolo(trackId, trk.solo);
+  }
+  debounceSaveSong(song);
+};
+
+window.onTrackVolumeInput = function (trackId, val) {
+  if (window.MultiTrackEngine) {
+    window.MultiTrackEngine.setTrackVolume(trackId, parseFloat(val));
+  }
+  const badge = document.getElementById(`vol-val-${trackId}`);
+  if (badge) badge.textContent = `${val}%`;
+};
+
+window.onTrackVolumeCommit = function (trackId, val) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song || !song.multitracks) return;
+  const trk = song.multitracks.find(t => String(t.id) === String(trackId));
+  if (trk) {
+    trk.volume = parseInt(val);
+    debounceSaveSong(song);
+  }
+};
+
+window.onTrackPanInput = function (trackId, val) {
+  if (window.MultiTrackEngine) {
+    window.MultiTrackEngine.setTrackPan(trackId, parseFloat(val));
+  }
+  const badge = document.getElementById(`pan-val-${trackId}`);
+  if (badge) badge.textContent = formatPanDisplay(val);
+};
+
+window.onTrackPanCommit = function (trackId, val) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song || !song.multitracks) return;
+  const trk = song.multitracks.find(t => String(t.id) === String(trackId));
+  if (trk) {
+    trk.pan = parseInt(val);
+    debounceSaveSong(song);
+  }
+};
+
+window.resetTrackPan = function (trackId) {
+  const slider = document.getElementById(`pan-input-${trackId}`);
+  if (slider) slider.value = 0;
+  onTrackPanInput(trackId, 0);
+  onTrackPanCommit(trackId, 0);
+};
+
+window.renameMultiTrack = function (trackId) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song || !song.multitracks) return;
+  const trk = song.multitracks.find(t => String(t.id) === String(trackId));
+  if (!trk) return;
+
+  const newName = prompt("Nuevo nombre para esta pista:", trk.name);
+  if (newName && newName.trim()) {
+    trk.name = newName.trim();
+    saveLocalStorage();
+    if (window.SongsService) {
+      window.SongsService.saveSong(song).catch(() => {});
+    }
+    renderRehearsalRoom();
+  }
+};
+
+window.deleteMultiTrack = async function (trackId) {
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song || !song.multitracks) return;
+  const idx = song.multitracks.findIndex(t => String(t.id) === String(trackId));
+  if (idx === -1) return;
+
+  const trk = song.multitracks[idx];
+  if (!confirm(`¿Estás seguro de eliminar la pista "${trk.name}"?`)) return;
+
+  triggerEnsayoToast(`Eliminando pista "${trk.name}"...`);
+
+  song.multitracks.splice(idx, 1);
+  saveLocalStorage();
+
+  if (window.SongsService) {
+    if (trk.url && window.SongsService.deleteAudioByUrl) {
+      window.SongsService.deleteAudioByUrl(trk.url).catch(() => {});
+    }
+    await window.SongsService.saveSong(song).catch(err => console.error(err));
+  }
+
+  if (window.MultiTrackEngine) {
+    window.MultiTrackEngine.loadSongTracks(song.multitracks);
+  }
+
+  triggerEnsayoToast("Pista eliminada correctamente");
+  renderRehearsalRoom();
+};
+
+window.handleMultiTrackFileUpload = async function (event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song) {
+    alert("No hay ningún tema activo seleccionado.");
+    return;
+  }
+
+  const defaultName = file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+  const trackName = prompt("Nombre para esta pista:", defaultName) || defaultName;
+
+  triggerEnsayoToast("☁️ Subiendo pista de audio a Supabase Storage...");
+
+  try {
+    let audioUrl = null;
+    if (window.SongsService && typeof window.SongsService.uploadAudioBlob === "function") {
+      audioUrl = await window.SongsService.uploadAudioBlob(song.id, "multitrack", file, file.name);
+    }
+
+    if (!audioUrl) {
+      throw new Error("No se pudo obtener la URL de descarga de Supabase Storage.");
+    }
+
+    if (!song.multitracks) song.multitracks = [];
+
+    const lowerName = trackName.toLowerCase();
+    let type = "other";
+    if (lowerName.includes("voz") || lowerName.includes("vocal") || lowerName.includes("coro")) type = "voice";
+    else if (lowerName.includes("guitar")) type = "guitar";
+    else if (lowerName.includes("bajo") || lowerName.includes("bass")) type = "bass";
+    else if (lowerName.includes("bater") || lowerName.includes("drum")) type = "drums";
+    else if (lowerName.includes("tecla") || lowerName.includes("piano") || lowerName.includes("synth")) type = "keys";
+
+    song.multitracks.push({
+      id: "trk_" + Date.now(),
+      name: trackName,
+      type: type,
+      url: audioUrl,
+      volume: 85,
+      pan: 0,
+      muted: false,
+      solo: false,
+      date: new Date().toLocaleDateString()
+    });
+
+    saveLocalStorage();
+    if (window.SongsService) {
+      await window.SongsService.saveSong(song);
+    }
+
+    if (window.MultiTrackEngine) {
+      window.MultiTrackEngine.loadSongTracks(song.multitracks);
+    }
+
+    triggerEnsayoToast("✅ ¡Pista agregada y sincronizada!");
+    renderRehearsalRoom();
+  } catch (err) {
+    console.error("Error al subir archivo de pista:", err);
+    alert("Error al subir la pista a Supabase: " + err.message);
+  } finally {
+    event.target.value = "";
+  }
+};
+
+window.openMultiTrackRecordModal = function () {
+  const modal = document.getElementById("modal-multitrack-record");
+  if (!modal) return;
+
+  const nameInput = document.getElementById("mt-rec-name");
+  const typeSelect = document.getElementById("mt-rec-type");
+  const timer = document.getElementById("mt-rec-timer");
+  const statusText = document.getElementById("mt-rec-status-text");
+  const pulse = document.getElementById("mt-rec-pulse-indicator");
+  const previewBox = document.getElementById("mt-rec-preview-box");
+  const previewAudio = document.getElementById("mt-rec-preview-audio");
+  const btnStart = document.getElementById("mt-btn-start-record");
+  const btnStop = document.getElementById("mt-btn-stop-record");
+  const btnSave = document.getElementById("mt-btn-save-record");
+
+  if (nameInput) nameInput.value = "";
+  if (typeSelect) typeSelect.value = "voice";
+  if (timer) timer.textContent = "00:00";
+  if (statusText) statusText.textContent = 'Presiona "Iniciar Grabación" para comenzar';
+  if (pulse) {
+    pulse.style.background = "#666";
+    pulse.style.boxShadow = "none";
+  }
+  if (previewBox) previewBox.style.display = "none";
+  if (previewAudio) {
+    previewAudio.pause();
+    previewAudio.src = "";
+  }
+  if (btnStart) {
+    btnStart.innerHTML = '<i class="ti ti-microphone"></i> Iniciar Grabación';
+    btnStart.style.display = "flex";
+  }
+  if (btnStop) btnStop.style.display = "none";
+  if (btnSave) btnSave.style.display = "none";
+
+  recordedTrackBlob = null;
+  modal.style.display = "flex";
+};
+
+window.closeMultiTrackRecordModal = function () {
+  const modal = document.getElementById("modal-multitrack-record");
+  if (modal) modal.style.display = "none";
+
+  if (window.MultiTrackEngine && window.MultiTrackEngine.isRecording()) {
+    window.MultiTrackEngine.stopRecordingTrack().catch(() => {});
+  }
+  recordedTrackBlob = null;
+};
+
+window.startMultiTrackRecording = async function () {
+  if (!window.MultiTrackEngine) return;
+
+  const btnStart = document.getElementById("mt-btn-start-record");
+  const btnStop = document.getElementById("mt-btn-stop-record");
+  const btnSave = document.getElementById("mt-btn-save-record");
+  const pulse = document.getElementById("mt-rec-pulse-indicator");
+  const timer = document.getElementById("mt-rec-timer");
+  const statusText = document.getElementById("mt-rec-status-text");
+  const monitorCheck = document.getElementById("mt-rec-monitor");
+  const previewBox = document.getElementById("mt-rec-preview-box");
+
+  if (previewBox) previewBox.style.display = "none";
+  if (btnSave) btnSave.style.display = "none";
+
+  const listenBacking = monitorCheck ? monitorCheck.checked : true;
+
+  try {
+    if (btnStart) btnStart.style.display = "none";
+    if (btnStop) btnStop.style.display = "flex";
+    if (statusText) statusText.textContent = "🔴 Grabando... Habla, canta o toca hacia tu micrófono";
+    if (pulse) {
+      pulse.style.background = "#ff007f";
+      pulse.style.boxShadow = "0 0 16px #ff007f";
+    }
+
+    await window.MultiTrackEngine.startRecordingTrack({
+      listenBackingTracks: listenBacking,
+      onTimeTick: secs => {
+        if (timer) timer.textContent = formatTime(secs);
+      }
+    });
+  } catch (err) {
+    console.error("Error al iniciar grabación:", err);
+    alert("No se pudo iniciar la grabación: " + err.message + ". Verifica los permisos de micrófono.");
+    if (btnStart) btnStart.style.display = "flex";
+    if (btnStop) btnStop.style.display = "none";
+    if (statusText) statusText.textContent = "Error al acceder al micrófono";
+  }
+};
+
+window.stopMultiTrackRecording = async function () {
+  if (!window.MultiTrackEngine) return;
+
+  const btnStop = document.getElementById("mt-btn-stop-record");
+  const btnStart = document.getElementById("mt-btn-start-record");
+  const btnSave = document.getElementById("mt-btn-save-record");
+  const pulse = document.getElementById("mt-rec-pulse-indicator");
+  const statusText = document.getElementById("mt-rec-status-text");
+  const previewBox = document.getElementById("mt-rec-preview-box");
+  const previewAudio = document.getElementById("mt-rec-preview-audio");
+
+  if (btnStop) btnStop.style.display = "none";
+
+  try {
+    const result = await window.MultiTrackEngine.stopRecordingTrack();
+    if (!result || !result.blob) {
+      throw new Error("No se obtuvieron datos de audio.");
+    }
+
+    recordedTrackBlob = result.blob;
+    recordedTrackExt = result.extension || "webm";
+    recordedTrackDuration = result.duration || 0;
+
+    if (pulse) {
+      pulse.style.background = "#00ff99";
+      pulse.style.boxShadow = "0 0 12px #00ff99";
+    }
+    if (statusText) statusText.textContent = "✅ Grabación lista. Escucha la vista previa antes de guardar:";
+    if (previewBox && previewAudio) {
+      previewAudio.src = URL.createObjectURL(result.blob);
+      previewBox.style.display = "flex";
+    }
+    if (btnStart) {
+      btnStart.innerHTML = '<i class="ti ti-rotate"></i> Regrabar';
+      btnStart.style.display = "flex";
+    }
+    if (btnSave) btnSave.style.display = "flex";
+  } catch (err) {
+    console.error("Error al detener grabación:", err);
+    alert("Error al finalizar la grabación: " + err.message);
+    if (btnStart) btnStart.style.display = "flex";
+  }
+};
+
+window.saveMultiTrackRecording = async function () {
+  if (!recordedTrackBlob) {
+    alert("No hay ninguna grabación disponible para guardar.");
+    return;
+  }
+
+  const song = state.songs.find(s => String(s.id) === String(state.activeSongId));
+  if (!song) {
+    alert("No hay ningún tema activo seleccionado.");
+    return;
+  }
+
+  const nameInput = document.getElementById("mt-rec-name");
+  const typeSelect = document.getElementById("mt-rec-type");
+  const btnSave = document.getElementById("mt-btn-save-record");
+
+  const trackName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : `Pista Grabada (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+  const trackType = typeSelect ? typeSelect.value : "voice";
+
+  if (btnSave) {
+    btnSave.disabled = true;
+    btnSave.innerHTML = '<i class="ti ti-loader"></i> Subiendo...';
+  }
+
+  triggerEnsayoToast("☁️ Guardando pista en Supabase Storage...");
+
+  try {
+    const filename = `take_${Date.now()}.${recordedTrackExt}`;
+    let audioUrl = null;
+
+    if (window.SongsService && typeof window.SongsService.uploadAudioBlob === "function") {
+      audioUrl = await window.SongsService.uploadAudioBlob(song.id, "multitrack", recordedTrackBlob, filename);
+    }
+
+    if (!audioUrl) {
+      throw new Error("No se pudo obtener la URL de descarga desde Supabase.");
+    }
+
+    if (!song.multitracks) song.multitracks = [];
+
+    song.multitracks.push({
+      id: "trk_" + Date.now(),
+      name: trackName,
+      type: trackType,
+      url: audioUrl,
+      volume: 85,
+      pan: 0,
+      muted: false,
+      solo: false,
+      duration: recordedTrackDuration,
+      date: new Date().toLocaleDateString()
+    });
+
+    saveLocalStorage();
+    if (window.SongsService) {
+      await window.SongsService.saveSong(song);
+    }
+
+    if (window.MultiTrackEngine) {
+      window.MultiTrackEngine.loadSongTracks(song.multitracks);
+    }
+
+    triggerEnsayoToast("✅ ¡Pista guardada y sincronizada en la nube!");
+    closeMultiTrackRecordModal();
+    renderRehearsalRoom();
+  } catch (err) {
+    console.error("Error al guardar pista grabada:", err);
+    alert("Error al guardar la pista en Supabase: " + err.message);
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.innerHTML = '<i class="ti ti-cloud-upload"></i> Guardar Pista';
     }
   }
 };
